@@ -6,6 +6,12 @@ Last updated: generated at project creation.
 
 ---
 
+## Language
+
+**English only** for all project documentation (see `.cursor/rules/documentation-english.mdc`).
+
+---
+
 ## Principle
 
 | Question | Answer in |

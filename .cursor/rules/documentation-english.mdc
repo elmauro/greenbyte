@@ -1,0 +1,33 @@
+---
+description: All GreenByte documentation must be written in English
+alwaysApply: true
+---
+
+# Documentation language — English only
+
+GreenByte documentation is **English-only**. Apply this to every doc you create or update.
+
+## In scope
+
+- `docs/`, `frontend/docs/`, `backend/docs/`, `infrastructure/**/README.md`
+- `cursor/` — prompts, templates, playbooks, project context, analysis artifacts, company docs
+- `README.md` files at repo and package roots
+- Script and config **comments** when they explain usage (e.g. `scripts/*.sh`, `*.tfvars` comments)
+- User-facing copy in the web app (landing, footer, nav labels) unless a story explicitly targets another locale
+
+## Rules
+
+- Write new documentation in **English**. Do not add Spanish (or mixed) prose to project docs.
+- When editing existing docs, translate any remaining non-English sections to English as part of the change.
+- Keep proper nouns unchanged (GreenByte, Syngenta, HatchWorks, AWS service names, domain names).
+- Code identifiers, env vars, paths and commit messages follow existing repo conventions (English preferred).
+
+## Out of scope
+
+- Third-party dependencies (`node_modules/`, vendor docs)
+- User chat with the team (respond in the user's language when they write in Spanish)
+
+## Reference
+
+- Doc locations: `cursor/docs/documentation-governance.md`
+- Hackathon context: `cursor/company/HACKATHON.md`

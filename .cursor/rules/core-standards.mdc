@@ -11,4 +11,5 @@ alwaysApply: true
 - Update docs, tests, mocks and configuration when behavior or contracts change.
 - Preserve the separation between `frontend/`, `backend/`, `infrastructure/`, `docs/`, `.cursor/` and `cursor/`.
 - Use `project.config.json` as the source of truth for how the project was generated.
+- Write all documentation in **English** (see `documentation-english.mdc`).
 
