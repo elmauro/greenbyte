@@ -1,15 +1,14 @@
 # ses
 
-Contrato para configuracion de email con Amazon SES.
+Contract for email configuration with Amazon SES.
 
-## Inputs esperados
+## Expected inputs
 
 - `project`
 - `environment`
 - `domain_name`
 - `from_address`
 
-## Pendiente
+## Pending
 
-Definir verificacion de dominio, DKIM, limites, templates y alarmas.
-
+Define domain verification, DKIM, limits, templates and alarms.

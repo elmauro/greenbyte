@@ -4,7 +4,7 @@ Use this prompt to run **multiple lifecycle phases in one Agent session** with e
 
 **When to use:** new story from analysis through close, or resume mid-pipeline (`Start at: validation`).
 
-**Intake primero (story nueva):** si no hay paquete ni entrada en `STORY-LOG.md`, usa [`prompt-story-intake.md`](prompt-story-intake.md) (Modo A o B) o `node cursor/scripts/new-feature.mjs` antes de este orquestador. Si la story ya existe, pega el bloque del STORY-LOG.
+**Intake first (new story):** if there is no package or entry in `STORY-LOG.md`, use [`prompt-story-intake.md`](prompt-story-intake.md) (Mode A or B) or `node cursor/scripts/new-feature.mjs` before this orchestrator. If the story already exists, paste the block from STORY-LOG.
 
 **When not to use:** bugs (`prompt-bug-fix.md`), manifest-only updates, or GitHub re-sync only (use `prompt-feature-close-package.md` PHASE GitHub).
 
@@ -121,9 +121,9 @@ Stop on failed gate. Do not skip review before close.
 Do not expand scope between phases.
 ```
 
-## Entry point alternativo
+## Alternative entry point
 
-Para intake conversacional antes del lifecycle:
+For conversational intake before lifecycle:
 
 ```text
 @cursor/prompts/feature/prompt-story-intake.md

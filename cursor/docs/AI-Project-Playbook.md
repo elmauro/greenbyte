@@ -1,32 +1,32 @@
 # AI Project Playbook
 
-Guia practica para usar Cursor en features, bugs, mejoras, refactors y analisis de `GreenByte`.
+Practical guide for using Cursor on features, bugs, improvements, refactors and analysis in `GreenByte`.
 
-## Objetivo
+## Goal
 
-- Mantener un flujo repetible para `frontend/`, `backend/` e `infrastructure/` cuando aplique.
-- Guardar estado duradero por feature en `cursor/analysis/features/<area>/<feature-slug>/`.
-- Usar reglas por stack y plantillas compartidas para reducir contexto perdido entre sesiones.
-- Evitar analisis de todo el repositorio cuando una tarea puede resolverse con alcance minimo.
+- Keep a repeatable flow for `frontend/`, `backend/` and `infrastructure/` when applicable.
+- Store durable state per feature in `cursor/analysis/features/<area>/<feature-slug>/`.
+- Use stack rules and shared templates to reduce lost context between sessions.
+- Avoid analyzing the entire repository when a task can be resolved with minimal scope.
 
-## Regla central
+## Core rule
 
-- `backend/` define contratos, reglas de negocio, datos, APIs e infraestructura de aplicacion.
-- `frontend/` define experiencia de usuario, rutas, servicios, tipos, mocks y pruebas de UI.
-- `infrastructure/` define Terraform, capabilities AWS y despliegue cuando el preset lo incluye.
-- `cursor/` define contexto, prompts, plantillas y artefactos de trabajo para Cursor.
-- `cursor/company/` (opcional) define vision, backlog `FW-*` y registry de stories.
-- Si un cambio toca contratos, alinea backend y frontend antes de cerrar.
+- `backend/` defines contracts, business rules, data, APIs and application infrastructure.
+- `frontend/` defines user experience, routes, services, types, mocks and UI tests.
+- `infrastructure/` defines Terraform, AWS capabilities and deployment when the preset includes it.
+- `cursor/` defines context, prompts, templates and working artifacts for Cursor.
+- `cursor/company/` (optional) defines vision, `FW-*` backlog and story registry.
+- If a change touches contracts, align backend and frontend before closing.
 
-## Layout esperado
+## Expected layout
 
 ```text
 <project-root>/
 ├─ frontend/
 ├─ backend/
-├─ infrastructure/     # cuando el preset lo incluye
+├─ infrastructure/     # when the preset includes it
 ├─ cursor/
-│  ├─ company/         # opcional (--with-product-backlog)
+│  ├─ company/         # optional (--with-product-backlog)
 │  ├─ docs/
 │  ├─ projects/
 │  ├─ prompts/
@@ -39,83 +39,83 @@ Guia practica para usar Cursor en features, bugs, mejoras, refactors y analisis 
    └─ hooks.json       # GitHub sync after edits (off until hookEnabled)
 ```
 
-## Contexto requerido
+## Required context
 
-Los prompts de `cursor/prompts/feature/` ya cargan el contexto necesario: project context, reglas activas, review guidelines y templates. Esta seccion es solo referencia.
+Prompts in `cursor/prompts/feature/` already load the necessary context: project context, active rules, review guidelines and templates. This section is reference only.
 
-Para producto y alcance (si existe `cursor/company/`):
+For product and scope (if `cursor/company/` exists):
 
 - `cursor/company/README.md`
-- `.cursor/rules/company-product-context.mdc` (siempre activa)
+- `.cursor/rules/company-product-context.mdc` (always active)
 
-Para backend:
+For backend:
 
 - `cursor/projects/backend/project-context.md`
 - `.cursor/rules/backend-serverless.mdc`
 
-Para frontend:
+For frontend:
 
 - `cursor/projects/frontend/project-context.md`
 - `.cursor/rules/frontend-react.mdc`
 
-Para infraestructura:
+For infrastructure:
 
 - `cursor/projects/infrastructure/project-context.md`
 - `.cursor/rules/infrastructure-terraform.mdc`
 
-Para full-stack, usa los packs que apliquen.
+For full-stack, use the packs that apply.
 
-Para features que leen mucho contexto o cruzan carpetas, registra evidencia opcional en [`context-trace-matrix.md`](context-trace-matrix.md).
+For features that read a lot of context or cross folders, optionally record evidence in [`context-trace-matrix.md`](context-trace-matrix.md).
 
-## Context routing rapido
+## Quick context routing
 
-Antes de cargar documentos largos, elige el contexto minimo por area. Ver tambien `.cursor/rules/context-scope.mdc` y [`context-scope-sessions.md`](context-scope-sessions.md).
+Before loading long documents, choose minimal context by area. See also `.cursor/rules/context-scope.mdc` and [`context-scope-sessions.md`](context-scope-sessions.md).
 
-1. Identifica el area (`AREA-TAXONOMY.md` si existe; si no, stack scope).
-2. Lee primero solo el contexto base de esa area.
-3. Agrega contexto condicional solo si el archivo se toca o cambia una decision.
-4. Si la story fue ambigua o consumio mucho contexto, anota 2-4 filas **Context trace** en `analysis.md` o `implementation-notes.md`.
+1. Identify the area (`AREA-TAXONOMY.md` if present; otherwise stack scope).
+2. Read only that area's base context first.
+3. Add conditional context only if a file is touched or a decision changes.
+4. If the story was ambiguous or consumed a lot of context, note 2–4 **Context trace** rows in `analysis.md` or `implementation-notes.md`.
 
-| Area | Lee primero | Agrega solo si aplica |
+| Area | Read first | Add only if applicable |
 | --- | --- | --- |
-| Backend | `cursor/projects/backend/project-context.md`, `.cursor/rules/backend-serverless.mdc`, paths `backend/` afectados | infra project-context si deploy; `company/future-work/` si backlog |
-| Frontend | `cursor/projects/frontend/project-context.md`, `.cursor/rules/frontend-react.mdc`, paths `frontend/` afectados | backend docs si contrato; MSW/Cypress si E2E |
-| Infrastructure | `cursor/projects/infrastructure/project-context.md`, `.cursor/rules/infrastructure-terraform.mdc` | backend/frontend si outputs afectan apps |
-| Full-stack | Ambos project contexts + feature package | API docs + types/services en ambos lados |
-| Product / backlog | `cursor/company/README.md`, `future-work/`, `documentation-governance.md` | codigo solo si la decision requiere implementacion |
-| DX / AI workflow | Este Playbook, templates/scripts tocados | company/product docs solo si cambia scope |
-| Studies | `cursor/analysis/studies/<slug>/study.md`, study template | feature packages solo para filas `implement` |
+| Backend | `cursor/projects/backend/project-context.md`, `.cursor/rules/backend-serverless.mdc`, affected `backend/` paths | infra project-context if deploy; `company/future-work/` if backlog |
+| Frontend | `cursor/projects/frontend/project-context.md`, `.cursor/rules/frontend-react.mdc`, affected `frontend/` paths | backend docs if contract; MSW/Cypress if E2E |
+| Infrastructure | `cursor/projects/infrastructure/project-context.md`, `.cursor/rules/infrastructure-terraform.mdc` | backend/frontend if outputs affect apps |
+| Full-stack | Both project contexts + feature package | API docs + types/services on both sides |
+| Product / backlog | `cursor/company/README.md`, `future-work/`, `documentation-governance.md` | code only if the decision requires implementation |
+| DX / AI workflow | This Playbook, touched templates/scripts | company/product docs only if scope changes |
+| Studies | `cursor/analysis/studies/<slug>/study.md`, study template | feature packages only for `implement` rows |
 
-## Flujo determinista
+## Deterministic flow
 
 ```text
-[BACKLOG opcional] -> INTAKE -> STORY -> ANALYSIS -> IMPLEMENT -> VALIDATE -> REVIEW -> CLOSE
-                                            └─ trabajo en branch + PR ─┘
+[optional BACKLOG] -> INTAKE -> STORY -> ANALYSIS -> IMPLEMENT -> VALIDATE -> REVIEW -> CLOSE
+                                            └─ work on branch + PR ─┘
 ```
 
-| Fase | Proposito | Salida principal |
+| Phase | Purpose | Main output |
 | --- | --- | --- |
-| Intake | Registrar story (registry + STORY-LOG) y crear paquete | carpeta + manifest |
-| Story | Criterios de aceptacion | `user-story.md` |
-| Analysis | Impacto, contratos, riesgos | `analysis.md` |
-| Implementation | Codigo + docs en alcance | codigo + `implementation-notes.md` |
-| Validate | Ejecutar checks enfocados | `test-checklist.md` actualizado |
-| Review | Revision tipo PR | findings o `Review: **pass**` |
-| Close | Cerrar y sincronizar docs/backlog | manifest done + `INDEX.md` + GitHub |
+| Intake | Register story (registry + STORY-LOG) and create package | folder + manifest |
+| Story | Acceptance criteria | `user-story.md` |
+| Analysis | Impact, contracts, risks | `analysis.md` |
+| Implementation | Code + in-scope docs | code + `implementation-notes.md` |
+| Validate | Run focused checks | updated `test-checklist.md` |
+| Review | PR-style review | findings or `Review: **pass**` |
+| Close | Close and sync docs/backlog | manifest done + `INDEX.md` + GitHub |
 
-Gates mecanicos: `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase <phase>`. Detalle de tests: [`story-validation.md`](story-validation.md).
+Mechanical gates: `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase <phase>`. Test details: [`story-validation.md`](story-validation.md).
 
 ## Quick start
 
-Adjunta **solo el prompt** de la fase. El prompt ya referencia templates, reglas y contexto del proyecto.
+Attach **only the prompt** for the phase. The prompt already references templates, rules and project context.
 
-**Orquestador (varias fases en una sesion):** [`prompt-feature-lifecycle.md`](../prompts/feature/prompt-feature-lifecycle.md) — encadena analysis → close con gates. Inputs: `Start at`, `Run tests`, `Auto-close`.
+**Orchestrator (multiple phases in one session):** [`prompt-feature-lifecycle.md`](../prompts/feature/prompt-feature-lifecycle.md) — chains analysis → close with gates. Inputs: `Start at`, `Run tests`, `Auto-close`.
 
-**Slug vs name:** `Feature slug` define la carpeta bajo el area: `cursor/analysis/features/<area>/<feature-slug>/`. `Feature name` es el titulo legible en encabezados y en el campo `Name:` de cada artefacto.
+**Slug vs name:** `Feature slug` defines the folder under the area: `cursor/analysis/features/<area>/<feature-slug>/`. `Feature name` is the readable title in headers and the `Name:` field in each artifact.
 
-**Area:** para proyectos con backlog, usa [`AREA-TAXONOMY.md`](../company/future-work/AREA-TAXONOMY.md). Sin backlog, usa `backend` / `frontend` / `infrastructure` / `_core`.
+**Area:** for projects with backlog, use [`AREA-TAXONOMY.md`](../company/future-work/AREA-TAXONOMY.md). Without backlog, use `backend` / `frontend` / `infrastructure` / `_core`.
 
-### 0. Intake (opcional)
+### 0. Intake (optional)
 
 ```text
 @cursor/prompts/feature/prompt-story-intake.md
@@ -124,15 +124,15 @@ Mode: A
 <describe the feature in natural language>
 ```
 
-Registro mecanico (si existe `cursor/company/future-work/`):
+Mechanical registration (if `cursor/company/future-work/` exists):
 
 ```bash
 node cursor/scripts/new-feature.mjs --name "<Feature name>" --area frontend
 ```
 
-Imprime el bloque copy-paste del orquestador y lo deja en el `STORY-LOG.md` del area.
+Prints the orchestrator copy-paste block and writes it to the area's `STORY-LOG.md`.
 
-### 1. Crear paquete de analisis
+### 1. Create analysis package
 
 ```text
 @cursor/prompts/feature/prompt-feature-analysis-package.md
@@ -143,15 +143,15 @@ Ticket/story: <ticket-or-story-if-any>
 Stack scope: backend | frontend | infrastructure | full-stack
 ```
 
-Archivos esperados:
+Expected files:
 
-- `feature-manifest.md` (incluye **Validation plan**)
+- `feature-manifest.md` (includes **Validation plan**)
 - `user-story.md`
 - `analysis.md`
 
-Luego: `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase analysis`
+Then: `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase analysis`
 
-### 2. Implementar
+### 2. Implement
 
 ```text
 @cursor/prompts/feature/prompt-feature-implementation-package.md
@@ -161,16 +161,16 @@ Feature name: <feature-name>
 Stack scope: backend | frontend | infrastructure | full-stack
 ```
 
-Salidas esperadas:
+Expected outputs:
 
-- cambios de codigo/documentacion
+- code/documentation changes
 - `implementation-notes.md`
 - `test-checklist.md`
-- `feature-manifest.md` actualizado
+- updated `feature-manifest.md`
 
-Opcional: `node cursor/scripts/start-feature.mjs --slug <slug>`
+Optional: `node cursor/scripts/start-feature.mjs --slug <slug>`
 
-### 3. Validar
+### 3. Validate
 
 ```text
 @cursor/prompts/feature/prompt-feature-validation-package.md
@@ -180,9 +180,9 @@ Feature name: <feature-name>
 Stack scope: backend | frontend | infrastructure | full-stack
 ```
 
-Ejecuta `run-feature-gates.mjs --phase validation`. Evidencia en `test-checklist.md`.
+Run `run-feature-gates.mjs --phase validation`. Evidence in `test-checklist.md`.
 
-### 4. Revisar
+### 4. Review
 
 ```text
 @cursor/prompts/feature/prompt-feature-review.md
@@ -191,9 +191,9 @@ Feature slug: <feature-slug>
 Feature name: <feature-name>
 ```
 
-La revision debe empezar por hallazgos y clasificar severidad. Cierre requiere `Review: **pass**` en el checklist.
+Review must lead with findings and classify severity. Closing requires `Review: **pass**` in the checklist.
 
-### 5. Cerrar
+### 5. Close
 
 ```text
 @cursor/prompts/feature/prompt-feature-close-package.md
@@ -202,7 +202,7 @@ Feature slug: <feature-slug>
 Feature name: <feature-name>
 ```
 
-### Lifecycle completo
+### Full lifecycle
 
 ```text
 @cursor/prompts/feature/prompt-feature-lifecycle.md
@@ -216,9 +216,9 @@ Run tests: no
 Auto-close: yes
 ```
 
-## Ruta para bugs
+## Bug path
 
-Para bugs pequenos:
+For small bugs:
 
 ```text
 @cursor/prompts/feature/prompt-bug-fix.md
@@ -231,26 +231,26 @@ Feature slug: <bug-... | n/a>
 Feature name: <human-readable name | n/a>
 ```
 
-Si el bug requiere seguimiento, crea `cursor/analysis/features/<area>/bug-<ticket>/`.
+If the bug needs follow-up, create `cursor/analysis/features/<area>/bug-<ticket>/`.
 
-## Definicion de terminado
+## Definition of done
 
-- El alcance implementado coincide con `user-story.md` o el bug report.
-- API docs, reglas de negocio, tipos, servicios, mocks y pruebas E2E se actualizaron si el contrato cambio.
-- Pruebas o validacion manual estan registradas en `test-checklist.md`.
-- `implementation-notes.md` explica decisiones, archivos tocados y riesgos residuales.
-- La revision no tiene blockers ni majors abiertos (`Review: **pass**`).
-- `run-feature-gates.mjs --phase close-readiness` pasa.
-- `cursor/analysis/features/INDEX.md` refleja stage `done` cuando la feature se cierra.
-- Si hay backlog: `STORY-REGISTRY` + `STORY-LOG` del area actualizados; GitHub sync si esta configurado.
+- Implemented scope matches `user-story.md` or the bug report.
+- API docs, business rules, types, services, mocks and E2E tests updated if the contract changed.
+- Tests or manual validation recorded in `test-checklist.md`.
+- `implementation-notes.md` explains decisions, touched files and residual risks.
+- Review has no open blockers or majors (`Review: **pass**`).
+- `run-feature-gates.mjs --phase close-readiness` passes.
+- `cursor/analysis/features/INDEX.md` reflects stage `done` when the feature closes.
+- If backlog exists: area `STORY-REGISTRY` + `STORY-LOG` updated; GitHub sync if configured.
 
-## Referencia
+## Reference
 
-- Indice de prompts: `cursor/prompts/README.md`
-- Plantillas de artefactos: `cursor/templates/`
-- Gobernanza de docs: `cursor/docs/documentation-governance.md`
-- Validacion / smoke: `cursor/docs/story-validation.md`
+- Prompt index: `cursor/prompts/README.md`
+- Artifact templates: `cursor/templates/`
+- Doc governance: `cursor/docs/documentation-governance.md`
+- Validation / smoke: `cursor/docs/story-validation.md`
 - GitHub sync: `cursor/docs/github-projects-sync.md`
-- Indice de features: `cursor/analysis/features/INDEX.md`
+- Features index: `cursor/analysis/features/INDEX.md`
 - Context routing: `cursor/docs/context-scope-sessions.md`
 - Context trace (optional): `cursor/docs/context-trace-matrix.md`

@@ -1,22 +1,22 @@
 # Features — Index
 
-Indice de paquetes bajo `cursor/analysis/features/`. Actualizar al crear o cerrar una feature.
+Index of packages under `cursor/analysis/features/`. Update when creating or closing a feature.
 
-## Convenciones
+## Conventions
 
-| Campo | Uso |
+| Field | Use |
 | --- | --- |
-| **Ticket** | ID ejecutable (JIRA, GitHub issue, `STORY-*`) — campo Ticket/story en manifest |
-| **Backlog ID** | ID de backlog de producto (`FW-*`) — separado del ticket |
-| **Slug** | Carpeta kebab-case |
-| **Name** | Titulo legible (Feature name) |
-| **Area** | Subcarpeta opcional: `backend`, `frontend`, `infrastructure`, `_core`, … |
+| **Ticket** | Executable ID (JIRA, GitHub issue, `STORY-*`) — Ticket/story field in manifest |
+| **Backlog ID** | Product backlog ID (`FW-*`) — separate from ticket |
+| **Slug** | kebab-case folder |
+| **Name** | Readable title (Feature name) |
+| **Area** | Optional subfolder: `backend`, `frontend`, `infrastructure`, `_core`, … |
 | **Stage** | intake \| analysis \| implementation \| validation \| review \| done |
 
-Ruta:
+Path:
 
-- Con area: `cursor/analysis/features/<area>/<slug>/`
-- Sin area: `cursor/analysis/features/<slug>/`
+- With area: `cursor/analysis/features/<area>/<slug>/`
+- Without area: `cursor/analysis/features/<slug>/`
 
 ## Index
 
@@ -24,10 +24,10 @@ Ruta:
 | --- | --- | --- | --- | --- | --- |
 | — | — | — | — | — | — |
 
-## Como actualizar
+## How to update
 
-1. Al **crear** paquete: anadir fila con stage inicial.
-2. Al **cerrar**: stage `done` via `prompt-feature-close-package.md`.
-3. Mantener **Name** = Feature name; no usar slug como titulo en manifest.
+1. When **creating** a package: add a row with the initial stage.
+2. When **closing**: set stage `done` via `prompt-feature-close-package.md`.
+3. Keep **Name** = Feature name; do not use slug as title in manifest.
 
-Relacionado: `cursor/docs/documentation-governance.md`, `cursor/company/future-work/STORY-REGISTRY.md` (si existe).
+Related: `cursor/docs/documentation-governance.md`, `cursor/company/future-work/STORY-REGISTRY.md` (if present).

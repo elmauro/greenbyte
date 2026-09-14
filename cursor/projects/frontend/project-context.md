@@ -2,7 +2,7 @@
 
 ## Overview
 
-Frontend web para `GreenByte`, dominio `AgTech — intelligent agriculture and crop data`.
+Web frontend for `GreenByte`, domain `AgTech — intelligent agriculture and crop data`.
 
 ## Stack
 
@@ -32,8 +32,7 @@ Use `frontend/frontend.config.json` as the source of truth for selected frontend
 
 ## Rules
 
-- No hardcodear configuracion de ambiente.
-- Mantener servicios HTTP en `src/services/`.
-- Actualizar tipos y tests cuando cambien contratos API.
-- Documentar rutas, flujos criticos y despliegue frontend.
-
+- Do not hardcode environment configuration.
+- Keep HTTP services in `src/services/`.
+- Update types and tests when API contracts change.
+- Document routes, critical flows and frontend deployment.

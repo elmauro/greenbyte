@@ -32,13 +32,13 @@ Do not commit secrets or production data in studies.
 
 1. Create `study.md` from [`analysis-study-template.md`](../templates/analysis-study-template.md).
 2. Fill **FINDINGS** and **CANDIDATE STORIES**.
-3. Promote via [`prompt-story-intake.md`](../prompts/feature/prompt-story-intake.md) **Mode B**, or manually per row (Modo A / analysis package).
+3. Promote via [`prompt-story-intake.md`](../prompts/feature/prompt-story-intake.md) **Mode B**, or manually per row (Mode A / analysis package).
 4. If using product backlog: register **Backlog ID** in `cursor/company/future-work/STORY-REGISTRY.md`.
 
 Studies are **planning artifacts** — they do not replace shipped docs in `docs/` or stack docs.
 
 ## Related
 
-- Intake Modo B: `cursor/prompts/feature/prompt-story-intake.md`
+- Intake Mode B: `cursor/prompts/feature/prompt-story-intake.md`
 - Features index: [`features/INDEX.md`](features/INDEX.md)
 - Governance: `cursor/docs/documentation-governance.md`

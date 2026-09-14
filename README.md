@@ -1,6 +1,6 @@
 # GreenByte
 
-Repositorio: [github.com/elmauro/greenbyte](https://github.com/elmauro/greenbyte)
+Repository: [github.com/elmauro/greenbyte](https://github.com/elmauro/greenbyte)
 
 Generated from `project-foundation-template`.
 
@@ -23,10 +23,10 @@ Generated from `project-foundation-template`.
 
 ## Hackathon & Syngenta
 
-GreenByte — **HatchWorks AI Hackathon — AgTech Edition** (28 sep – 1 oct 2026), en colaboración con **Syngenta**.  
-Contexto: [`cursor/company/HACKATHON.md`](cursor/company/HACKATHON.md).
+GreenByte — **HatchWorks AI Hackathon — AgTech Edition** (28 Sep – 1 Oct 2026), in collaboration with **Syngenta**.  
+Context: [`cursor/company/HACKATHON.md`](cursor/company/HACKATHON.md).
 
-**Dominio:** [greenbyte-ag.com](https://greenbyte-ag.com) — despliegue AWS: [`docs/infrastructure/greenbyte-ag-domain.md`](docs/infrastructure/greenbyte-ag-domain.md).
+**Domain:** [greenbyte-ag.com](https://greenbyte-ag.com) — AWS deployment: [`docs/infrastructure/greenbyte-ag-domain.md`](docs/infrastructure/greenbyte-ag-domain.md).
 
 ## Quick start
 

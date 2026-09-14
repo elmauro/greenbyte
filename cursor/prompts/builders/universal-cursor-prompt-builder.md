@@ -2,24 +2,24 @@
 
 ## Purpose
 
-- Ejecutar análisis, documentación, planificación, implementación, pruebas y revisión en esta sesión.
-- No producir un prompt para pegar en otro lugar salvo que el usuario lo pida.
-- Guardar artefactos largos bajo `cursor/analysis/features/<feature-slug>/` cuando la tarea crea estado duradero.
+- Run analysis, documentation, planning, implementation, tests and review in this session.
+- Do not produce a prompt to paste elsewhere unless the user asks.
+- Save long artifacts under `cursor/analysis/features/<feature-slug>/` when the task creates durable state.
 
 ## Systems
 
 - **Frontend:** `frontend/`
-  - React, Vite, TypeScript y las features habilitadas por el preset (routes, services, tests, mocks, etc.).
-  - Fuente de UI, rutas, servicios, tipos y pruebas de frontend.
+  - React, Vite, TypeScript and preset-enabled features (routes, services, tests, mocks, etc.).
+  - Source for UI, routes, services, types and frontend tests.
 - **Backend:** `backend/`
-  - Node.js, Serverless Framework, AWS Lambda, API Gateway y las APIs/layers generadas por el preset.
-  - Fuente de contratos, reglas de negocio, datos, auth e infraestructura de aplicación.
+  - Node.js, Serverless Framework, AWS Lambda, API Gateway and preset-generated APIs/layers.
+  - Source for contracts, business rules, data, auth and application infrastructure.
 - **Infrastructure:** `infrastructure/`
-  - Terraform y capabilities AWS cuando el preset lo incluye.
+  - Terraform and AWS capabilities when the preset includes them.
 - **Cursor kit:** `cursor/`
-  - Fuente de contexto IA, prompts, templates y artefactos de análisis.
+  - Source for AI context, prompts, templates and analysis artifacts.
 - **Active rules:** `.cursor/rules/*.mdc`
-  - Reglas breves y accionables que Cursor aplica automáticamente.
+  - Brief, actionable rules Cursor applies automatically.
 
 ## Required Context
 

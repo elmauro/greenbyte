@@ -1,14 +1,13 @@
 # dynamodb
 
-Contrato para tablas DynamoDB reutilizables.
+Contract for reusable DynamoDB tables.
 
-## Inputs esperados
+## Expected inputs
 
 - `project`
 - `environment`
 - `tables`
 
-## Pendiente
+## Pending
 
-Definir convenciones de keys, TTL, streams, backups y capacidad antes de promoverlo a modulo productivo.
-
+Define key conventions, TTL, streams, backups and capacity before promoting to a production module.

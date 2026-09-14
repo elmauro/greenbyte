@@ -2,14 +2,14 @@
 
 ## Overview
 
-`GreenByte` usa el preset `fullstack-aws-enterprise`.
+`GreenByte` uses the `fullstack-aws-enterprise` preset.
 
 ## Components
 
-- Frontend web, si aplica.
-- Backend API, si aplica.
-- Infraestructura AWS, si aplica.
-- Contexto Cursor para trabajo asistido por IA.
+- Frontend web, when applicable.
+- Backend API, when applicable.
+- AWS infrastructure, when applicable.
+- Cursor context for AI-assisted work.
 
 ## Environments
 
@@ -20,4 +20,3 @@
 ## AWS region
 
 `us-east-1`
-

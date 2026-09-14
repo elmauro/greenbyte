@@ -1,8 +1,8 @@
 # rds-postgres
 
-Contrato para PostgreSQL administrado en AWS.
+Contract for managed PostgreSQL on AWS.
 
-## Inputs esperados
+## Expected inputs
 
 - `project`
 - `environment`
@@ -10,7 +10,6 @@ Contrato para PostgreSQL administrado en AWS.
 - `subnet_ids`
 - `instance_class`
 
-## Pendiente
+## Pending
 
-Definir networking, backups, rotacion de credenciales, RDS Proxy y estrategia de migraciones.
-
+Define networking, backups, credential rotation, RDS Proxy and migration strategy.

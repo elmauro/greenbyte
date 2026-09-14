@@ -1,4 +1,4 @@
-# Prompt: revisión de feature (post-implementación)
+# Prompt: Feature Review (post-implementation)
 
 **Goal:** Review the implementation as a careful peer: correctness, security, maintainability, and alignment with project rules and the stated story.
 
@@ -16,7 +16,7 @@
 Task type: feature review
 Feature slug: <feature-slug>
 Feature name: <feature-name>
-PR / branch / archivos clave a revisar: <refs>
+PR / branch / key files to review: <refs>
 
 Please review against Feature name: <feature-name> and the acceptance criteria in user-story.md.
 

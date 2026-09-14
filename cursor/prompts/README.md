@@ -1,31 +1,31 @@
-# Prompts — uso en Cursor
+# Prompts — using Cursor
 
-Prompts reutilizables para trabajar con Cursor sobre `GreenByte`.
+Reusable prompts for working with Cursor on `GreenByte`.
 
-## Índice
+## Index
 
-| Carpeta / archivo | Cuándo usarlo |
+| Folder / file | When to use |
 |-------------------|---------------|
-| `builders/universal-cursor-prompt-builder.md` | Guía de ejecución para tareas completas en la sesión actual. |
-| `feature/prompt-story-intake.md` | **Entrada** — Modo A story nueva; Modo B desde estudio (`analysis/studies/`). |
-| `feature/prompt-feature-lifecycle.md` | Orquestador analysis → implement → validate → review → close **con gates**. |
-| `feature/prompt-feature-analysis-package.md` | Story + analysis + manifest sin implementar. |
-| `feature/prompt-feature-implementation-package.md` | Implementar + notes + checklist + manifest. |
-| `feature/prompt-feature-validation-package.md` | Ejecutar checks y actualizar test-checklist. |
-| `feature/prompt-feature-review.md` | Revisar diff, riesgos, pruebas y documentación. |
-| `feature/prompt-feature-close-package.md` | Cerrar story, INDEX y sync de docs/backlog. |
-| `feature/prompt-bug-fix.md` | Reproducir, corregir y validar un bug. |
-| `feature/prompt-user-story.md` | Crear o refinar criterios de aceptación. |
-| `feature/prompt-test-checklist.md` | Crear checklist de validación. |
-| `feature/prompt-feature-manifest-update.md` | Actualizar estado y próximos pasos de una feature. |
+| `builders/universal-cursor-prompt-builder.md` | Execution guide for complete tasks in the current session. |
+| `feature/prompt-story-intake.md` | **Entry** — Mode A new story; Mode B from study (`analysis/studies/`). |
+| `feature/prompt-feature-lifecycle.md` | Orchestrator analysis → implement → validate → review → close **with gates**. |
+| `feature/prompt-feature-analysis-package.md` | Story + analysis + manifest without implementing. |
+| `feature/prompt-feature-implementation-package.md` | Implement + notes + checklist + manifest. |
+| `feature/prompt-feature-validation-package.md` | Run checks and update test-checklist. |
+| `feature/prompt-feature-review.md` | Review diff, risks, tests and documentation. |
+| `feature/prompt-feature-close-package.md` | Close story, INDEX and doc/backlog sync. |
+| `feature/prompt-bug-fix.md` | Reproduce, fix and validate a bug. |
+| `feature/prompt-user-story.md` | Create or refine acceptance criteria. |
+| `feature/prompt-test-checklist.md` | Create validation checklist. |
+| `feature/prompt-feature-manifest-update.md` | Update feature status and next steps. |
 
-## Regla de alcance
+## Scope rule
 
-Antes de pedir implementación, define:
+Before requesting implementation, define:
 
-- Stack scope: `frontend`, `backend`, `infrastructure` o `full-stack`.
-- Feature slug y Feature name.
-- Carpetas concretas a revisar.
-- Resultado esperado: plan, diff, documentación, pruebas o revisión.
+- Stack scope: `frontend`, `backend`, `infrastructure` or `full-stack`.
+- Feature slug and Feature name.
+- Concrete folders to review.
+- Expected outcome: plan, diff, documentation, tests or review.
 
-Evita prompts que pidan analizar todo el repositorio salvo que el objetivo realmente lo requiera.
+Avoid prompts that ask to analyze the entire repository unless the goal truly requires it.

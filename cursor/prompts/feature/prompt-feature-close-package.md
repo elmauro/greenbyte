@@ -1,12 +1,12 @@
 # Prompt: Feature Close Package
 
-Cerrar una feature cuando review paso y la validacion esta documentada.
+Close a feature when review passed and validation is documented.
 
 ## Required inputs
 
 - Feature slug: `<feature-slug>`
 - Feature name: `<feature-name>`
-- Area (opcional): `<area>`
+- Area (optional): `<area>`
 
 ## Prompt to paste in Cursor
 
@@ -25,9 +25,9 @@ Feature slug: <feature-slug>
 Feature name: <feature-name>
 
 Preconditions:
-- Review: pass (sin blockers ni majors abiertos) — `Review: **pass**` en test-checklist.md
-- Testing: done o gaps documentados en test-checklist.md
-- Implementation alineada con user-story.md o desviaciones en implementation-notes.md
+- Review: pass (no open blockers or majors) — `Review: **pass**` in test-checklist.md
+- Testing: done or gaps documented in test-checklist.md
+- Implementation aligned with user-story.md or deviations in implementation-notes.md
 - Gate: node cursor/scripts/run-feature-gates.mjs --slug <feature-slug> --phase close-readiness
 
 Please execute in order:
@@ -43,7 +43,7 @@ PHASE 2 — INDEX
 
 PHASE 3 — BACKLOG SYNC (if applicable)
 - If cursor/company/future-work/STORY-REGISTRY.md exists: mark story shipped
-- If future-work/<area>/STORY-LOG.md exists: Estado: shipped
+- If future-work/<area>/STORY-LOG.md exists: Status: shipped
 - If Backlog ID (FW-*) exists: move item to Shipped in area README under future-work/
 - Do not invent links or IDs
 
@@ -55,7 +55,7 @@ PHASE 4 — GITHUB SYNC (optional)
 
 PHASE 5 — DOCUMENTATION SYNC
 - Follow cursor/docs/documentation-governance.md
-- Update docs/ or stack README solo si el cambio lo invalida
+- Update docs/ or stack README only if the change invalidates them
 - Cross-link from implementation-notes.md if contracts changed
 
 PHASE 6 — HANDOFF

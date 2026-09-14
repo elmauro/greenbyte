@@ -1,6 +1,6 @@
 # GreenByte Backend
 
-Backend multi-API serverless para `GreenByte`, alineado con una estructura de APIs separadas, Lambda layers, database, tests e infraestructura compartida.
+Multi-API serverless backend for `GreenByte`, aligned with separate APIs, Lambda layers, database, tests and shared infrastructure.
 
 ## Structure
 

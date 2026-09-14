@@ -1,20 +1,20 @@
 # Terraform Modules
 
-Modulos reutilizables para infraestructura AWS comun entre proyectos.
+Reusable modules for common AWS infrastructure across projects.
 
-## Modulos
+## Modules
 
-| Modulo | Proposito |
+| Module | Purpose |
 | --- | --- |
-| `cognito` | User pool y cliente de aplicacion. |
-| `static-web` | S3 + CloudFront para frontend estatico. |
-| `api-gateway-lambda` | Contrato base para APIs serverless. |
-| `dynamodb` | Tablas DynamoDB por dominio. |
-| `rds-postgres` | PostgreSQL administrado. |
-| `ses` | Configuracion base de email. |
-| `ssm-secrets` | Parametros y referencias a secretos. |
+| `cognito` | User pool and application client. |
+| `static-web` | S3 + CloudFront for static frontend. |
+| `api-gateway-lambda` | Base contract for serverless APIs. |
+| `dynamodb` | DynamoDB tables by domain. |
+| `rds-postgres` | Managed PostgreSQL. |
+| `ses` | Base email configuration. |
+| `ssm-secrets` | Parameters and secret references. |
 
-## Uso
+## Usage
 
 ```hcl
 module "auth" {
@@ -25,5 +25,4 @@ module "auth" {
 }
 ```
 
-Versiona estos modulos antes de usarlos en multiples repositorios productivos.
-
+Version these modules before using them across multiple production repositories.

@@ -1,17 +1,17 @@
 # Prompt: Feature Validation Package
 
-Ejecutar validacion enfocada despues de implementacion y antes de review formal.
+Run focused validation after implementation and before formal review.
 
 ## Required inputs
 
 - Feature slug: `<feature-slug>`
 - Feature name: `<feature-name>`
-- Area (opcional): `<area>`
+- Area (optional): `<area>`
 - Stack scope: `backend`, `frontend`, `infrastructure` or `full-stack`
 
-Ruta del paquete:
+Package path:
 
-- `cursor/analysis/features/<feature-slug>/` o
+- `cursor/analysis/features/<feature-slug>/` or
 - `cursor/analysis/features/<area>/<feature-slug>/`
 
 ## Prompt to paste in Cursor
@@ -29,7 +29,7 @@ Feature name: <feature-name>
 Stack scope: backend | frontend | infrastructure | full-stack
 
 Naming rules:
-- Actualizar test-checklist.md con Feature name en titulo y campo Name.
+- Update test-checklist.md with Feature name in title and Name field.
 
 Please execute in order:
 
@@ -37,21 +37,21 @@ PHASE 1 — READ CHECKLIST
 - Reconfirm acceptance criteria from user-story.md via test-checklist.md.
 - List blocked or not-run items explicitly.
 
-PHASE 2 — RUN FOCUSED CHECKS (por stack scope)
-- Frontend: lint/build/test en frontend/ cuando exista (npm run lint, build, test).
-- Backend: tests en backend/ cuando exista (npm test, integration si aplica).
-- Infrastructure: terraform fmt/validate en infrastructure/ cuando aplique.
-- Full-stack: al menos un check por stack tocado en implementation-notes.md.
-- Luego: node cursor/scripts/run-feature-gates.mjs --slug <feature-slug> --phase validation
-  (ejecuta comandos del Validation plan si Run tests: yes; si no, solo archivos).
+PHASE 2 — RUN FOCUSED CHECKS (by stack scope)
+- Frontend: lint/build/test in frontend/ when present (npm run lint, build, test).
+- Backend: tests in backend/ when present (npm test, integration if applicable).
+- Infrastructure: terraform fmt/validate in infrastructure/ when applicable.
+- Full-stack: at least one check per stack touched in implementation-notes.md.
+- Then: node cursor/scripts/run-feature-gates.mjs --slug <feature-slug> --phase validation
+  (runs Validation plan commands if Run tests: yes; otherwise files only).
 
 PHASE 3 — UPDATE ARTIFACTS
-- Marcar resultados en test-checklist.md (passed / failed / blocked / not run).
-- Actualizar feature-manifest.md: Testing status, Validation plan, next step.
-- Si un check no se ejecuto, documentar por que.
+- Mark results in test-checklist.md (passed / failed / blocked / not run).
+- Update feature-manifest.md: Testing status, Validation plan, next step.
+- If a check was not run, document why.
 
 Constraints:
-- No expandir scope ni implementar features nuevas.
-- No marcar Testing: done si hay fallos sin explicacion o blockers abiertos.
-- Preferir checks que el desarrollador pueda reproducir.
+- Do not expand scope or implement new features.
+- Do not mark Testing: done if there are failures without explanation or open blockers.
+- Prefer checks the developer can reproduce.
 ```

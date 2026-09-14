@@ -1,8 +1,8 @@
 # AI Workspace - GreenByte
 
-Contexto, reglas, prompts y artefactos de trabajo para Cursor.
+Context, rules, prompts and working artifacts for Cursor.
 
-## Estructura
+## Structure
 
 ```text
 cursor/
@@ -46,36 +46,36 @@ cursor/company/
    └─ README.md
 ```
 
-## Uso
+## Usage
 
-- Usa `.cursor/rules/*.mdc` para reglas activas que Cursor debe aplicar automaticamente.
-- Usa `context-map.md` como indice rapido del proyecto.
-- Usa `docs/AI-Project-Playbook.md` como flujo base.
-- Usa `prompts/README.md` para elegir el prompt correcto por tarea.
-- Actualiza `projects/*/project-context.md` cuando cambie la arquitectura real.
-- Crea artefactos por feature en `analysis/features/<feature-slug>/`.
-- Mantiene las reglas tecnicas separadas de las reglas de negocio.
+- Use `.cursor/rules/*.mdc` for active rules Cursor should apply automatically.
+- Use `context-map.md` as the quick project index.
+- Use `docs/AI-Project-Playbook.md` as the base workflow.
+- Use `prompts/README.md` to pick the right prompt per task.
+- Update `projects/*/project-context.md` when the real architecture changes.
+- Create per-feature artifacts in `analysis/features/<feature-slug>/`.
+- Keep technical rules separate from business rules.
 
-## Prompts disponibles
+## Available prompts
 
-| Prompt | Uso |
+| Prompt | Use |
 | --- | --- |
-| `prompts/builders/universal-cursor-prompt-builder.md` | Guia de ejecucion para tareas completas en sesion. |
-| `prompts/feature/prompt-story-intake.md` | Intake conversacional + crear paquete. |
-| `prompts/feature/prompt-feature-lifecycle.md` | Lifecycle completo analysis→close **con gates**. |
-| `prompts/feature/prompt-feature-analysis-package.md` | Story + analysis + manifest sin implementar. |
-| `prompts/feature/prompt-feature-implementation-package.md` | Implementacion + notes + checklist + manifest. |
-| `prompts/feature/prompt-feature-validation-package.md` | Validacion enfocada pre-review. |
-| `prompts/feature/prompt-feature-close-package.md` | Cerrar feature + INDEX + sync docs. |
-| `prompts/feature/prompt-feature-review.md` | Revision post-implementacion. |
-| `prompts/feature/prompt-bug-fix.md` | Reproducir, corregir y validar un bug. |
-| `prompts/feature/prompt-user-story.md` | Crear o refinar user story. |
-| `prompts/feature/prompt-test-checklist.md` | Crear checklist de validacion. |
-| `prompts/feature/prompt-feature-manifest-update.md` | Actualizar estado de una feature. |
+| `prompts/builders/universal-cursor-prompt-builder.md` | Execution guide for complete tasks in a session. |
+| `prompts/feature/prompt-story-intake.md` | Conversational intake + create package. |
+| `prompts/feature/prompt-feature-lifecycle.md` | Full lifecycle analysis→close **with gates**. |
+| `prompts/feature/prompt-feature-analysis-package.md` | Story + analysis + manifest without implementing. |
+| `prompts/feature/prompt-feature-implementation-package.md` | Implementation + notes + checklist + manifest. |
+| `prompts/feature/prompt-feature-validation-package.md` | Focused pre-review validation. |
+| `prompts/feature/prompt-feature-close-package.md` | Close feature + INDEX + sync docs. |
+| `prompts/feature/prompt-feature-review.md` | Post-implementation review. |
+| `prompts/feature/prompt-bug-fix.md` | Reproduce, fix and validate a bug. |
+| `prompts/feature/prompt-user-story.md` | Create or refine user story. |
+| `prompts/feature/prompt-test-checklist.md` | Create validation checklist. |
+| `prompts/feature/prompt-feature-manifest-update.md` | Update feature status. |
 
 ## Analysis artifacts
 
-Usa `analysis/features/<feature-slug>/` para mantener contexto durable de cada trabajo:
+Use `analysis/features/<feature-slug>/` to keep durable context for each piece of work:
 
 - `feature-manifest.md`
 - `user-story.md`
@@ -83,9 +83,9 @@ Usa `analysis/features/<feature-slug>/` para mantener contexto durable de cada t
 - `implementation-notes.md`
 - `test-checklist.md`
 
-Usa templates de `cursor/templates/` al crear estos archivos.
+Use templates from `cursor/templates/` when creating these files.
 
 ## `.cursor/` vs `cursor/`
 
-- `.cursor/`: configuracion activa para Cursor.
-- `cursor/`: documentacion, prompts, contexto y memoria de trabajo.
+- `.cursor/`: active configuration for Cursor.
+- `cursor/`: documentation, prompts, context and working memory.

@@ -1,6 +1,6 @@
 # Local Development
 
-Recursos opcionales para desarrollo local.
+Optional resources for local development.
 
 ## Docker Compose
 
@@ -8,9 +8,8 @@ Recursos opcionales para desarrollo local.
 docker compose up -d
 ```
 
-Servicios incluidos:
+Included services:
 
-- PostgreSQL para desarrollo local.
+- PostgreSQL for local development.
 
-Estos servicios son opcionales. Agrega otros servicios locales solo cuando el proyecto los necesite.
-
+These services are optional. Add other local services only when the project needs them.

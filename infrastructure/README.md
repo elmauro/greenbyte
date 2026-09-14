@@ -1,6 +1,6 @@
 # GreenByte Infrastructure
 
-Infraestructura AWS organizada por capability, alineada con proyectos serverless existentes.
+AWS infrastructure organized by capability, aligned with existing serverless projects.
 
 ## Structure
 
@@ -17,5 +17,4 @@ infrastructure/
 └─ scripts/
 ```
 
-Cada capability mantiene su propio estado, variables y runbook cuando aplica.
-
+Each capability keeps its own state, variables and runbook when applicable.

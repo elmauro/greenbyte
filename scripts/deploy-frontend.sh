@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Build + sync frontend to S3 + invalidar CloudFront.
-# Requiere: AWS CLI, terraform apply previo en infrastructure/web/
+# Build + sync frontend to S3 + invalidate CloudFront.
+# Requires: AWS CLI, prior terraform apply in infrastructure/web/
 #
-# Uso:
+# Usage:
 #   export AWS_PROFILE=default AWS_REGION=us-east-1
 #   ./scripts/deploy-frontend.sh
 #   ./scripts/deploy-frontend.sh --bucket greenbyte-dev-web --distribution-id E1234567890
@@ -18,12 +18,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --bucket) BUCKET="$2"; shift 2 ;;
     --distribution-id) DIST_ID="$2"; shift 2 ;;
-    *) echo "Opción desconocida: $1" >&2; exit 1 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
 
 if [[ -z "$BUCKET" || -z "$DIST_ID" ]]; then
-  echo "Leyendo outputs de Terraform (infrastructure/web)..."
+  echo "Reading Terraform outputs (infrastructure/web)..."
   pushd "$ROOT/infrastructure/web" >/dev/null
   terraform init -input=false >/dev/null
   BUCKET="${BUCKET:-$(terraform output -raw web_bucket_name)}"
@@ -50,4 +50,4 @@ aws cloudfront wait invalidation-completed \
   --id "$INVALIDATION_ID"
 
 echo "=== Done ==="
-echo "Site: https://greenbyte-ag.com (si DNS y certificado ACM están listos)"
+echo "Site: https://greenbyte-ag.com (when DNS and ACM certificate are ready)"

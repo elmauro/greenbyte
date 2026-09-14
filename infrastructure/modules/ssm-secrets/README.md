@@ -1,17 +1,16 @@
 # ssm-secrets
 
-Contrato para parametros y secretos comunes.
+Contract for common parameters and secrets.
 
-## Inputs esperados
+## Expected inputs
 
 - `project`
 - `environment`
 - `parameters`
 - `secrets`
 
-## Reglas
+## Rules
 
-- No almacenar valores sensibles en archivos versionados.
-- Usar `SecureString` o Secrets Manager para secretos.
-- Documentar consumidores de cada parametro.
-
+- Do not store sensitive values in versioned files.
+- Use `SecureString` or Secrets Manager for secrets.
+- Document consumers of each parameter.

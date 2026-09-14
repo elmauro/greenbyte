@@ -8,21 +8,20 @@ Owner team: `greenbyte-hackathon`
 
 Frontend web:
 
-1. Crear infraestructura en `infrastructure/web`.
-2. Configurar GitHub environment con outputs de Terraform.
-3. Ejecutar workflow `Deploy Web`.
-4. Abrir la URL de CloudFront.
+1. Create infrastructure in `infrastructure/web`.
+2. Configure GitHub environment with Terraform outputs.
+3. Run the `Deploy Web` workflow (or push to `master` with frontend changes).
+4. Open the CloudFront URL or https://greenbyte-ag.com.
 
-Ver `docs/infrastructure/web-deployment.md`.
+See `docs/infrastructure/web-deployment.md` and `docs/infrastructure/greenbyte-ag-domain.md`.
 
 ## Rollback
 
-Documentar estrategia de rollback por componente.
+Document rollback strategy per component.
 
 ## Operational checks
 
-- Frontend disponible.
-- API healthcheck responde.
-- Logs sin errores criticos.
-- Alarmas revisadas.
-
+- Frontend available.
+- API healthcheck responds.
+- Logs without critical errors.
+- Alarms reviewed.

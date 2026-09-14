@@ -1,45 +1,45 @@
 # Story log — template (lifecycle diary per area)
 
-Plantilla para el archivo **`STORY-LOG.md`** que vive en cada carpeta de área bajo `cursor/company/future-work/` (`backend/`, `frontend/`, `infrastructure/`, `product/`, `_core/`, o un área de dominio).
+Template for the **`STORY-LOG.md`** file that lives in each area folder under `cursor/company/future-work/` (`backend/`, `frontend/`, `infrastructure/`, `product/`, `_core/`, or a domain area).
 
-## Para qué sirve
+## Purpose
 
-Registrar, **por área**, cada story que se va a implementar (o ya se implementó) junto con su **bloque copy-paste** del orquestador [`prompt-feature-lifecycle.md`](../../prompts/feature/prompt-feature-lifecycle.md). Así vas directo a **una** story sin abrir el registry completo.
+Record, **per area**, each story to implement (or already implemented) along with its **copy-paste block** from the [`prompt-feature-lifecycle.md`](../../prompts/feature/prompt-feature-lifecycle.md) orchestrator. This lets you jump directly to **one** story without opening the full registry.
 
-## Dónde vive
+## Location
 
-- Un `STORY-LOG.md` por área: `future-work/<área>/STORY-LOG.md`.
-- El **backlog** (`FW-*`) sigue en el `README.md` del folder; el **detalle** de la story sigue en `cursor/analysis/features/<área>/<slug>/`.
+- One `STORY-LOG.md` per area: `future-work/<area>/STORY-LOG.md`.
+- The **backlog** (`FW-*`) stays in the folder `README.md`; **detail** stays in `cursor/analysis/features/<area>/<slug>/`.
 
-`new-feature.mjs` crea el log si no existe y inserta la entrada (más reciente arriba).
+`new-feature.mjs` creates the log if missing and inserts the entry (newest first).
 
-## Relación con los otros archivos (no duplicar)
+## Relationship with other files (do not duplicate)
 
-| Archivo | Rol | Granularidad |
+| File | Role | Granularity |
 | --- | --- | --- |
-| `README.md` del folder | Backlog FW-* (gaps, prioridad, shipped) | Por área |
-| [`STORY-REGISTRY.md`](STORY-REGISTRY.md) | Asignación maestra **ticket ↔ FW ↔ slug** | Global |
-| **`STORY-LOG.md`** (este template) | **Bloques lifecycle + estado de ejecución** | Por área |
-| `cursor/analysis/features/<área>/<slug>/` | Análisis, implementación, tests | Por story |
-| [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) | Formato de un ítem FW | — |
+| Folder `README.md` | FW-* backlog (gaps, priority, shipped) | Per area |
+| [`STORY-REGISTRY.md`](STORY-REGISTRY.md) | Master **ticket ↔ FW ↔ slug** mapping | Global |
+| **`STORY-LOG.md`** (this template) | **Lifecycle blocks + execution status** | Per area |
+| `cursor/analysis/features/<area>/<slug>/` | Analysis, implementation, tests | Per story |
+| [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) | Format for one FW item | — |
 
-**Regla:** el `STORY-LOG.md` **no** repite el backlog ni el análisis; es el diario de uso del lifecycle del folder.
+**Rule:** `STORY-LOG.md` does **not** repeat the backlog or analysis; it is the lifecycle usage diary for the folder.
 
-## Estados sugeridos
+## Suggested statuses
 
-`planned` (registrado, sin empezar) · `in-progress` · `review` · `shipped` · `deferred`.
+`planned` (registered, not started) · `in-progress` · `review` · `shipped` · `deferred`.
 
 ---
 
-## Formato de una entrada (copiar por cada story)
+## Entry format (copy per story)
 
 ```markdown
 ### GREENBYTE-### — <Feature name>
 
 - FW: `FW-GREENBYTE-<nnn>` · Slug: `<feature-slug>` · Stack: backend|frontend|infrastructure|full-stack
 - Branch: `feature/GREENBYTE-###` · PR: `GREENBYTE-###: <Feature name>`
-- Estado: planned | in-progress | review | shipped | deferred
-- Package: `cursor/analysis/features/<área>/<slug>/` · Issue: #<n> (si existe)
+- Status: planned | in-progress | review | shipped | deferred
+- Package: `cursor/analysis/features/<area>/<slug>/` · Issue: #<n> (if exists)
 
 ​```text
 @cursor/prompts/feature/prompt-feature-lifecycle.md
@@ -55,15 +55,15 @@ Auto-close: yes
 ​```
 ```
 
-> Para una story **nueva**, usa `Start at: analysis`. Para re-sincronizar o cerrar una ya hecha, `Start at: close`.
+> For a **new** story, use `Start at: analysis`. To re-sync or close an existing one, `Start at: close`.
 
-## Encabezado de cada `STORY-LOG.md`
+## Header for each `STORY-LOG.md`
 
 ```markdown
 # Story log — <Area>
 
-Registro de stories (uso de `prompt-feature-lifecycle.md`) para esta área.
-Backlog FW-*: [`README.md`](README.md) · Maestro ticket↔FW: [`../STORY-REGISTRY.md`](../STORY-REGISTRY.md) · Plantilla: [`../STORY-LOG-TEMPLATE.md`](../STORY-LOG-TEMPLATE.md).
+Story registry (usage of `prompt-feature-lifecycle.md`) for this area.
+FW-* backlog: [`README.md`](README.md) · Master ticket↔FW: [`../STORY-REGISTRY.md`](../STORY-REGISTRY.md) · Template: [`../STORY-LOG-TEMPLATE.md`](../STORY-LOG-TEMPLATE.md).
 
 ## Stories
 

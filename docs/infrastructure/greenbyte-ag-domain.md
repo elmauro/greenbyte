@@ -1,16 +1,16 @@
-# Dominio greenbyte-ag.com en AWS
+# greenbyte-ag.com domain on AWS
 
-Guía para servir el frontend en **https://greenbyte-ag.com** con S3 + CloudFront + Route 53 + ACM.
+Guide to serve the frontend at **https://greenbyte-ag.com** with S3 + CloudFront + Route 53 + ACM.
 
-## Prerrequisitos
+## Prerequisites
 
-1. Dominio **greenbyte-ag.com** registrado (Route 53 u otro registrar).
-2. AWS CLI y Terraform ≥ 1.9.
-3. Frontend compila: `cd frontend && npm install && npm run build`.
+1. **greenbyte-ag.com** registered (Route 53 or another registrar).
+2. AWS CLI and Terraform ≥ 1.9.
+3. Frontend builds: `cd frontend && npm install && npm run build`.
 
-## 1. Delegar DNS a Route 53
+## 1. Delegate DNS to Route 53
 
-Si el dominio **no** está en Route 53:
+If the domain is **not** in Route 53:
 
 ```bash
 cd infrastructure/web
@@ -18,11 +18,11 @@ terraform init
 terraform plan -var-file=dev.tfvars
 ```
 
-En el primer `apply`, Terraform puede crear la hosted zone. Copia los **4 name servers** del output o de la consola Route 53 y configúralos en tu registrar (GoDaddy, Namecheap, etc.).
+On the first `apply`, Terraform may create the hosted zone. Copy the **4 name servers** from the output or Route 53 console and configure them at your registrar (GoDaddy, Namecheap, etc.).
 
-Si la zona ya existe en Route 53, asegúrate de que `hosted_zone_name = "greenbyte-ag.com"` en `dev.tfvars` coincide.
+If the zone already exists in Route 53, ensure `hosted_zone_name = "greenbyte-ag.com"` in `dev.tfvars` matches.
 
-## 2. Aplicar infraestructura web
+## 2. Apply web infrastructure
 
 ```bash
 cd infrastructure/web
@@ -31,14 +31,14 @@ terraform plan -var-file=dev.tfvars
 terraform apply -var-file=dev.tfvars
 ```
 
-Recursos creados:
+Resources created:
 
-- S3 `greenbyte-dev-web` (privado)
-- CloudFront con alias `greenbyte-ag.com` y `www.greenbyte-ag.com`
-- Certificado ACM (validación DNS automática en la hosted zone)
-- Registros A/AAAA alias hacia CloudFront
+- S3 `greenbyte-dev-web` (private)
+- CloudFront with aliases `greenbyte-ag.com` and `www.greenbyte-ag.com`
+- ACM certificate (automatic DNS validation in the hosted zone)
+- A/AAAA alias records to CloudFront
 
-Captura outputs:
+Capture outputs:
 
 ```bash
 terraform output web_bucket_name
@@ -46,48 +46,48 @@ terraform output cloudfront_distribution_id
 terraform output web_url
 ```
 
-## 3. Desplegar el sitio
+## 3. Deploy the site
 
-### Opción A — Script local (Git Bash)
+### Option A — Local script (Git Bash)
 
 ```bash
 export AWS_REGION=us-east-1
 ./scripts/deploy-frontend.sh
 ```
 
-### Opción B — GitHub Actions
+### Option B — GitHub Actions
 
 Repo: [github.com/elmauro/greenbyte](https://github.com/elmauro/greenbyte)
 
-En el environment **`dev`** del repo (Settings → Environments):
+In the repo **`dev`** environment (Settings → Environments):
 
-| Tipo | Nombre | Valor (dev actual) |
+| Type | Name | Value (current dev) |
 | --- | --- | --- |
-| Secret | `AWS_ACCESS_KEY_ID` | IAM user con S3 + CloudFront |
+| Secret | `AWS_ACCESS_KEY_ID` | IAM user with S3 + CloudFront |
 | Secret | `AWS_SECRET_ACCESS_KEY` | … |
 | Variable | `AWS_REGION` | `us-east-1` |
 | Variable | `WEB_S3_BUCKET` | `greenbyte-dev-web` |
 | Variable | `CLOUDFRONT_DISTRIBUTION_ID` | `E38QB192T37GLT` |
 | Variable | `CLOUDFRONT_DOMAIN_NAME` | `d3iom2jm2enk07.cloudfront.net` |
 
-**CI automático:** cada push a `master` que toque `frontend/**` dispara **Deploy Web** → environment `dev`.
+**Automatic CI:** every push to `master` that touches `frontend/**` triggers **Deploy Web** → `dev` environment.
 
-Deploy manual: **Actions → Deploy Web → Run workflow → dev**
+Manual deploy: **Actions → Deploy Web → Run workflow → dev**
 
-## 4. Verificar
+## 4. Verify
 
 ```bash
 curl -I https://greenbyte-ag.com
 ```
 
-Debe responder **200** con `index.html` (SPA).
+Should return **200** with `index.html` (SPA).
 
-## Notas
+## Notes
 
-- El diseño del sitio está **inspirado** en portales AgTech corporativos (layout Syngenta-like); la marca visible es **GreenByte**, no Syngenta.
-- Sin backend desplegado, la landing es estática (ideal para demo del hackathon).
-- Coste estimado: ~1–3 USD/mes (S3 + CloudFront con tráfico bajo + hosted zone ~0,50 USD).
+- Site design is **inspired by** corporate AgTech portals (Syngenta-like layout); visible brand is **GreenByte**, not Syngenta.
+- Without a deployed backend, the landing is static (ideal for hackathon demo).
+- Estimated cost: ~$1–3/month (S3 + CloudFront with low traffic + hosted zone ~$0.50).
 
 ## Troubleshooting
 
-Ver [`web-deployment.md`](web-deployment.md).
+See [`web-deployment.md`](web-deployment.md).

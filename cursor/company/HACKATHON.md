@@ -1,57 +1,57 @@
 # GreenByte — HatchWorks AI Hackathon (AgTech Edition)
 
-Contexto del evento para orientar decisiones técnicas y de producto durante el hack week.
+Event context to guide technical and product decisions during hack week.
 
-## Evento
+## Event
 
-| Campo | Valor |
+| Field | Value |
 | --- | --- |
-| **Nombre** | HatchWorks AI Hackathon — AgTech Edition |
-| **Hack week** | 28 sep – 1 oct 2026 |
-| **Demo day** | 2 oct 2026 |
-| **Equipo** | GreenByte (hasta 6 personas; solo permitido) |
+| **Name** | HatchWorks AI Hackathon — AgTech Edition |
+| **Hack week** | 28 Sep – 1 Oct 2026 |
+| **Demo day** | 2 Oct 2026 |
+| **Team** | GreenByte (up to 6 people; only team allowed) |
 
-## Requisitos del hackathon
+## Hackathon requirements
 
-1. **GenAI obligatorio** — el proyecto debe usar herramientas de IA generativa de forma central (no decorativa).
-2. **Casos de uso reales** — orientados a AgTech; casos compartidos por Syngenta (Vegetable BU).
-3. **Stack libre** — salvo GenAI, el resto es elección del equipo (este repo usa el preset enterprise del foundation template).
-4. **Entorno propio** — cada equipo configura dev, APIs y datasets.
+1. **GenAI required** — the project must use generative AI tools in a central way (not decorative).
+2. **Real use cases** — AgTech-oriented; cases shared by Syngenta (Vegetable BU).
+3. **Free stack** — except GenAI, the team chooses the rest (this repo uses the foundation template enterprise preset).
+4. **Own environment** — each team configures dev, APIs and datasets.
 
-## Criterios de evaluación
+## Evaluation criteria
 
-1. Innovación y uso de GenAI (peso alto)
-2. Calidad técnica
-3. Viabilidad de negocio / producto
-4. Demo y presentación
+1. Innovation and GenAI usage (high weight)
+2. Technical quality
+3. Business / product viability
+4. Demo and presentation
 
-## IP y entrega
+## IP and delivery
 
-- HatchWorks retiene la IP del hackathon.
-- El código se entrega a Syngenta al cierre del evento.
-- Documentar decisiones en `cursor/analysis/` facilita el handoff.
+- HatchWorks retains hackathon IP.
+- Code is delivered to Syngenta at the end of the event.
+- Document decisions in `cursor/analysis/` to ease handoff.
 
 ## Partner: Syngenta
 
-- Empresa con la que trabajamos en el hackathon (Vegetable BU / casos AgTech).
-- **Aún no hay objetivo de producto definido** — la landing refleja tono AgTech corporativo.
-- GreenByte **no es** Syngenta: sitio propio en **https://greenbyte-ag.com**, disclaimer en footer.
+- Company we work with during the hackathon (Vegetable BU / AgTech cases).
+- **Product goal not defined yet** — the landing reflects a corporate AgTech tone.
+- GreenByte **is not** Syngenta: own site at **https://greenbyte-ag.com**, disclaimer in footer.
 
-## Enfoque sugerido para GreenByte
+## Suggested approach for GreenByte
 
-- **Dominio:** `greenbyte-ag.com` (AWS: `infrastructure/web` + `docs/infrastructure/greenbyte-ag-domain.md`).
-- **Web:** landing estilo portal AgTech (verde #009F3C, azul #36398E) desplegable en S3/CloudFront.
-- **MVP demo:** landing en AWS primero; APIs y GenAI cuando se defina el reto del hackathon.
+- **Domain:** `greenbyte-ag.com` (AWS: `infrastructure/web` + `docs/infrastructure/greenbyte-ag-domain.md`).
+- **Web:** AgTech portal-style landing (green #009F3C, blue #36398E) deployable on S3/CloudFront.
+- **MVP demo:** landing on AWS first; APIs and GenAI when the hackathon challenge is defined.
 
-## Repositorio
+## Repository
 
 - GitHub: [github.com/elmauro/greenbyte](https://github.com/elmauro/greenbyte)
-- Rama principal: `master`
+- Default branch: `master`
 
-## Próximos pasos en el repo
+## Next steps in the repo
 
-1. Abrir `C:\Projects\greenbyte` como workspace en Cursor.
-2. Leer `cursor/context-map.md` y `cursor/docs/AI-Project-Playbook.md`.
-3. Registrar la primera story en `cursor/company/future-work/` (prefijo `GREENBYTE`).
-4. `cd frontend && npm install && npm run dev` para la UI.
-5. `cd backend && npm install` cuando toque integrar APIs.
+1. Open `C:\Projects\greenbyte` as a workspace in Cursor.
+2. Read `cursor/context-map.md` and `cursor/docs/AI-Project-Playbook.md`.
+3. Register the first story in `cursor/company/future-work/` (prefix `GREENBYTE`).
+4. `cd frontend && npm install && npm run dev` for the UI.
+5. `cd backend && npm install` when it is time to integrate APIs.

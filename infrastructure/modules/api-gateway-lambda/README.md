@@ -1,8 +1,8 @@
 # api-gateway-lambda
 
-Contrato para un modulo reusable de API Gateway + Lambda.
+Contract for a reusable API Gateway + Lambda module.
 
-## Inputs esperados
+## Expected inputs
 
 - `project`
 - `environment`
@@ -10,7 +10,6 @@ Contrato para un modulo reusable de API Gateway + Lambda.
 - `lambda_runtime`
 - `lambda_source_path`
 
-## Pendiente
+## Pending
 
-Implementar cuando se decida si el backend estandar usara Serverless Framework, Terraform puro o una combinacion de ambos.
-
+Implement once it is decided whether the standard backend will use Serverless Framework, pure Terraform, or a combination of both.
