@@ -1,6 +1,12 @@
 name: Deploy Web
 
 on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -13,11 +19,15 @@ on:
           - staging
           - prod
 
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || 'dev' }}
     permissions:
       contents: read
     steps:
@@ -75,5 +85,5 @@ jobs:
       - name: Deployment summary
         run: |
           echo "Deployed greenbyte frontend to CloudFront."
+          echo "Site: https://greenbyte-ag.com"
           echo "CloudFront domain: ${{ vars.CLOUDFRONT_DOMAIN_NAME }}"
-

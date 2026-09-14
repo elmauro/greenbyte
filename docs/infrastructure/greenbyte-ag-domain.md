@@ -70,7 +70,9 @@ En el environment **`dev`** del repo (Settings → Environments):
 | Variable | `CLOUDFRONT_DISTRIBUTION_ID` | `E38QB192T37GLT` |
 | Variable | `CLOUDFRONT_DOMAIN_NAME` | `d3iom2jm2enk07.cloudfront.net` |
 
-Workflow: **Actions → Deploy Web → Run workflow → dev**
+**CI automático:** cada push a `master` que toque `frontend/**` dispara **Deploy Web** → environment `dev`.
+
+Deploy manual: **Actions → Deploy Web → Run workflow → dev**
 
 ## 4. Verificar
 
