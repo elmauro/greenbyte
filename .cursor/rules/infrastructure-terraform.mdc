@@ -1,0 +1,15 @@
+---
+description: Terraform and AWS infrastructure conventions
+globs: infrastructure/**/*.{tf,tfvars,md,sh,yml,yaml}
+alwaysApply: false
+---
+
+# Infrastructure Conventions
+
+- Run `terraform fmt` and `terraform validate` for changed Terraform modules or capabilities.
+- Keep variables explicit and separated by environment.
+- Do not commit real `terraform.tfvars`, state files or secrets.
+- Prefer reusable modules or capability folders for common AWS resources.
+- Document remote state, deployment order and operational risks.
+- Tag AWS resources with project and environment where supported.
+

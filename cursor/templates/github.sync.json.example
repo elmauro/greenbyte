@@ -1,0 +1,11 @@
+{
+  "pullRequestNumber": null,
+  "pullRequestUrl": null,
+  "issueNumber": null,
+  "issueUrl": null,
+  "featureSlug": "greenbyte-example-capability",
+  "featureName": "Example capability",
+  "ticket": "GREENBYTE-001",
+  "releaseTag": null,
+  "lastSyncedAt": null
+}

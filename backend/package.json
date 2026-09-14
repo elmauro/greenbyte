@@ -1,0 +1,28 @@
+{
+  "name": "greenbyte-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/integration --no-cache"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "latest",
+    "@aws-sdk/client-dynamodb": "latest",
+    "@aws-sdk/client-secrets-manager": "latest",
+    "@aws-sdk/util-dynamodb": "latest"
+  },
+  "devDependencies": {
+    "jest": "latest",
+    "jest-environment-node": "latest",
+    "jsonwebtoken": "latest",
+    "pg": "latest",
+    "serverless": "latest",
+    "serverless-domain-manager": "latest",
+    "serverless-latest-layer-version": "latest",
+    "serverless-package-external": "latest",
+    "supertest": "latest"
+  }
+}

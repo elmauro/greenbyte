@@ -1,0 +1,13 @@
+{
+  "features": [
+    "router",
+    "services",
+    "types",
+    "tailwind",
+    "msw"
+  ],
+  "framework": "react",
+  "bundler": "vite",
+  "language": "typescript",
+  "packageName": "greenbyte-frontend"
+}

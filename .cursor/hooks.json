@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "node cursor/scripts/sync-github-feature.mjs --from-hook"
+      }
+    ]
+  }
+}

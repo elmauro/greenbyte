@@ -1,0 +1,24 @@
+---
+description: Company and product context for scope and business decisions
+alwaysApply: true
+---
+
+# Company & Product Context
+
+When `cursor/company/` exists, read `cursor/company/README.md` before product, scope or prioritization work.
+
+## Source of truth
+
+| Topic | File |
+| --- | --- |
+| Company index | `cursor/company/README.md` |
+| Product backlog | `cursor/company/future-work/README.md` |
+| Story registry | `cursor/company/future-work/STORY-REGISTRY.md` |
+| Area taxonomy | `cursor/company/future-work/AREA-TAXONOMY.md` |
+| Story log (per area) | `cursor/company/future-work/<area>/STORY-LOG.md` |
+| Documentation policy | `cursor/docs/documentation-governance.md` |
+| Domain summary | `docs/domain.md` |
+
+Add vision, MVP plan and commercial notes under `cursor/company/` as the product grows. When docs conflict on scope, follow the vision or plan named in `cursor/company/README.md`.
+
+Do not invent backlog IDs. Promote `FW-*` to an execution story before implementing. If `cursor/company/` is missing, skip this rule and use `docs/` plus the active feature package.

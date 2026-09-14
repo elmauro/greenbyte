@@ -1,0 +1,17 @@
+---
+description: Backend Serverless and API conventions
+globs: backend/**/*.{js,ts,yml,yaml}
+alwaysApply: false
+---
+
+# Backend Conventions
+
+- Keep handlers small: validate input, call services and return consistent responses.
+- Put business logic in services or domain modules, not directly in handlers.
+- Keep shared behavior in layers only when it is used by multiple APIs.
+- Document public routes with OpenAPI or Swagger.
+- Keep environment-specific values in config, SSM or Secrets Manager.
+- Deploy shared layers before APIs when using the multi-API serverless preset.
+- Treat `core-api` as the first domain API and remove optional APIs that do not apply.
+- Read `backend/backend.config.json` before assuming which APIs or layers exist.
+

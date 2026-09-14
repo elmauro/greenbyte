@@ -1,0 +1,37 @@
+{
+  "hookEnabled": false,
+  "projectOwner": "greenbyte",
+  "projectNumber": null,
+  "projectStatusFieldName": "Status",
+  "defaultProjectStatus": "Backlog",
+  "ticketPrefix": "GREENBYTE",
+  "branchPrefix": "feature",
+  "defaultBranch": "main",
+  "manifestStageToProjectStatus": {
+    "intake": "Backlog",
+    "analysis": "Backlog",
+    "planned": "Ready",
+    "implementation": "In progress",
+    "validation": "In review",
+    "review": "In review",
+    "done": "Done",
+    "closed": "Done"
+  },
+  "defaultLabels": ["story"],
+  "stackLabels": {
+    "backend": "backend",
+    "frontend": "frontend",
+    "infrastructure": "infrastructure",
+    "full-stack": "full-stack"
+  },
+  "stageToIssueState": {
+    "closed": "closed",
+    "done": "closed"
+  },
+  "phaseParents": {
+    "phase-1": null
+  },
+  "ticketPhase": {
+    "001": "phase-1"
+  }
+}

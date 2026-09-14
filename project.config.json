@@ -1,0 +1,29 @@
+{
+  "projectName": "GreenByte",
+  "projectSlug": "greenbyte",
+  "businessDomain": "AgTech — intelligent agriculture and crop data",
+  "preset": "fullstack-aws-enterprise",
+  "awsRegion": "us-east-1",
+  "frontendAppName": "greenbyte-frontend",
+  "backendServiceName": "greenbyte-backend",
+  "backendApis": [
+    "core",
+    "auth"
+  ],
+  "backendLayers": [
+    "transversal"
+  ],
+  "frontendFeatures": [
+    "router",
+    "services",
+    "types",
+    "tailwind",
+    "msw"
+  ],
+  "ownerTeam": "greenbyte-hackathon",
+  "repositoryUrl": "https://github.com/elmauro/greenbyte",
+  "projectDir": "C:\\Projects\\greenbyte",
+  "projectsRoot": "C:\\Projects",
+  "generatedBy": "project-foundation-template",
+  "generatedAt": "2026-09-14T21:59:10.824Z"
+}

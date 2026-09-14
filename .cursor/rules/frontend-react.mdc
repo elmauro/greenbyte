@@ -1,0 +1,16 @@
+---
+description: Frontend React and Vite conventions
+globs: frontend/**/*.{ts,tsx,js,jsx}
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+- Keep route definitions under `frontend/src/routes/`.
+- Keep API calls in `frontend/src/services/` and avoid hardcoded URLs.
+- Keep request and response shapes in `frontend/src/types/`.
+- Keep MSW handlers and Cypress specs aligned with backend contracts.
+- Prefer shared UI primitives from `frontend/src/components/ui/`.
+- Use environment variables through `VITE_*` configuration.
+- Read `frontend/frontend.config.json` before assuming which optional frontend features exist.
+

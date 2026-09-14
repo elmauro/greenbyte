@@ -1,0 +1,19 @@
+{
+  "apis": [
+    "core",
+    "auth"
+  ],
+  "apiDirectories": [
+    "core-api",
+    "auth-api"
+  ],
+  "layers": [
+    "transversal"
+  ],
+  "layerDirectories": [
+    "layer-transversal"
+  ],
+  "runtime": "nodejs20.x",
+  "framework": "serverless",
+  "deployScript": "deploy-backend.sh"
+}

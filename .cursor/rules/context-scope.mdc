@@ -1,0 +1,39 @@
+---
+description: Scope context reads and sessions without skipping lifecycle gates
+alwaysApply: true
+---
+
+# Context scope (token-aware, process-safe)
+
+Complements `project-context.mdc` and `AI-Project-Playbook.md`. **Never skip required reads or gates to save tokens.**
+
+## Non-negotiable (always)
+
+- Lifecycle unchanged: intake → analysis → implement → validate → review → close.
+- Before editing a stack, read its `cursor/projects/<stack>/project-context.md` (per `project-context.mdc`).
+- Work from the active feature package: `cursor/analysis/features/<area>/<slug>/` or `cursor/analysis/features/<slug>/`.
+- On close: update manifest, `cursor/analysis/features/INDEX.md`, area `STORY-LOG.md` if present, and backlog registry if `cursor/company/future-work/` exists. Run `sync-github-feature.mjs` when GitHub sync is configured.
+- Use `run-feature-gates.mjs` between phases; do not skip a failed gate.
+- Contract or behavior changes: run relevant tests and update docs/mocks/E2E per stack rules.
+- Cross-stack stories: read every affected stack context before implementing.
+
+## Scope reads (defer until needed)
+
+Use the Playbook **Context routing** table as source of truth. Additionally:
+
+- Prefer **one stack per task** — do not load unrelated stacks.
+- Read **slices**, not catalogs: one registry row, not full `STORY-REGISTRY.md`.
+- Skip by default unless the task touches them: agent transcripts, full studies when a feature package exists, unrelated modules.
+- **Ask mode** for roadmap/questions; **Agent** for implementation.
+
+## Session hygiene (recommended)
+
+- Prefer a **fresh chat** when changing lifecycle phase or switching stack/area.
+- Long threads: summarize scope in the next message or start a new chat with explicit paths.
+- Prompt templates: `cursor/docs/context-scope-sessions.md` (reference only — read if user asks or scope is unclear).
+
+## If scope is ambiguous
+
+Ask one clarifying question or read the minimum Playbook row for that area. Do not explore the whole repo.
+
+Optional evidence: `cursor/docs/context-trace-matrix.md` when optimizing context over multiple features.

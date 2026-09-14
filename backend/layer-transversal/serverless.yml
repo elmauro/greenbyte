@@ -1,0 +1,14 @@
+service: greenbyte-layer-transversal
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'us-east-1'}
+
+layers:
+  transversal:
+    path: nodejs
+    name: ${self:service}-${sls:stage}
+    description: Shared controllers, errors, logging and response helpers.

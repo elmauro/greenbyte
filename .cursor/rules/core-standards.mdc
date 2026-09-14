@@ -1,0 +1,14 @@
+---
+description: Core standards for generated projects
+alwaysApply: true
+---
+
+# Core Standards
+
+- Keep changes scoped to the requested feature, bug or refactor.
+- Do not commit secrets, tokens, private keys, real `.env` files or Terraform variable files with sensitive values.
+- Prefer existing project patterns over introducing new abstractions.
+- Update docs, tests, mocks and configuration when behavior or contracts change.
+- Preserve the separation between `frontend/`, `backend/`, `infrastructure/`, `docs/`, `.cursor/` and `cursor/`.
+- Use `project.config.json` as the source of truth for how the project was generated.
+
