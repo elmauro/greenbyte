@@ -93,17 +93,19 @@ Before loading long documents, choose minimal context by area. See also `.cursor
                                             └─ work on branch + PR ─┘
 ```
 
-| Phase | Purpose | Main output |
-| --- | --- | --- |
-| Intake | Register story (registry + STORY-LOG) and create package | folder + manifest |
-| Story | Acceptance criteria | `user-story.md` |
-| Analysis | Impact, contracts, risks | `analysis.md` |
-| Implementation | Code + in-scope docs | code + `implementation-notes.md` |
-| Validate | Run focused checks | updated `test-checklist.md` |
-| Review | PR-style review | findings or `Review: **pass**` |
-| Close | Close and sync docs/backlog | manifest done + `INDEX.md` + GitHub |
+| Phase | Purpose | Main output | Prompt / script |
+| --- | --- | --- | --- |
+| Intake | Register story (registry + STORY-LOG) and create package | folder + manifest | [`prompt-story-intake.md`](../prompts/feature/prompt-story-intake.md) · [`new-feature.mjs`](../scripts/README.md#new-feature-intake) |
+| Story | Acceptance criteria | `user-story.md` | [`prompt-user-story.md`](../prompts/feature/prompt-user-story.md) |
+| Analysis | Impact, contracts, risks | `analysis.md` | [`prompt-feature-analysis-package.md`](../prompts/feature/prompt-feature-analysis-package.md) |
+| Implementation | Code + in-scope docs | code + `implementation-notes.md` | [`prompt-feature-implementation-package.md`](../prompts/feature/prompt-feature-implementation-package.md) |
+| Validate | Run focused checks | updated `test-checklist.md` | [`prompt-feature-validation-package.md`](../prompts/feature/prompt-feature-validation-package.md) |
+| Review | PR-style review | findings or `Review: **pass**` | [`prompt-feature-review.md`](../prompts/feature/prompt-feature-review.md) |
+| Close | Close and sync docs/backlog | manifest done + `INDEX.md` + GitHub | [`prompt-feature-close-package.md`](../prompts/feature/prompt-feature-close-package.md) |
 
-Mechanical gates: `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase <phase>`. Test details: [`story-validation.md`](story-validation.md).
+Mechanical gates: [`run-feature-gates.mjs`](../scripts/README.md) — `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase <phase>`. Test details: [`story-validation.md`](story-validation.md).
+
+Feature package layout and artifact list: [`analysis/features/README.md`](../analysis/features/README.md).
 
 ## Quick start
 
@@ -117,6 +119,8 @@ Attach **only the prompt** for the phase. The prompt already references template
 
 ### 0. Intake (optional)
 
+**Full guide:** [`prompt-story-intake.md`](../prompts/feature/prompt-story-intake.md) (Mode A — new story; Mode B — from [`analysis/studies/`](../analysis/studies/README.md)).
+
 ```text
 @cursor/prompts/feature/prompt-story-intake.md
 Mode: A
@@ -124,13 +128,13 @@ Mode: A
 <describe the feature in natural language>
 ```
 
-Mechanical registration (if `cursor/company/future-work/` exists):
+Mechanical registration (if [`cursor/company/future-work/`](../company/future-work/README.md) exists):
 
 ```bash
 node cursor/scripts/new-feature.mjs --name "<Feature name>" --area frontend
 ```
 
-Prints the orchestrator copy-paste block and writes it to the area's `STORY-LOG.md`.
+Script details: [`scripts/README.md`](../scripts/README.md#new-feature-intake). Prints the orchestrator copy-paste block and writes it to the area's `STORY-LOG.md`.
 
 ### 1. Create analysis package
 
@@ -246,11 +250,17 @@ If the bug needs follow-up, create `cursor/analysis/features/<area>/bug-<ticket>
 
 ## Reference
 
-- Prompt index: `cursor/prompts/README.md`
-- Artifact templates: `cursor/templates/`
-- Doc governance: `cursor/docs/documentation-governance.md`
-- Validation / smoke: `cursor/docs/story-validation.md`
-- GitHub sync: `cursor/docs/github-projects-sync.md`
-- Features index: `cursor/analysis/features/INDEX.md`
-- Context routing: `cursor/docs/context-scope-sessions.md`
-- Context trace (optional): `cursor/docs/context-trace-matrix.md`
+| Topic | Document |
+| --- | --- |
+| Prompt index | [`cursor/prompts/README.md`](../prompts/README.md) |
+| Feature packages | [`cursor/analysis/features/README.md`](../analysis/features/README.md) |
+| Studies (intake Mode B) | [`cursor/analysis/studies/README.md`](../analysis/studies/README.md) |
+| Artifact templates | [`cursor/templates/`](../templates/) |
+| Scripts (intake, gates, GitHub) | [`cursor/scripts/README.md`](../scripts/README.md) |
+| Product backlog | [`cursor/company/future-work/README.md`](../company/future-work/README.md) |
+| Doc governance | [`documentation-governance.md`](documentation-governance.md) |
+| Validation / smoke | [`story-validation.md`](story-validation.md) |
+| GitHub sync | [`github-projects-sync.md`](github-projects-sync.md) |
+| Features index | [`cursor/analysis/features/INDEX.md`](../analysis/features/INDEX.md) |
+| Context routing | [`context-scope-sessions.md`](context-scope-sessions.md) |
+| Context trace (optional) | [`context-trace-matrix.md`](context-trace-matrix.md) |
