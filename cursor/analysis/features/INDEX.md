@@ -22,7 +22,7 @@ Path:
 
 | Ticket | Backlog ID | Slug | Name | Area | Stage |
 | --- | --- | --- | --- | --- | --- |
-| — | — | — | — | — | — |
+| GREENBYTE-001 | n/a | site-language-es-en | Site language support (Spanish and English) | frontend | done |
 
 ## How to update
 

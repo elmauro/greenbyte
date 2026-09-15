@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-001` (update when assigning).
+**Next free execution ID:** `GREENBYTE-002` (update when assigning).
 
 ---
 
@@ -31,6 +31,7 @@ Status: **backlog** = FW without execution ID; **active** = feature folder exist
 
 | Execution story | Backlog ID | Feature slug | Feature name | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-001 | n/a | `site-language-es-en` | Site language support (Spanish and English) | P2 | shipped |
 | — | FW-GREENBYTE-001 | `greenbyte-example-capability` | Example capability | P2 | backlog |
 
 Remove the example row when you promote or delete the starter item.

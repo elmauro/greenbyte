@@ -1,21 +1,24 @@
 import { useState } from 'react';
-
-const navItems = [
-  { label: 'Innovation', href: '#discover' },
-  { label: 'Precision agriculture', href: '#precision' },
-  { label: 'Sustainability', href: '#sustainability' },
-  { label: 'News', href: '#news' },
-];
+import { useLocale } from '../../i18n';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const { messages: m } = useLocale();
+
+  const navItems = [
+    { label: m.nav.innovation, href: '#discover' },
+    { label: m.nav.precision, href: '#precision' },
+    { label: m.nav.sustainability, href: '#sustainability' },
+    { label: m.nav.news, href: '#news' },
+  ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="border-b border-brand-green/20 bg-brand-green/5">
         <div className="site-container flex h-9 items-center justify-between text-xs text-gray-600">
-          <span>AgTech innovation · Partnering with Syngenta</span>
-          <span className="hidden sm:inline">greenbyte-ag.com</span>
+          <span>{m.header.tagline}</span>
+          <span className="hidden sm:inline">{m.header.domain}</span>
         </div>
       </div>
 
@@ -26,7 +29,7 @@ export function SiteHeader() {
           </span>
           <div className="leading-tight">
             <span className="block text-lg font-semibold text-brand-blue">GreenByte</span>
-            <span className="hidden text-xs text-gray-500 sm:block">Intelligent agriculture</span>
+            <span className="hidden text-xs text-gray-500 sm:block">{m.header.brandSubtitle}</span>
           </div>
         </a>
 
@@ -38,21 +41,24 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <button
-          type="button"
-          className="inline-flex rounded-md p-2 text-gray-700 md:hidden"
-          aria-expanded={open}
-          aria-label="Toggle menu"
-          onClick={() => setOpen((v) => !v)}
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            {open ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          <button
+            type="button"
+            className="inline-flex rounded-md p-2 text-gray-700 md:hidden"
+            aria-expanded={open}
+            aria-label="Toggle menu"
+            onClick={() => setOpen((v) => !v)}
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {open ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {open && (
