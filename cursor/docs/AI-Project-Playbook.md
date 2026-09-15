@@ -71,7 +71,7 @@ For features that read a lot of context or cross folders, optionally record evid
 
 Before loading long documents, choose minimal context by area. See also `.cursor/rules/context-scope.mdc` and [`context-scope-sessions.md`](context-scope-sessions.md).
 
-1. Identify the area (`AREA-TAXONOMY.md` if present; otherwise stack scope).
+1. Identify the area ([`AREA-TAXONOMY.md`](../company/future-work/AREA-TAXONOMY.md) if present; otherwise stack scope).
 2. Read only that area's base context first.
 3. Add conditional context only if a file is touched or a decision changes.
 4. If the story was ambiguous or consumed a lot of context, note 2–4 **Context trace** rows in `analysis.md` or `implementation-notes.md`.
@@ -82,7 +82,7 @@ Before loading long documents, choose minimal context by area. See also `.cursor
 | Frontend | `cursor/projects/frontend/project-context.md`, `.cursor/rules/frontend-react.mdc`, affected `frontend/` paths | backend docs if contract; MSW/Cypress if E2E |
 | Infrastructure | `cursor/projects/infrastructure/project-context.md`, `.cursor/rules/infrastructure-terraform.mdc` | backend/frontend if outputs affect apps |
 | Full-stack | Both project contexts + feature package | API docs + types/services on both sides |
-| Product / backlog | `cursor/company/README.md`, `future-work/`, `documentation-governance.md` | code only if the decision requires implementation |
+| Product / backlog | [`cursor/company/README.md`](../company/README.md), [`future-work/`](../company/future-work/README.md), [`documentation-governance.md`](documentation-governance.md) | code only if the decision requires implementation |
 | DX / AI workflow | This Playbook, touched templates/scripts | company/product docs only if scope changes |
 | Studies | `cursor/analysis/studies/<slug>/study.md`, study template | feature packages only for `implement` rows |
 
@@ -92,6 +92,10 @@ Before loading long documents, choose minimal context by area. See also `.cursor
 [optional BACKLOG] -> INTAKE -> STORY -> ANALYSIS -> IMPLEMENT -> VALIDATE -> REVIEW -> CLOSE
                                             └─ work on branch + PR ─┘
 ```
+
+Only **`BACKLOG`** is optional. **Intake is required for every new story** — it creates the feature package and (when backlog exists) registry + STORY-LOG entry. Skip intake only when the feature package already exists (resume mid-pipeline), when a STORY-LOG row already exists (if backlog is enabled), or when you use the [bug path](#bug-path) instead.
+
+**Story** acceptance criteria are drafted at intake and refined during analysis; use [`prompt-user-story.md`](../prompts/feature/prompt-user-story.md) to update them later.
 
 | Phase | Purpose | Main output | Prompt / script |
 | --- | --- | --- | --- |
@@ -111,13 +115,15 @@ Feature package layout and artifact list: [`analysis/features/README.md`](../ana
 
 Attach **only the prompt** for the phase. The prompt already references templates, rules and project context.
 
-**Orchestrator (multiple phases in one session):** [`prompt-feature-lifecycle.md`](../prompts/feature/prompt-feature-lifecycle.md) — chains analysis → close with gates. Inputs: `Start at`, `Run tests`, `Auto-close`.
+**Orchestrator (multiple phases in one session):** [`prompt-feature-lifecycle.md`](../prompts/feature/prompt-feature-lifecycle.md) — chains analysis → close with gates. Run **intake first** for new stories (no package yet). Inputs: `Start at`, `Run tests`, `Auto-close`.
 
 **Slug vs name:** `Feature slug` defines the folder under the area: `cursor/analysis/features/<area>/<feature-slug>/`. `Feature name` is the readable title in headers and the `Name:` field in each artifact.
 
 **Area:** for projects with backlog, use [`AREA-TAXONOMY.md`](../company/future-work/AREA-TAXONOMY.md). Without backlog, use `backend` / `frontend` / `infrastructure` / `_core`.
 
-### 0. Intake (optional)
+### 0. Intake
+
+**Required for new stories.** Entry point before analysis — registers the story, creates the feature package, and chains the lifecycle. Skip only if the feature package already exists (and STORY-LOG entry, when backlog is enabled).
 
 **Full guide:** [`prompt-story-intake.md`](../prompts/feature/prompt-story-intake.md) (Mode A — new story; Mode B — from [`analysis/studies/`](../analysis/studies/README.md)).
 
@@ -137,6 +143,8 @@ node cursor/scripts/new-feature.mjs --name "<Feature name>" --area frontend
 Script details: [`scripts/README.md`](../scripts/README.md#new-feature-intake). Prints the orchestrator copy-paste block and writes it to the area's `STORY-LOG.md`.
 
 ### 1. Create analysis package
+
+Assumes intake (step 0) already created the package, or you are resuming an existing story.
 
 ```text
 @cursor/prompts/feature/prompt-feature-analysis-package.md
@@ -208,6 +216,8 @@ Feature name: <feature-name>
 
 ### Full lifecycle
 
+Run **step 0 (Intake)** first for new stories, then use the orchestrator:
+
 ```text
 @cursor/prompts/feature/prompt-feature-lifecycle.md
 
@@ -222,7 +232,9 @@ Auto-close: yes
 
 ## Bug path
 
-For small bugs:
+For small bugs (skips intake; use when fixing a known defect):
+
+**Prompt:** [`prompt-bug-fix.md`](../prompts/feature/prompt-bug-fix.md)
 
 ```text
 @cursor/prompts/feature/prompt-bug-fix.md
@@ -246,7 +258,7 @@ If the bug needs follow-up, create `cursor/analysis/features/<area>/bug-<ticket>
 - Review has no open blockers or majors (`Review: **pass**`).
 - `run-feature-gates.mjs --phase close-readiness` passes.
 - `cursor/analysis/features/INDEX.md` reflects stage `done` when the feature closes.
-- If backlog exists: area `STORY-REGISTRY` + `STORY-LOG` updated; GitHub sync if configured.
+- If backlog exists: [`STORY-REGISTRY.md`](../company/future-work/STORY-REGISTRY.md) + area `STORY-LOG.md` updated; GitHub sync if configured ([`github-projects-sync.md`](github-projects-sync.md)).
 
 ## Reference
 
