@@ -84,7 +84,7 @@ Before loading long documents, choose minimal context by area. See also `.cursor
 | Full-stack | Both project contexts + feature package | API docs + types/services on both sides |
 | Product / backlog | [`cursor/company/README.md`](../company/README.md), [`future-work/`](../company/future-work/README.md), [`documentation-governance.md`](documentation-governance.md) | code only if the decision requires implementation |
 | DX / AI workflow | This Playbook, touched templates/scripts | company/product docs only if scope changes |
-| Studies | `cursor/analysis/studies/<slug>/study.md`, study template | feature packages only for `implement` rows |
+| Studies | `cursor/analysis/studies/<slug>/study.md`, [`analysis-study-template.md`](../templates/analysis-study-template.md) | feature packages only for `implement` rows |
 
 ## Deterministic flow
 
@@ -141,6 +141,35 @@ node cursor/scripts/new-feature.mjs --name "<Feature name>" --area frontend
 ```
 
 Script details: [`scripts/README.md`](../scripts/README.md#new-feature-intake). Prints the orchestrator copy-paste block and writes it to the area's `STORY-LOG.md`.
+
+### Studies (optional — plan before stories)
+
+Use a **study** when you need to **explore or compare** before committing to one story — e.g. gap analysis, “what should we build next?”, or splitting work into several stories. A study **does not implement code** and **does not replace** per-feature `analysis.md`.
+
+| Situation | Start with |
+| --- | --- |
+| One clear feature (“add login redirect”) | Intake **Mode A** → feature analysis → implement |
+| Unclear scope or **multiple** candidate stories | **Study** → Intake **Mode B** → one package per `Decision: implement` row |
+| Story already registered | Skip study; use feature analysis or lifecycle |
+
+**Why a study helps:** you capture findings once, rank gaps, and produce a **Candidate stories** table so intake registers the right number of execution stories (ticket + STORY-LOG) instead of jumping straight into a single package that may be too big or miss related work.
+
+**Artifact:** `cursor/analysis/studies/<study-slug>/study.md` from [`analysis-study-template.md`](../templates/analysis-study-template.md). Full workflow: [`analysis/studies/README.md`](../analysis/studies/README.md).
+
+**Example — evaluate landing gaps before stories:**
+
+```text
+@cursor/prompts/feature/prompt-story-intake.md
+@cursor/templates/analysis-study-template.md
+
+Mode: B
+Analysis ref: create
+Topic: Public landing — auth entry points, i18n, and SEO gaps vs hackathon MVP
+```
+
+The agent produces `cursor/analysis/studies/landing-gaps/study.md` with **FINDINGS** and **CANDIDATE STORIES** (each row: `Decision: implement | defer | confirm`). After you approve rows marked **implement**, intake Mode B registers stories (via `new-feature.mjs` when configured) — then each story gets its own feature package and **`analysis.md`** (not the study file).
+
+**Do not** use `prompt-feature-analysis-package.md` as a substitute for a study when the goal is backlog generation; use the study template + intake Mode B.
 
 ### 1. Create analysis package
 
@@ -267,7 +296,9 @@ If the bug needs follow-up, create `cursor/analysis/features/<area>/bug-<ticket>
 | Prompt index | [`cursor/prompts/README.md`](../prompts/README.md) |
 | Feature packages | [`cursor/analysis/features/README.md`](../analysis/features/README.md) |
 | Studies (intake Mode B) | [`cursor/analysis/studies/README.md`](../analysis/studies/README.md) |
-| Artifact templates | [`cursor/templates/`](../templates/) |
+| Study template | [`cursor/templates/analysis-study-template.md`](../templates/analysis-study-template.md) |
+| Feature analysis template | [`cursor/templates/analysis-template.md`](../templates/analysis-template.md) |
+| Artifact templates (index) | [`cursor/templates/`](../templates/) |
 | Scripts (intake, gates, GitHub) | [`cursor/scripts/README.md`](../scripts/README.md) |
 | Product backlog | [`cursor/company/future-work/README.md`](../company/future-work/README.md) |
 | Doc governance | [`documentation-governance.md`](documentation-governance.md) |
