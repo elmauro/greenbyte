@@ -106,11 +106,11 @@ function branchName(ticket, slug, config) {
 
 const args = parseArgs(process.argv.slice(2));
 const slug = (args.slug || "").trim();
-if (!slug) die("usa --slug <feature-slug>");
+if (!slug) die("use --slug <feature-slug>");
 
 const relDir = findFeatureDir(slug);
 if (!relDir) {
-  die(`no encontré user-story.md para slug \`${slug}\` bajo cursor/analysis/features/`);
+  die(`could not find user-story.md for slug \`${slug}\` under cursor/analysis/features/`);
 }
 
 const userStoryPath = path.join(FEATURES_DIR, relDir, "user-story.md");
@@ -127,24 +127,24 @@ if (args.dryRun) {
   try {
     execSync(`git checkout -b ${branch}`, { stdio: "inherit", cwd: REPO_ROOT });
   } catch (e) {
-    die(`git checkout -b falló (¿el branch ya existe?): ${e.message}`);
+    die(`git checkout -b failed (branch may already exist): ${e.message}`);
   }
 }
 
 console.log([
   "",
-  args.dryRun ? "[dry-run] no se creó el branch." : "── Branch creado ──",
+  args.dryRun ? "[dry-run] branch not created." : "── Branch created ──",
   `Feature:     ${name}`,
   `Slug:        ${slug}`,
   `Ticket:      ${ticket}`,
   `Branch:      ${branch}`,
   "",
-  "Al terminar:",
+  "When done:",
   `  git commit -m "feat: ${name}"`,
   `  git push -u origin ${branch}`,
   `  gh pr create --base ${config.defaultBranch || "main"} --fill --title "${title}"`,
   "",
-  "Sync issue/board (opcional):",
+  "Sync issue/board (optional):",
   `  node cursor/scripts/sync-github-feature.mjs --slug ${slug}`,
   "",
 ].join("\n"));

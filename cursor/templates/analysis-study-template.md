@@ -38,7 +38,7 @@
 
 ## CANDIDATE STORIES (actionable output)
 
-> Each row with **Decision: implement** becomes a story via intake (Mode A) or `prompt-feature-analysis-package.md`.
+> Each row with **Decision: implement** becomes a story via intake (Mode A or Mode B batch).
 > **Backlog ID:** existing `FW-*`, `create` (add to `cursor/company/future-work/`), or `n/a`.
 
 | # | Feature name | Area | Origin | Backlog ID | Priority | Why it matters | Ship criteria (1 line) | Decision |
@@ -60,7 +60,14 @@ node cursor/scripts/new-feature.mjs --from-study cursor/analysis/studies/<study-
 **Manual (per row):**
 
 1. Assign Ticket/story and Backlog ID (update `STORY-REGISTRY.md` if using `company/future-work/`).
-2. Run intake Mode A or:
+2. Run intake Mode A (required for new stories):
+
+```text
+@cursor/prompts/feature/prompt-story-intake.md
+Mode: A
+```
+
+Or use the STORY-LOG lifecycle block after `new-feature.mjs`. Analysis package only when resuming:
 
 ```text
 @cursor/prompts/feature/prompt-feature-analysis-package.md

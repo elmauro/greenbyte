@@ -47,7 +47,7 @@ Add area folders when the backlog grows. Keep shipped behavior in `docs/` — no
 1. **Backlog** — FW item in README; execution story `—`.
 2. **Promoted** — assign execution story; create feature package; update registry.
 3. **In progress** — manifest + implementation.
-4. **Shipped** — mark in registry; update stack docs; optional GitHub sync (Capa C).
+4. **Shipped** — mark in registry; update stack docs; optional GitHub sync (Layer C).
 
 Detail: [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) · Playbook: [`cursor/docs/AI-Project-Playbook.md`](../../docs/AI-Project-Playbook.md)
 
@@ -61,7 +61,7 @@ Add items below or create `<area>/README.md` files.
 | --- | --- |
 | **ID** | FW-GREENBYTE-001 |
 | **Title** | Example capability (→ feature **Name**) |
-| **Feature slug (previsto)** | `greenbyte-example-capability` |
+| **Feature slug (planned)** | `greenbyte-example-capability` |
 | **Story** | — |
 | **Priority** | P2 |
 | **Gap** | Short label of what is missing |

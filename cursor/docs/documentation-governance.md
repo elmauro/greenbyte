@@ -67,7 +67,7 @@ When closing a feature (`prompt-feature-close-package.md`):
 1. Update `cursor/analysis/features/INDEX.md`.
 2. Mark manifest `Current stage: done`.
 3. If `cursor/company/future-work/STORY-REGISTRY.md` exists → mark shipped.
-4. If `future-work/<area>/STORY-LOG.md` exists → `Estado: shipped`.
+4. If `future-work/<area>/STORY-LOG.md` exists → `Status: shipped`.
 5. Update stack docs only if behavior or contracts changed.
 6. Record residual risks in `implementation-notes.md`.
 7. Optional: `run-feature-gates.mjs --phase sync`.

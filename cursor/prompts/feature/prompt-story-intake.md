@@ -7,7 +7,7 @@
 - **Mode A — New story:** "I want a story for …" → package + lifecycle.
 - **Mode B — From study:** "evaluate gaps in X" (create study) or "read this study and extract stories".
 
-**Automate (agent, script optional):** folders, `user-story.md`, `feature-manifest.md`, rows in `STORY-REGISTRY` if backlog exists, chain to lifecycle.
+**Automate (agent; mechanical script optional):** intake is still required for new stories — the agent creates folders, `user-story.md`, `feature-manifest.md`, registry rows when backlog exists, and chains the lifecycle.
 
 **Recommended (scripts):** `new-feature.mjs` registers ticket + STORY-LOG and prints the orchestrator block. Then `start-feature.mjs` and `sync-github-feature.mjs` — see `cursor/scripts/README.md`.
 
@@ -53,7 +53,7 @@ Interaction rules:
    That writes the area STORY-LOG.md and the orchestrator copy-paste block.
 5) If Backlog ID = "create": add FW-* in future-work/ with ITEM-TEMPLATE.md
 6) Optional: node cursor/scripts/start-feature.mjs --slug <slug>
-7) Chain prompt-feature-lifecycle.md (or analysis-package if planning only)
+7) Chain prompt-feature-lifecycle.md (or analysis-package if planning only — package must exist from this intake)
 8) Validation plan in manifest: Run tests yes/no by stack (see story-validation.md)
 
 ── MODE B — STORIES FROM STUDY

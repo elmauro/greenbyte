@@ -14,7 +14,7 @@ analysis/
 ├─ studies/
 │  └─ <study-slug>/study.md    ← optional; backlog research
 └─ features/
-   └─ <feature-slug>/
+   └─ <area>/<feature-slug>/   ← recommended with backlog; or flat <feature-slug>/
       ├─ feature-manifest.md
       ├─ user-story.md
       ├─ analysis.md

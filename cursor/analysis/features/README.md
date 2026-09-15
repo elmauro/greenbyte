@@ -23,9 +23,9 @@ features/frontend/login-redirect/
 features/bug-login-redirect/
 ```
 
-Areas sugeridas: `backend`, `frontend`, `infrastructure`, `_core`, `product`, o dominio de producto.
+Suggested areas: `backend`, `frontend`, `infrastructure`, `_core`, `product`, or a product domain slug.
 
-Con backlog (`--with-product-backlog`): usa [`AREA-TAXONOMY.md`](../../company/future-work/AREA-TAXONOMY.md) y registra el lifecycle en `future-work/<area>/STORY-LOG.md` via `new-feature.mjs`.
+With backlog (`--with-product-backlog`): use [`AREA-TAXONOMY.md`](../../company/future-work/AREA-TAXONOMY.md) and register the lifecycle in `future-work/<area>/STORY-LOG.md` via `new-feature.mjs`.
 
 ## Recommended files
 
@@ -43,6 +43,6 @@ Register closed features in [`INDEX.md`](INDEX.md).
 
 | Phase | Prompt |
 | --- | --- |
-| Intake | `cursor/prompts/feature/prompt-story-intake.md` |
+| Intake (required for new stories) | `cursor/prompts/feature/prompt-story-intake.md` |
 | Full lifecycle | `cursor/prompts/feature/prompt-feature-lifecycle.md` |
 | Close | `cursor/prompts/feature/prompt-feature-close-package.md` |

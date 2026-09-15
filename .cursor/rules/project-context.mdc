@@ -12,5 +12,5 @@ alwaysApply: true
 - For backend work, read `cursor/projects/backend/project-context.md` before changing `backend/**`.
 - For infrastructure work, read `cursor/projects/infrastructure/project-context.md` before changing `infrastructure/**`.
 - For cross-stack work, read all relevant project contexts and check whether contracts, mocks, docs and tests need updates.
-- Use `cursor/docs/AI-Project-Playbook.md` for the expected intake, analysis, implementation, testing and review flow.
+- Use `cursor/docs/AI-Project-Playbook.md` for the full lifecycle: intake → story → analysis → implement → validate → review → close.
 

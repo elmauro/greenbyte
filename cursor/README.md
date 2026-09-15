@@ -51,9 +51,10 @@ cursor/company/
 - Use `.cursor/rules/*.mdc` for active rules Cursor should apply automatically.
 - Use `context-map.md` as the quick project index.
 - Use `docs/AI-Project-Playbook.md` as the base workflow.
+- **New stories:** run intake (Playbook §0) before the lifecycle orchestrator.
 - Use `prompts/README.md` to pick the right prompt per task.
 - Update `projects/*/project-context.md` when the real architecture changes.
-- Create per-feature artifacts in `analysis/features/<feature-slug>/`.
+- Create per-feature artifacts in `analysis/features/<area>/<feature-slug>/` (or `<feature-slug>/` without backlog).
 - Keep technical rules separate from business rules.
 
 ## Available prompts
@@ -62,7 +63,7 @@ cursor/company/
 | --- | --- |
 | `prompts/builders/universal-cursor-prompt-builder.md` | Execution guide for complete tasks in a session. |
 | `prompts/feature/prompt-story-intake.md` | Conversational intake + create package. |
-| `prompts/feature/prompt-feature-lifecycle.md` | Full lifecycle analysis→close **with gates**. |
+| `prompts/feature/prompt-feature-lifecycle.md` | After intake: analysis→close **with gates**. |
 | `prompts/feature/prompt-feature-analysis-package.md` | Story + analysis + manifest without implementing. |
 | `prompts/feature/prompt-feature-implementation-package.md` | Implementation + notes + checklist + manifest. |
 | `prompts/feature/prompt-feature-validation-package.md` | Focused pre-review validation. |

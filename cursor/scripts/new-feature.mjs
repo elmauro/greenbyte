@@ -120,9 +120,9 @@ function bumpNextFree(registry, prefix, usedNum) {
 
 function insertRegistryRow(registry, row) {
   const header = registry.indexOf("| Execution story |");
-  if (header < 0) die("no encontré la tabla 'Execution story' en STORY-REGISTRY.md");
+  if (header < 0) die("could not find 'Execution story' table in STORY-REGISTRY.md");
   const sep = registry.indexOf("| --- |", header);
-  if (sep < 0) die("no encontré el separador de la tabla de STORY-REGISTRY.md");
+  if (sep < 0) die("could not find table separator in STORY-REGISTRY.md");
   const insertAt = registry.indexOf("\n", sep) + 1;
   return registry.slice(0, insertAt) + row + "\n" + registry.slice(insertAt);
 }
@@ -131,8 +131,8 @@ function logSkeleton(area) {
   return [
     `# Story log — ${area}`,
     "",
-    "Registro de stories (uso de `prompt-feature-lifecycle.md`) para esta área.",
-    "Backlog FW-*: [`README.md`](README.md) · Maestro ticket↔FW: [`../STORY-REGISTRY.md`](../STORY-REGISTRY.md) · Plantilla: [`../STORY-LOG-TEMPLATE.md`](../STORY-LOG-TEMPLATE.md).",
+    "Story log for this area (use `prompt-feature-lifecycle.md`).",
+    "Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGISTRY.md`](../STORY-REGISTRY.md) · Template: [`../STORY-LOG-TEMPLATE.md`](../STORY-LOG-TEMPLATE.md).",
     "",
     "## Stories",
     "",
@@ -171,7 +171,7 @@ function logEntry(s) {
     "",
     `- FW: \`${s.fw}\` · Slug: \`${s.slug}\` · Stack: ${s.stack}`,
     `- Branch: \`${s.branch}\` · PR: \`${s.pr}\``,
-    `- Estado: planned · Package: [\`${s.area}/${s.slug}/\`](${pkgRel})`,
+    `- Status: planned · Package: [\`${s.area}/${s.slug}/\`](${pkgRel})`,
     "",
     "```text",
     lifecycleBlock(s),
@@ -182,7 +182,7 @@ function logEntry(s) {
 
 function insertLogEntry(logMd, entry) {
   if (!logMd.includes(LOG_MARKER)) {
-    die("no encontré el marcador de STORY-LOG.md (newest first; new-feature.mjs inserts…)");
+    die("could not find STORY-LOG.md marker (newest first; new-feature.mjs inserts below this comment)");
   }
   const idx = logMd.indexOf(LOG_MARKER);
   const insertAt = logMd.indexOf("\n", idx) + 1;
@@ -197,16 +197,16 @@ function defaultStack(area) {
 
 function normalizeStory(input, prefixes) {
   const name = (input.name || "").trim();
-  if (!name) die("falta --name (Feature name)");
+  if (!name) die("missing --name (Feature name)");
   const area = (input.area || "").trim() || "backend";
   if (area.includes("/") || area.includes("\\") || area.startsWith(".")) {
-    die(`área inválida "${area}"`);
+    die(`invalid area "${area}"`);
   }
   if (!AREAS.has(area) && !/^[a-z][a-z0-9-]*$/.test(area)) {
-    die(`área inválida "${area}". Usa backend|frontend|infrastructure|product|_core o un slug de dominio`);
+    die(`invalid area "${area}". Use backend|frontend|infrastructure|product|_core or a domain slug`);
   }
   const fwRaw = (input.fw || "").trim();
-  const fw = !fwRaw || fwRaw === "crear" ? "n/a" : fwRaw;
+  const fw = !fwRaw || fwRaw === "create" || fwRaw === "crear" ? "n/a" : fwRaw;
   const slug = (input.slug || "").trim() || slugify(name);
   const stack = (input.stack || "").trim() || defaultStack(area);
   const runTests = (input["run-tests"] || input.runTests || "").trim() || "no";
@@ -215,7 +215,7 @@ function normalizeStory(input, prefixes) {
     slug,
     area,
     fw,
-    fwPending: fwRaw === "crear",
+    fwPending: fwRaw === "create" || fwRaw === "crear",
     origin: input.origin === "comparison" ? "comparison" : "new",
     stack,
     priority: (input.priority || "").trim() || "P2",
@@ -264,16 +264,16 @@ function registerOne(input, registry, prefixes, dryRun) {
     }
   }
 
-  const fwNote = s.fwPending ? "  ⚠ FW pendiente: crea el ítem en future-work y actualiza la fila" : "";
+  const fwNote = s.fwPending ? "  ⚠ FW pending: create the item in future-work and update the row" : "";
   const summary = `${s.ticket}  ${s.area}  ${s.slug}  (FW: ${s.fw}, ${s.origin}, ${s.priority})${fwNote}`;
   return { story: s, registry: nextRegistry, summary, logFile: hasFw ? logFile : null };
 }
 
 function parseStudy(file) {
-  if (!fs.existsSync(file)) die(`no existe el estudio: ${file}`);
+  if (!fs.existsSync(file)) die(`study file not found: ${file}`);
   const md = readText(file);
   const secIdx = md.search(/##\s*CANDIDATE STORIES/i);
-  if (secIdx < 0) die('el estudio no tiene sección "## CANDIDATE STORIES"');
+  if (secIdx < 0) die('study is missing "## CANDIDATE STORIES" section');
   const section = md.slice(secIdx);
   const lines = section.split("\n").filter((l) => l.trim().startsWith("|"));
   const stories = [];
@@ -304,7 +304,7 @@ const hasRegistry = fs.existsSync(REGISTRY);
 if (args["from-study"] && args["from-study"] !== "true") {
   const studyFile = args["from-study"];
   const stories = parseStudy(path.isAbsolute(studyFile) ? studyFile : path.join(REPO_ROOT, studyFile));
-  if (stories.length === 0) die(`sin filas "Decision: implement" en ${studyFile}`);
+  if (stories.length === 0) die(`no rows with "Decision: implement" in ${studyFile}`);
 
   let registry = hasRegistry ? readText(REGISTRY) : null;
   const results = [];
@@ -317,13 +317,13 @@ if (args["from-study"] && args["from-study"] !== "true") {
 
   console.log([
     "",
-    `── Lote desde estudio: ${studyFile} ──`,
-    args.dryRun ? "[dry-run] no se escribió nada." : "Stories registradas.",
+    `── Batch from study: ${studyFile} ──`,
+    args.dryRun ? "[dry-run] nothing written." : "Stories registered.",
     "",
     ...results.map((r) => r.summary),
     "",
     `Total: ${results.length} stories${args.dryRun ? " (preview)" : ""}.`,
-    "Siguiente: pega el bloque de cada entrada del STORY-LOG en Cursor Agent.",
+    "Next: paste each STORY-LOG entry block into Cursor Agent.",
     "",
   ].join("\n"));
   process.exit(0);
@@ -336,19 +336,19 @@ if (!args.dryRun && hasRegistry) fs.writeFileSync(REGISTRY, r.registry);
 const s = r.story;
 console.log([
   "",
-  args.dryRun ? "[dry-run] no se escribió nada." : "── Story registrada ──",
+  args.dryRun ? "[dry-run] nothing written." : "── Story registered ──",
   `Ticket:     ${s.ticket}`,
-  `Área:       ${s.area}  →  cursor/analysis/features/${s.area}/${s.slug}/`,
+  `Area:       ${s.area}  →  cursor/analysis/features/${s.area}/${s.slug}/`,
   `Slug:       ${s.slug}`,
-  `FW:         ${s.fw}${s.fwPending ? "  ⚠ pendiente de crear" : ""}`,
+  `FW:         ${s.fw}${s.fwPending ? "  ⚠ pending creation" : ""}`,
   `Stack:      ${s.stack}`,
-  r.logFile ? `Story log:  ${path.relative(REPO_ROOT, r.logFile).replaceAll("\\", "/")}` : "Story log:  (sin cursor/company/future-work — solo bloque abajo)",
+  r.logFile ? `Story log:  ${path.relative(REPO_ROOT, r.logFile).replaceAll("\\", "/")}` : "Story log:  (no cursor/company/future-work — block below only)",
   `Branch:     ${s.branch}`,
   "",
-  "Opcional:",
+  "Optional:",
   `  node cursor/scripts/start-feature.mjs --slug ${s.slug}`,
   "",
-  "Siguiente paso (orquestador) — pegar en Cursor Agent:",
+  "Next step (orchestrator) — paste into Cursor Agent:",
   "",
   lifecycleBlock(s),
   "",

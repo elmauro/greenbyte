@@ -37,7 +37,7 @@ Remove the example row when you promote or delete the starter item.
 
 ---
 
-## GitHub sync (optional — Capa C)
+## GitHub sync (optional — Layer C)
 
 When using `cursor/scripts/sync-github-feature.mjs`, map stories in `cursor/scripts/github-story.config.json`.
 

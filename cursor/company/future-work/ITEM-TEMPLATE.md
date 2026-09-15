@@ -16,7 +16,7 @@ Template for new entries in any `README.md` under `cursor/company/future-work/`.
 **Promote FW → story:**
 
 1. Pick next free execution ID (see registry) or run `node cursor/scripts/new-feature.mjs --name "…" --area <area> --fw FW-GREENBYTE-NNN`.
-2. Copy **Title** and **Feature slug (previsto)** to `prompt-feature-analysis-package.md` (or paste the STORY-LOG lifecycle block).
+2. Run intake (`new-feature.mjs` or `prompt-story-intake.md` Mode A) — or paste the STORY-LOG lifecycle block if already registered.
 3. Update FW item with **Story:** link.
 4. Create feature package under `cursor/analysis/features/<area>/<slug>/`.
 
@@ -28,7 +28,7 @@ Template for new entries in any `README.md` under `cursor/company/future-work/`.
 | --- | --- |
 | **ID** | `FW-GREENBYTE-<nnn>` |
 | **Title** | Human-readable name — same as **Name** in `user-story.md` |
-| **Feature slug (previsto)** | kebab-case folder under `cursor/analysis/features/` |
+| **Feature slug (planned)** | kebab-case folder under `cursor/analysis/features/` |
 | **Priority** | `P0` · `P1` · `P2` · `P3` |
 | **Gap** | One-line label of what is missing |
 | **Description** | What to build (2–4 sentences) |
@@ -56,7 +56,7 @@ Template for new entries in any `README.md` under `cursor/company/future-work/`.
 | --- | --- |
 | **ID** | FW-GREENBYTE-NNN |
 | **Title** | Short title (→ feature **Name**) |
-| **Feature slug (previsto)** | `greenbyte-…` |
+| **Feature slug (planned)** | `greenbyte-…` |
 | **Story** | — |
 | **Priority** | P1 |
 | **Gap** | … |

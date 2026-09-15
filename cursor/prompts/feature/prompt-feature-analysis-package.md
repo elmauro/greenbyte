@@ -2,6 +2,8 @@
 
 Use this prompt when you want to analyze a feature and prepare the feature package **without implementing code yet**.
 
+**Requires an existing package** from intake (Playbook step 0) or an explicit resume — do not use this as a substitute for intake on new stories.
+
 ## Required inputs
 
 - Feature slug: `<feature-slug>` (kebab-case folder under `cursor/analysis/features/`)

@@ -14,7 +14,7 @@ Last updated: generated at project creation.
 | --- | --- |
 | What works **today**? | `docs/`, `frontend/docs/`, `backend/docs/` |
 | What is **planned** (backlog)? | `cursor/company/future-work/` |
-| What story are we **implementing**? | `cursor/analysis/features/<slug>/` |
+| What story are we **implementing**? | `cursor/analysis/features/<area>/<slug>/` |
 | FW ↔ story ↔ shipped? | `cursor/company/future-work/STORY-REGISTRY.md` |
 
 One source of truth per dimension. Cross-link; do not duplicate long tables.
@@ -59,7 +59,7 @@ When closing a feature ([`prompt-feature-close-package.md`](../prompts/feature/p
 1. Update stack docs if contracts or behavior changed.
 2. Move or mark **`FW-*`** item as Shipped in `future-work/` (area README if present).
 3. Update [`STORY-REGISTRY.md`](future-work/STORY-REGISTRY.md) and [`features/INDEX.md`](../analysis/features/INDEX.md).
-4. If using GitHub sync (Capa C): update `github.sync.json` in the feature folder.
+4. If using GitHub sync (Layer C): update `github.sync.json` in the feature folder.
 
 ---
 

@@ -8,7 +8,7 @@ Reusable prompts for working with Cursor on `GreenByte`.
 |-------------------|---------------|
 | `builders/universal-cursor-prompt-builder.md` | Execution guide for complete tasks in the current session. |
 | `feature/prompt-story-intake.md` | **Entry** — Mode A new story; Mode B from study (`analysis/studies/`). |
-| `feature/prompt-feature-lifecycle.md` | Orchestrator analysis → implement → validate → review → close **with gates**. |
+| `feature/prompt-feature-lifecycle.md` | After intake: analysis → implement → validate → review → close **with gates**. |
 | `feature/prompt-feature-analysis-package.md` | Story + analysis + manifest without implementing. |
 | `feature/prompt-feature-implementation-package.md` | Implement + notes + checklist + manifest. |
 | `feature/prompt-feature-validation-package.md` | Run checks and update test-checklist. |

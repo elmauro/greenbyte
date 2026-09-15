@@ -2,7 +2,7 @@
 
 Use this prompt to run **multiple lifecycle phases in one Agent session** with explicit gates. It orchestrates the existing phase prompts — it does not replace them.
 
-**When to use:** new story from analysis through close, or resume mid-pipeline (`Start at: validation`).
+**When to use:** new story **after intake** (analysis through close), or resume mid-pipeline (`Start at: validation`).
 
 **Intake first (new story):** if there is no package or entry in `STORY-LOG.md`, use [`prompt-story-intake.md`](prompt-story-intake.md) (Mode A or B) or `node cursor/scripts/new-feature.mjs` before this orchestrator. If the story already exists, paste the block from STORY-LOG.
 

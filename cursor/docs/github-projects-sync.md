@@ -75,7 +75,7 @@ Close                →  manifest done → sync (Done) → optional FW Shipped
 
 ### 1. Create analysis package
 
-Use `prompt-feature-analysis-package.md` or intake. Expected folder:
+Run intake first (`prompt-story-intake.md` or `new-feature.mjs`). Use `prompt-feature-analysis-package.md` only when resuming an existing package. Expected folder:
 
 ```text
 cursor/analysis/features/<slug>/
@@ -181,4 +181,4 @@ The script no-ops unless the edited file is a `user-story.md` or `feature-manife
 
 - Script reference: [`cursor/scripts/README.md`](../scripts/README.md)
 - Playbook: [`AI-Project-Playbook.md`](AI-Project-Playbook.md)
-- Examples: [`docs/examples/`](../../docs/examples/README.md) (in foundation template repo)
+- Workflow examples: see `project-foundation-template/docs/examples/` in the generator repo (not copied into generated projects)

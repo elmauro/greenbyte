@@ -59,6 +59,7 @@ greenbyte/
 | --- | --- |
 | Prompt index | `cursor/prompts/README.md` |
 | Execution guide | `cursor/prompts/builders/universal-cursor-prompt-builder.md` |
+| Story entry (required) | `cursor/prompts/feature/prompt-story-intake.md` |
 | Feature workflow | `cursor/prompts/feature/prompt-feature-lifecycle.md` |
 | Artifact templates | `cursor/templates/README.md` |
 | Review guidelines | `cursor/analysis/shared/review-guidelines.md` |
@@ -70,4 +71,5 @@ Active rules live under `.cursor/rules/`. Keep them short and actionable. Longer
 - `company-product-context.mdc` — product/backlog docs when `cursor/company/` exists (always applied).
 - `context-scope.mdc` — token-aware reads without skipping lifecycle gates.
 - `core-standards.mdc` — scoped changes, no secrets, update docs/tests with contracts.
+- `documentation-english.mdc` — project documentation is English-only.
 
