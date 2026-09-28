@@ -39,6 +39,10 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Media & local hackathon downloads
+*.mp4
+*Hackathon 2026 - Use Cases*
+
 # Cursor scripts (local GitHub config)
 cursor/scripts/github-story.config.json
 loyalty-cursor/scripts/github-story.config.json

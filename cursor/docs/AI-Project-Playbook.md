@@ -105,9 +105,10 @@ Only **`BACKLOG`** is optional. **Intake is required for every new story** — i
 | Implementation | Code + in-scope docs | code + `implementation-notes.md` | [`prompt-feature-implementation-package.md`](../prompts/feature/prompt-feature-implementation-package.md) |
 | Validate | Run focused checks | updated `test-checklist.md` | [`prompt-feature-validation-package.md`](../prompts/feature/prompt-feature-validation-package.md) |
 | Review | PR-style review | findings or `Review: **pass**` | [`prompt-feature-review.md`](../prompts/feature/prompt-feature-review.md) |
-| Close | Close and sync docs/backlog | manifest done + `INDEX.md` + GitHub | [`prompt-feature-close-package.md`](../prompts/feature/prompt-feature-close-package.md) |
+| Close | Close and sync docs/backlog | manifest done + `INDEX.md` + GitHub | [`prompt-feature-close-package.md`](../prompts/feature/prompt-feature-close-package.md) · [`story-close.mjs`](../scripts/README.md#story-close-helper) |
 
 Mechanical gates: [`run-feature-gates.mjs`](../scripts/README.md) — `node cursor/scripts/run-feature-gates.mjs --slug <slug> --phase <phase>`. Test details: [`story-validation.md`](story-validation.md).
+Index sync: [`sync-features-index.mjs`](../scripts/README.md#sync-features-index). Close helper: [`story-close.mjs`](../scripts/README.md#story-close-helper).
 
 Feature package layout and artifact list: [`analysis/features/README.md`](../analysis/features/README.md).
 
@@ -120,6 +121,8 @@ Attach **only the prompt** for the phase. The prompt already references template
 **Slug vs name:** `Feature slug` defines the folder under the area: `cursor/analysis/features/<area>/<feature-slug>/`. `Feature name` is the readable title in headers and the `Name:` field in each artifact.
 
 **Area:** for projects with backlog, use [`AREA-TAXONOMY.md`](../company/future-work/AREA-TAXONOMY.md). Without backlog, use `backend` / `frontend` / `infrastructure` / `_core`.
+
+**Subagents (`.cursor/agents/`):** Specialized model pinning per lifecycle phase (`lifecycle-scribe` for intake/close bookkeeping, `backlog-analyst` for read-only scoping, `frontend-dev` and `backend-dev` for implementation). See [`.cursor/README.md`](../../.cursor/README.md).
 
 ### 0. Intake
 
@@ -241,6 +244,13 @@ Review must lead with findings and classify severity. Closing requires `Review: 
 
 Feature slug: <feature-slug>
 Feature name: <feature-name>
+```
+
+Mechanical close helper:
+
+```bash
+node cursor/scripts/story-close.mjs --slug <feature-slug> --dry-run
+node cursor/scripts/story-close.mjs --slug <feature-slug> --apply
 ```
 
 ### Full lifecycle

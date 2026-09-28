@@ -8,6 +8,7 @@
 - Slug: `<feature-slug>`
 - Ticket/story: `<ticket-or-story-id>`
 - Backlog ID: `<FW-*|n/a>` — product backlog ID; does not replace Ticket/story
+- Change type: feat | fix | docs | chore | refactor
 - Owner:
 - Last updated:
 - Stack scope: backend | frontend | infrastructure | full-stack

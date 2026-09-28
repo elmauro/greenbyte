@@ -19,12 +19,13 @@ node cursor/scripts/new-feature.mjs --from-study cursor/analysis/studies/<slug>/
 | --- | --- | --- |
 | `--name` | required (single) | Feature name |
 | `--area` | `backend` | `backend` `frontend` `infrastructure` `product` `_core` or a domain slug |
+| `--type` | `feat` | `feat`, `fix`, `docs`, `chore`, `refactor` — saved in STORY-LOG and paste block |
 | `--fw` | `n/a` | Backlog ID `FW-*` |
 | `--slug` | derived from name | kebab-case |
 | `--stack` | inferred from area | `backend` `frontend` `infrastructure` `full-stack` |
 | `--ticket` | next ID from registry | Override execution ID |
 | `--start` | `analysis` | Orchestrator `Start at` |
-| `--run-tests` | `no` | Persist in Validation plan / paste block |
+| `--run-tests` | derived | `yes` for code changes; `no` for docs/chore/product |
 | `--from-study` | — | All `Decision: implement` rows in a study |
 | `--dry-run` | — | Preview only |
 
@@ -114,6 +115,29 @@ Default: **hook disabled** (`hookEnabled: false`). Enable only after `github-sto
 | Close | done, closed → Done (+ close issue) |
 
 Writes `cursor/analysis/features/<slug>/github.sync.json` on success.
+
+## Sync features index
+
+Keeps `cursor/analysis/features/INDEX.md` synchronized with the actual feature packages on disk. Detects new packages or stage updates from manifests.
+
+```bash
+node cursor/scripts/sync-features-index.mjs          # preview (dry-run)
+node cursor/scripts/sync-features-index.mjs --apply  # write changes
+```
+
+## Story close helper
+
+Automates the mechanical bookkeeping steps required when closing a story:
+1. Marks `feature-manifest.md` as `Current stage: done` and `Review: done`.
+2. Marks the story as `shipped` in `cursor/company/future-work/STORY-REGISTRY.md`.
+3. Marks the entry as `shipped` with completion date in the area `STORY-LOG.md`.
+4. Runs `sync-features-index.mjs --apply` to update `INDEX.md`.
+
+```bash
+node cursor/scripts/story-close.mjs --slug <slug> --dry-run   # preview
+node cursor/scripts/story-close.mjs --slug <slug> --apply     # apply close
+node cursor/scripts/story-close.mjs --ticket <id> --apply     # close by ticket ID
+```
 
 ## Related
 

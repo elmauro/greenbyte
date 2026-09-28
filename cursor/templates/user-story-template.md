@@ -8,6 +8,7 @@
 - Slug: `<feature-slug>`
 - Ticket/story: `<ticket-or-story-id>`
 - Backlog ID: `<FW-*|n/a>`
+- Change type: feat | fix | docs | chore | refactor
 - Stack scope: backend | frontend | infrastructure | full-stack
 
 ---

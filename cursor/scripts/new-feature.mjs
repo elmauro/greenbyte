@@ -157,6 +157,7 @@ function lifecycleBlock(s) {
     `Feature name: ${s.name}`,
     `Ticket/story: ${s.ticket}`,
     `Backlog ID: ${s.fw}`,
+    `Change type: ${s.type}`,
     `Stack scope: ${s.stack}`,
     `Start at: ${s.start}`,
     `Run tests: ${s.runTests}`,
@@ -170,7 +171,7 @@ function logEntry(s) {
     `### ${s.ticket} — ${s.name}`,
     "",
     `- FW: \`${s.fw}\` · Slug: \`${s.slug}\` · Stack: ${s.stack}`,
-    `- Branch: \`${s.branch}\` · PR: \`${s.pr}\``,
+    `- Change type: \`${s.type}\` · Branch: \`${s.branch}\` · PR: \`${s.pr}\``,
     `- Status: planned · Package: [\`${s.area}/${s.slug}/\`](${pkgRel})`,
     "",
     "```text",
@@ -209,7 +210,18 @@ function normalizeStory(input, prefixes) {
   const fw = !fwRaw || fwRaw === "create" || fwRaw === "crear" ? "n/a" : fwRaw;
   const slug = (input.slug || "").trim() || slugify(name);
   const stack = (input.stack || "").trim() || defaultStack(area);
-  const runTests = (input["run-tests"] || input.runTests || "").trim() || "no";
+  const type = (input.type || "").trim().toLowerCase() || "feat";
+
+  // Derive run-tests when not explicitly specified
+  let runTests = (input["run-tests"] || input.runTests || "").trim();
+  if (!runTests) {
+    if (type === "docs" || type === "chore" || area === "product" || area === "_core") {
+      runTests = "no";
+    } else {
+      runTests = "yes";
+    }
+  }
+
   return {
     name,
     slug,
@@ -218,6 +230,7 @@ function normalizeStory(input, prefixes) {
     fwPending: fwRaw === "create" || fwRaw === "crear",
     origin: input.origin === "comparison" ? "comparison" : "new",
     stack,
+    type,
     priority: (input.priority || "").trim() || "P2",
     start: (input.start || "").trim() || "analysis",
     runTests,
@@ -340,6 +353,7 @@ console.log([
   `Ticket:     ${s.ticket}`,
   `Area:       ${s.area}  →  cursor/analysis/features/${s.area}/${s.slug}/`,
   `Slug:       ${s.slug}`,
+  `Type:       ${s.type}`,
   `FW:         ${s.fw}${s.fwPending ? "  ⚠ pending creation" : ""}`,
   `Stack:      ${s.stack}`,
   r.logFile ? `Story log:  ${path.relative(REPO_ROOT, r.logFile).replaceAll("\\", "/")}` : "Story log:  (no cursor/company/future-work — block below only)",
