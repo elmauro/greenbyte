@@ -54,4 +54,17 @@ export const plantDemoHandlers = [
       return HttpResponse.json({ message: 'Unknown line' }, { status: 404 });
     }
   }),
+
+  http.post('*/demo/plant/batches/explain', async ({ request }) => {
+    const body = (await request.json()) as { po?: string; question?: string; locale?: Locale };
+    const locale = parseLocale(body);
+    if (!body.po || !body.question) {
+      return HttpResponse.json({ message: 'po and question required' }, { status: 400 });
+    }
+    try {
+      return HttpResponse.json(plantDemoServer.explainBatch(body.po, body.question, locale));
+    } catch {
+      return HttpResponse.json({ message: 'Unknown batch' }, { status: 404 });
+    }
+  }),
 ];

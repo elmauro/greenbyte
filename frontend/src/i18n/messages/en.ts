@@ -134,6 +134,19 @@ export const en = {
     apiNoteLocal:
       'Using BFF-shaped API locally (plantDemoServer). Set VITE_API_BASE_APP to core-api when live; enable VITE_USE_MSW=true for MSW in dev.',
     apiNoteBff: 'Connected to BFF (VITE_API_BASE_APP). Agent explain-replan should replace templated bullets when David’s service is live.',
+    salesChat: {
+      eyebrow: 'Syngenta nice-to-have',
+      title: 'Explain my batch (sales / customer service)',
+      subtitle:
+        'Ask why a PO is waiting, when it ships, or what would move it up — answers grounded in the current Line 1 queue (Agent API when live).',
+      poLabel: 'Production order (PO)',
+      quickPrompts: ['Why is it waiting?', 'When does it ship?', 'What would move it up?'],
+      inputPlaceholder: 'Ask about this batch…',
+      askButton: 'Ask',
+      citationsLabel: 'Sources',
+      agentNote:
+        'Demo uses rule-based answers from queue facts. David: replace with Agent tool calls to Data API batch + queue context.',
+    },
   },
   demoArchitecture: {
     eyebrow: 'Syngenta hackathon · Technical baseline',

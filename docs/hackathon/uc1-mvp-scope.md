@@ -80,7 +80,13 @@ When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **
 - Real rows from Pasco Excel seed (replace hardcoded PO list)
 - “Adjust manually” disabled with tooltip
 
-**Out:** UC4 product, multi-line, ERP write, sales chat, plant IoT.
+**Out:** UC4 product, multi-line, ERP write, plant IoT.
+
+### 5.1 Sales “explain my batch” (Syngenta nice-to-have — in demo)
+
+- UI on `/demo/plant`: PO selector + quick prompts + free-text ask.
+- BFF: `POST /demo/plant/batches/explain` `{ po, question, locale }` → `{ answer, citations[] }`.
+- Grounding: current queue position, finish, hold/QA, batches ahead (Camilo Data API; Agent paraphrase when live).
 
 ---
 

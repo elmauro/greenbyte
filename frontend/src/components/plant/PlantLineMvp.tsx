@@ -5,6 +5,7 @@ import { movedPoSet } from '../../demo/plant/plantDemoServer';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 import { plantDemoApi } from '../../services/plantDemoApi';
+import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantMiniTimeline } from './PlantMiniTimeline';
 
 export function PlantLineMvp() {
@@ -233,6 +234,8 @@ export function PlantLineMvp() {
                 )}
               </aside>
             </div>
+
+            <PlantBatchExplainChat queue={queue} />
 
             {eventType && (
               <>

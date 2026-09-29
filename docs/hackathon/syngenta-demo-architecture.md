@@ -205,6 +205,7 @@ UI ── inject event ──► BFF ──► Data API (replan) ──► Agent
 | POST | `/demo/plant/events` | Rush batch or QA failure |
 | POST | `/demo/plant/schedule/accept` | Human accepts plan |
 | GET | `/demo/plant/batches/{po}/summary` | Batch context for panel |
+| POST | `/demo/plant/batches/explain` | Sales nice-to-have: NL question about wait time / ship date / move-up (grounded in queue) |
 
 **Data API (Camilo)**
 

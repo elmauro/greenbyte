@@ -1,6 +1,7 @@
 import { PLANT_DEMO_LINE_ID, plantDemoServer } from '../demo/plant/plantDemoServer';
 import type {
   PlantAcceptResponse,
+  PlantBatchExplainResponse,
   PlantEventResponse,
   PlantEventType,
   PlantQueueResponse,
@@ -46,10 +47,25 @@ async function resetDemo(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueu
   return data;
 }
 
+async function postBatchExplain(
+  po: string,
+  question: string,
+  locale: Locale,
+): Promise<PlantBatchExplainResponse> {
+  if (!useRemoteBff) return plantDemoServer.explainBatch(po, question, locale);
+  const { data } = await axiosApp.post<PlantBatchExplainResponse>(`/demo/plant/batches/explain`, {
+    po,
+    question,
+    locale,
+  });
+  return data;
+}
+
 export const plantDemoApi = {
   getQueue,
   postEvent,
   postAccept,
   resetDemo,
+  postBatchExplain,
   useRemoteBff,
 };

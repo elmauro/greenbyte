@@ -44,3 +44,11 @@ export type PlantAcceptResponse = {
   lineId: string;
   planVersion: number;
 };
+
+/** Syngenta UC1 nice-to-have: sales / CS “explain my batch” (grounded in queue facts). */
+export type PlantBatchExplainResponse = {
+  po: string;
+  answer: string;
+  citations: string[];
+  suggestedFollowUps?: string[];
+};

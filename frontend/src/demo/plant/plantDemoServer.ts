@@ -1,4 +1,5 @@
 import type {
+  PlantBatchExplainResponse,
   PlantEventResponse,
   PlantEventType,
   PlantExplanation,
@@ -168,6 +169,87 @@ class PlantDemoServer {
       acceptedAt: new Date().toISOString(),
       lineId,
       planVersion: this.planVersion,
+    };
+  }
+
+  explainBatch(po: string, question: string, locale: Locale): PlantBatchExplainResponse {
+    const queue = this.queue.filter((r) => r.status !== 'COMPLETE');
+    const index = queue.findIndex((r) => r.po === po);
+    if (index < 0) throw new Error('Unknown batch');
+
+    const row = queue[index];
+    const position = index + 1;
+    const ahead = queue.slice(0, index);
+    const q = question.toLowerCase();
+
+    const citations = [
+      `PO ${row.po}`,
+      `Line 1 queue v${this.planVersion}`,
+      row.finish,
+    ];
+
+    if (locale === 'es') {
+      if (row.status === 'HOLD') {
+        return {
+          po,
+          answer: `PO ${po} está en **retención QA** tras un fallo pass/fail. No tiene fecha de salida hasta que el programador de planta libere o reprograme el lote. No hay escritura automática en ERP.`,
+          citations: [...citations, 'LSV pass/fail log (Pasco demo)'],
+          suggestedFollowUps: ['¿Quién aprueba la disposición?', '¿Qué lotes van antes en la línea?'],
+        };
+      }
+      if (q.includes('cuándo') || q.includes('cuando') || q.includes('ship') || q.includes('sale')) {
+        return {
+          po,
+          answer: `Según el plan actual de Línea 1, PO ${po} (${row.species}, ${row.kg} kg) tiene **fin programado ${row.finish}**. Está en posición **${position}** de ${queue.length}; los lotes delante deben correr primero (misma línea, reglas de changeover).`,
+          citations,
+          suggestedFollowUps: ['¿Por qué está esperando?', '¿Qué haría falta para subirlo?'],
+        };
+      }
+      if (q.includes('subir') || q.includes('move') || q.includes('antes')) {
+        return {
+          po,
+          answer: `Para **subir** PO ${po} hace falta una decisión del **programador de planta** (p. ej. lote rush o ventana cliente). Hoy hay ${ahead.length} lote(s) delante${ahead.length ? `: ${ahead.map((r) => r.po).join(', ')}` : ''}. Un rush de mayor prioridad podría reordenar — siempre con explicación y aceptación humana.`,
+          citations,
+          suggestedFollowUps: ['¿Por qué está en posición ' + position + '?'],
+        };
+      }
+      return {
+        po,
+        answer: `PO ${po} está en posición **${position}** (${row.species}). Motivo en plan: ${row.reasonShort ?? 'en cola estándar'}. Fin programado: **${row.finish}**. ${row.atRisk ? 'Marcado **en riesgo** por fecha SAP/cliente.' : ''}`,
+        citations,
+        suggestedFollowUps: ['¿Cuándo sale?', '¿Qué haría falta para subirlo?'],
+      };
+    }
+
+    if (row.status === 'HOLD') {
+      return {
+        po,
+        answer: `PO ${po} is on **QA hold** after a failed pass/fail test. It has no ship date until the line scheduler releases or replans the batch. No automatic ERP write.`,
+        citations: [...citations, 'LSV pass/fail log (Pasco demo)'],
+        suggestedFollowUps: ['Who approves disposition?', 'Which batches run first?'],
+      };
+    }
+    if (q.includes('when') || q.includes('ship')) {
+      return {
+        po,
+        answer: `On the current Line 1 plan, PO ${po} (${row.species}, ${row.kg} kg) shows **scheduled finish ${row.finish}**. It is **position ${position}** of ${queue.length}; batches ahead must run first (same line, changeover rules).`,
+        citations,
+        suggestedFollowUps: ['Why is it waiting?', 'What would move it up?'],
+      };
+    }
+    if (q.includes('move') || q.includes('up') || q.includes('ahead')) {
+      return {
+        po,
+        answer: `To **move up** PO ${po}, the **plant scheduler** must accept a replan (e.g. rush batch or customer window). There are ${ahead.length} batch(es) ahead${ahead.length ? `: ${ahead.map((r) => r.po).join(', ')}` : ''}. Higher-priority rush can reorder — always with explanation and human accept.`,
+        citations,
+        suggestedFollowUps: [`Why is it position ${position}?`],
+      };
+    }
+    return {
+      po,
+      answer: `PO ${po} is **position ${position}** (${row.species}). Plan note: ${row.reasonShort ?? 'standard queue'}. Scheduled finish: **${row.finish}**. ${row.atRisk ? 'Flagged **at risk** for SAP/customer date.' : ''}`,
+      citations,
+      suggestedFollowUps: ['When does it ship?', 'What would move it up?'],
     };
   }
 }

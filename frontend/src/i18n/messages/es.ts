@@ -305,6 +305,19 @@ export const es: Messages = {
       'API con forma BFF en local (plantDemoServer). Configura VITE_API_BASE_APP hacia core-api; VITE_USE_MSW=true en dev.',
     apiNoteBff:
       'Conectado al BFF (VITE_API_BASE_APP). Las viñetas deben venir del Agent explain-replan cuando el servicio de David esté en vivo.',
+    salesChat: {
+      eyebrow: 'Nice-to-have Syngenta',
+      title: 'Explicar mi lote (ventas / servicio al cliente)',
+      subtitle:
+        'Pregunta por qué un PO espera, cuándo sale o qué haría falta para subirlo — respuestas ancladas a la cola actual (Agent API en vivo).',
+      poLabel: 'Orden de producción (PO)',
+      quickPrompts: ['¿Por qué está esperando?', '¿Cuándo sale?', '¿Qué haría falta para subirlo?'],
+      inputPlaceholder: 'Pregunta sobre este lote…',
+      askButton: 'Preguntar',
+      citationsLabel: 'Fuentes',
+      agentNote:
+        'Demo con reglas sobre hechos de cola. David: sustituir por Agent + tools al Data API (batch + cola).',
+    },
   },
   demoBreeding: {
     eyebrow: 'Syngenta UC4 · Unificación R&D',
