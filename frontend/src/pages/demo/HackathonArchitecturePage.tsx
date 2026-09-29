@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
-import { MermaidDiagram } from '../../components/demo/MermaidDiagram';
+import { ArchitectureImageDiagram } from '../../components/demo/ArchitectureImageDiagram';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import {
-  hackathonArchitectureMermaid,
-  type HackathonMermaidKey,
-} from '../../content/hackathonArchitectureMermaid';
+  hackathonArchitectureImages,
+  type HackathonArchitectureImageKey,
+} from '../../content/hackathonArchitectureImages';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 
 type DiagramSection = {
-  diagramKey: HackathonMermaidKey;
+  diagramKey: HackathonArchitectureImageKey;
   title: string;
   description?: string;
 };
@@ -87,14 +87,18 @@ export function HackathonArchitecturePage() {
             </ol>
           </section>
 
-          {sections.map((section) => (
-            <MermaidDiagram
-              key={section.diagramKey}
-              title={section.title}
-              description={section.description}
-              chart={hackathonArchitectureMermaid[section.diagramKey]}
-            />
-          ))}
+          {sections.map((section) => {
+            const asset = hackathonArchitectureImages[section.diagramKey];
+            return (
+              <ArchitectureImageDiagram
+                key={section.diagramKey}
+                title={section.title}
+                description={section.description}
+                src={asset.src}
+                alt={asset.alt}
+              />
+            );
+          })}
 
           <section className="rounded-xl border border-brand-green/20 bg-brand-green/5 p-6 text-sm text-gray-700">
             <p className="font-semibold text-brand-blue">{a.monolithTitle}</p>

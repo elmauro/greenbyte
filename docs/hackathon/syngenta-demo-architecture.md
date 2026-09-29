@@ -343,7 +343,7 @@ Replace **Sources** and **React** route name (`/demo/plant` vs `/demo/breeding`)
 
 ## 14. Web architecture page
 
-Live **Mermaid** diagrams and team integration summary: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture). This markdown file keeps ASCII copies for PDF and offline reference.
+Live diagram PNGs and team integration summary: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture) (assets in `frontend/public/demo/architecture/`). This markdown file keeps ASCII copies for PDF and offline reference.
 
 ---
 
