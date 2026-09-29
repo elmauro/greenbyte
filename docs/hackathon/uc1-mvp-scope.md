@@ -3,7 +3,8 @@
 **Status:** Team-selected use case · **Demo day target** (not minimal MVP only)  
 **Persona:** Seed conditioning line scheduler (Pasco)  
 **Routes:** `/demo/plant` (interactive demo) · `/demo/plant/tour` (5-step story)  
-**Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7
+**Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7  
+**UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/plant/flow`
 
 ---
 

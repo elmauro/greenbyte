@@ -13,5 +13,6 @@ Initial documentation for `GreenByte`.
 - `security-baseline.md`: initial security checklist.
 - `cost-baseline.md`: initial AWS cost guide.
 - `hackathon/uc1-mvp-scope.md`: UC1 hackathon MVP scope (team-selected use case).
+- `hackathon/uc1-ui-backend-flow.md`: UC1 UI actions, BFF calls, sequences (Mermaid), response shapes.
 - `hackathon/syngenta-demo-architecture.md` (and `.pdf`): Syngenta hackathon demo architecture (BFF + Data API + Agent API).
-- `hackathon/mockups/`: UC1 and UC4 wow-moment UI mockups (PNG).
+- `hackathon/mockups/`: UC1/UC4 reference PNGs; live UI ↔ API at `/demo/plant/flow`.

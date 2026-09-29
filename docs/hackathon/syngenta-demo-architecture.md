@@ -206,6 +206,9 @@ UI ── inject event ──► BFF ──► Data API (replan) ──► Agent
 | POST | `/demo/plant/schedule/accept` | Human accepts plan |
 | GET | `/demo/plant/batches/{po}/summary` | Batch context for panel |
 | POST | `/demo/plant/batches/explain` | Sales nice-to-have: NL question about wait time / ship date / move-up (grounded in queue) |
+| POST | `/demo/plant/reset` | Demo helper: restore baseline queue (BFF-only; optional in Data) |
+
+**UX timing, sequences, and response fields:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Interactive:** [frontend `/demo/plant/flow`](../../frontend/src/pages/demo/PlantUc1FlowGallery.tsx).
 
 **Data API (Camilo)**
 
