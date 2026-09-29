@@ -13,6 +13,7 @@ export function PlantCapacityDemo() {
         eyebrow={d.eyebrow}
         title={d.title}
         subtitle={d.subtitle}
+        plainLanguage={d.plainLanguage}
         steps={d.steps}
         labels={m.demoCommon.labels}
         otherDemo={{ label: m.demoCommon.viewBreeding, href: paths.demoBreeding }}

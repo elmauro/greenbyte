@@ -3,16 +3,30 @@ import { Link } from 'react-router-dom';
 
 export type DemoStep = {
   title: string;
+  /** Colloquial one-liner for this step */
+  plainLine?: string;
   body: string;
   imageSrc?: string;
   imageAlt?: string;
   highlight?: string;
 };
 
+export type DemoPlainLanguage = {
+  sectionTitle: string;
+  problemHeading: string;
+  problem: string;
+  analogyHeading: string;
+  analogy: string;
+  walkthroughHeading: string;
+  walkthroughSteps: string[];
+  tagline: string;
+};
+
 type GuidedDemoProps = {
   eyebrow: string;
   title: string;
   subtitle: string;
+  plainLanguage: DemoPlainLanguage;
   steps: DemoStep[];
   labels: {
     step: string;
@@ -30,6 +44,7 @@ export function GuidedDemo({
   eyebrow,
   title,
   subtitle,
+  plainLanguage,
   steps,
   labels,
   otherDemo,
@@ -69,6 +84,23 @@ export function GuidedDemo({
       </section>
 
       <div className="site-container mt-10 max-w-[90rem]">
+        <aside className="mb-10 rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-brand-blue">{plainLanguage.sectionTitle}</h2>
+          <p className="mt-4 text-sm font-semibold text-gray-900">{plainLanguage.problemHeading}</p>
+          <p className="mt-2 leading-relaxed text-gray-700">{plainLanguage.problem}</p>
+          <p className="mt-5 text-sm font-semibold text-gray-900">{plainLanguage.analogyHeading}</p>
+          <p className="mt-2 leading-relaxed text-gray-700">{plainLanguage.analogy}</p>
+          <p className="mt-5 text-sm font-semibold text-gray-900">{plainLanguage.walkthroughHeading}</p>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-700">
+            {plainLanguage.walkthroughSteps.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+          <p className="mt-5 rounded-lg bg-brand-green/5 px-4 py-3 text-sm font-medium text-brand-green-dark">
+            {plainLanguage.tagline}
+          </p>
+        </aside>
+
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-medium text-gray-500">
             {labels.step} {index + 1} {labels.of} {steps.length}
@@ -92,6 +124,9 @@ export function GuidedDemo({
           </div>
           <div className="p-6 sm:p-8">
             <div className="w-full max-w-3xl">
+              {step.plainLine && (
+                <p className="mb-4 text-base font-medium leading-snug text-brand-blue">{step.plainLine}</p>
+              )}
               <p className="leading-relaxed text-gray-700">{step.body}</p>
               {step.highlight && (
                 <p className="mt-4 rounded-lg border border-brand-green/30 bg-brand-green/5 px-4 py-3 text-sm font-medium text-brand-green-dark">
