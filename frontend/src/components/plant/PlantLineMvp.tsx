@@ -118,31 +118,56 @@ export function PlantLineMvp() {
           </div>
         )}
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled={busy || loading}
-            onClick={() => void inject('rush')}
-            className="rounded-lg bg-brand-green px-4 py-2 text-sm font-semibold text-white hover:bg-brand-green-dark disabled:opacity-50"
-          >
-            {copy.actions.rush}
-          </button>
-          <button
-            type="button"
-            disabled={busy || loading}
-            onClick={() => void inject('qa_fail')}
-            className="rounded-lg border border-brand-blue/30 px-4 py-2 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5 disabled:opacity-50"
-          >
-            {copy.actions.qaFail}
-          </button>
-          <button
-            type="button"
-            disabled={busy || loading}
-            onClick={() => void reset()}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-          >
-            {copy.actions.reset}
-          </button>
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={busy || loading}
+              title={copy.actions.rushTooltip}
+              aria-describedby="plant-event-help-rush"
+              onClick={() => void inject('rush')}
+              className="rounded-lg bg-brand-green px-4 py-2 text-sm font-semibold text-white hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {copy.actions.rush}
+            </button>
+            <button
+              type="button"
+              disabled={busy || loading}
+              title={copy.actions.qaFailTooltip}
+              aria-describedby="plant-event-help-qa"
+              onClick={() => void inject('qa_fail')}
+              className="rounded-lg border border-brand-blue/30 px-4 py-2 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5 disabled:opacity-50"
+            >
+              {copy.actions.qaFail}
+            </button>
+            <button
+              type="button"
+              disabled={busy || loading}
+              title={copy.actions.resetTooltip}
+              aria-describedby="plant-event-help-reset"
+              onClick={() => void reset()}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+            >
+              {copy.actions.reset}
+            </button>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            <p className="font-semibold text-gray-900">{copy.eventHelp.title}</p>
+            <ul className="mt-2 space-y-2">
+              <li id="plant-event-help-rush">
+                <span className="font-medium text-brand-green-dark">{copy.eventHelp.rushLabel} —</span>{' '}
+                {copy.eventHelp.rushBody}
+              </li>
+              <li id="plant-event-help-qa">
+                <span className="font-medium text-brand-blue">{copy.eventHelp.qaLabel} —</span>{' '}
+                {copy.eventHelp.qaBody}
+              </li>
+              <li id="plant-event-help-reset">
+                <span className="font-medium text-gray-800">{copy.eventHelp.resetLabel} —</span>{' '}
+                {copy.eventHelp.resetBody}
+              </li>
+            </ul>
+          </div>
         </div>
 
         {loading ? (

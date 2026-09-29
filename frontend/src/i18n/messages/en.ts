@@ -122,10 +122,26 @@ export const en = {
     wowVisualAlt: 'UC1 plant capacity wow mockup after rush event',
     actions: {
       rush: 'Simulate rush batch',
+      rushTooltip:
+        'Urgent customer window: a high-priority PO moves up in the queue (demo: PO 1002307551).',
       qaFail: 'Simulate QA failure',
+      qaFailTooltip:
+        'Failed pass/fail test: batch goes on QA hold and is removed from the active slot (demo: PO 1001858227).',
       reset: 'Reset queue',
+      resetTooltip: 'Return to the calm baseline queue before any injected event.',
       accept: 'Accept schedule',
       accepted: 'Accepted',
+    },
+    eventHelp: {
+      title: 'What each inject button simulates (Syngenta demo-ready)',
+      rushLabel: 'Rush',
+      rushBody:
+        'A surprise urgent batch (tight SAP / customer date). The system proposes moving it ahead and explains changeover impact. Planner must accept; no ERP write.',
+      qaLabel: 'QA failure',
+      qaBody:
+        'A batch fails quality (pass/fail log). It is placed on hold and the line is re-sequenced so other batches can keep running.',
+      resetLabel: 'Reset',
+      resetBody: 'Clears the injected event so you can run the live demo again from a stable queue.',
     },
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle: 'Inject a rush batch or QA failure to see the proposed order and explanation.',

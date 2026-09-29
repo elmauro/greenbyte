@@ -292,10 +292,26 @@ export const es: Messages = {
     wowVisualAlt: 'Mockup wow UC1 tras evento rush',
     actions: {
       rush: 'Simular lote rush',
+      rushTooltip:
+        'Ventana de cliente urgente: un PO de alta prioridad sube en la cola (demo: PO 1002307551).',
       qaFail: 'Simular fallo QA',
+      qaFailTooltip:
+        'Test pass/fail fallido: el lote pasa a hold QA y sale del slot activo (demo: PO 1001858227).',
       reset: 'Restablecer cola',
+      resetTooltip: 'Vuelve a la cola base tranquila, antes de cualquier evento inyectado.',
       accept: 'Aceptar programa',
       accepted: 'Aceptado',
+    },
+    eventHelp: {
+      title: 'Qué simula cada botón (demo-ready Syngenta)',
+      rushLabel: 'Rush',
+      rushBody:
+        'Lote urgente sorpresa (fecha SAP / cliente apretada). El sistema propone subirlo y explica el impacto en changeover. El programador acepta; sin escribir en ERP.',
+      qaLabel: 'Fallo QA',
+      qaBody:
+        'Un lote no pasa calidad (log pass/fail). Queda en retención y se reordena la línea para que el resto siga corriendo.',
+      resetLabel: 'Restablecer',
+      resetBody: 'Quita el evento inyectado para repetir la demo en vivo desde cola estable.',
     },
     copilotTitle: 'Copiloto IA — Qué cambió',
     copilotIdle: 'Inyecta rush o fallo QA para ver el orden propuesto y la explicación.',
