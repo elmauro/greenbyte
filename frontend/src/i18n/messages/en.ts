@@ -89,17 +89,20 @@ export const en = {
     ],
   },
   plantMvp: {
-    eyebrow: 'Syngenta UC1 · Hackathon MVP',
+    eyebrow: 'Syngenta UC1 · Hackathon demo target',
     title: 'Pasco conditioning — Line 1',
     subtitle:
-      'Live queue, inject rush or QA failure, see explained replan and accept the schedule. Client-side mock until BFF + Data + Agent are wired.',
+      'Interactive scheduling demo: ranked queue, live rush/QA inject, timeline + copilot explanation, human accept — same BFF contract as production (MSW or core-api).',
+    demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
     links: {
       tour: 'Guided story (5 steps)',
+      tourCta: 'Start with the 5-step story',
       architecture: 'Integration architecture',
-      backMvp: 'Back to Line 1 MVP',
+      backMvp: 'Back to Line 1 demo',
     },
     lineTitle: 'Line 1 queue',
     lineSubtitle: 'Calm baseline — inject an event to replan (Syngenta demo-ready flow).',
+    loading: 'Loading queue…',
     status: { calm: 'Calm & stable', eventActive: 'Event active — review proposed plan' },
     statusLabels: { planned: 'PLANNED', atRisk: 'AT RISK', complete: 'COMPLETE', hold: 'QA HOLD' },
     queueTitle: 'Conditioning run order',
@@ -110,7 +113,13 @@ export const en = {
       kg: 'Kg',
       finish: 'Scheduled finish',
       status: 'Status',
+      reason: 'Reason (position)',
     },
+    timelineTitle: 'Schedule timeline (simplified)',
+    timelineSubtitle: 'Visual week strip after replan — full Gantt comes with Pasco ETL + Data API.',
+    wowVisualTitle: 'Target UX reference',
+    wowVisualSubtitle: 'Concept screen shown alongside the live queue after an event (mockup parity for judges).',
+    wowVisualAlt: 'UC1 plant capacity wow mockup after rush event',
     actions: {
       rush: 'Simulate rush batch',
       qaFail: 'Simulate QA failure',
@@ -120,31 +129,11 @@ export const en = {
     },
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle: 'Inject a rush batch or QA failure to see the proposed order and explanation.',
-    explanations: {
-      rush: {
-        alertBanner: 'Event injected: Rush batch — customer window at risk.',
-        summary: 'Moved PO 1002307551 ahead to protect the 2026-07-06 customer window.',
-        bullets: [
-          'Moved PO 1002307551 ahead of PO 1001759341.',
-          'Reason: SAP finish date 2026-07-06 and priority 2.',
-          'Avoided ~1.5h changeover: same species SWCO on Line 1.',
-        ],
-        impact: 'Impact: Customer window protected · Net changeover: −1.5h (demo heuristic).',
-      },
-      qa_fail: {
-        alertBanner: 'Event injected: Failed QA test — batch moved to hold and queue re-sequenced.',
-        summary: 'PO 1001858227 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
-        bullets: [
-          'PO 1001858227 set to HOLD from pass/fail log (demo).',
-          'Downstream positions shifted; no ERP write — planner validates.',
-          'Next runnable SWCO batches unchanged in species block where possible.',
-        ],
-        impact: 'Impact: Line keeps moving; failed batch isolated until disposition.',
-      },
-    },
-    footerStats: '{count} active batches in queue (demo data).',
+    footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance logged (demo). No live ERP update.',
-    mockNote: 'Replace mock replan with BFF → Data API replan + Agent explain-replan per docs/hackathon/uc1-mvp-scope.md.',
+    apiNoteLocal:
+      'Using BFF-shaped API locally (plantDemoServer). Set VITE_API_BASE_APP to core-api when live; enable VITE_USE_MSW=true for MSW in dev.',
+    apiNoteBff: 'Connected to BFF (VITE_API_BASE_APP). Agent explain-replan should replace templated bullets when David’s service is live.',
   },
   demoArchitecture: {
     eyebrow: 'Syngenta hackathon · Technical baseline',

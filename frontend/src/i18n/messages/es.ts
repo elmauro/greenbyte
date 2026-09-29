@@ -259,17 +259,20 @@ export const es: Messages = {
     ],
   },
   plantMvp: {
-    eyebrow: 'Syngenta UC1 · MVP hackathon',
+    eyebrow: 'Syngenta UC1 · Objetivo demo hackathon',
     title: 'Pasco acondicionamiento — Línea 1',
     subtitle:
-      'Cola en vivo, inyectar rush o fallo QA, ver replan explicado y aceptar el programa. Mock en cliente hasta conectar BFF + Data + Agent.',
+      'Demo interactiva: cola rankeada, rush/QA en vivo, timeline + copiloto, aceptación humana — mismo contrato BFF que producción (MSW o core-api).',
+    demoTargetBadge: 'Demo target B+ · Alineado al brief Syngenta + mockups wow GreenByte.',
     links: {
       tour: 'Historia guiada (5 pasos)',
+      tourCta: 'Empezar por la historia en 5 pasos',
       architecture: 'Arquitectura de integración',
-      backMvp: 'Volver al MVP Línea 1',
+      backMvp: 'Volver al demo Línea 1',
     },
     lineTitle: 'Cola Línea 1',
     lineSubtitle: 'Estado estable — inyecta un evento para replanificar (flujo demo-ready Syngenta).',
+    loading: 'Cargando cola…',
     status: { calm: 'Tranquilo y estable', eventActive: 'Evento activo — revisa plan propuesto' },
     statusLabels: { planned: 'PLANIFICADO', atRisk: 'EN RIESGO', complete: 'COMPLETO', hold: 'RETENIDO QA' },
     queueTitle: 'Orden de corrida (acondicionamiento)',
@@ -280,7 +283,13 @@ export const es: Messages = {
       kg: 'Kg',
       finish: 'Fin programado',
       status: 'Estado',
+      reason: 'Motivo (posición)',
     },
+    timelineTitle: 'Línea de tiempo (simplificada)',
+    timelineSubtitle: 'Franja semanal tras replan — Gantt completo con ETL Pasco + Data API.',
+    wowVisualTitle: 'Referencia UX objetivo',
+    wowVisualSubtitle: 'Pantalla concepto junto a la cola en vivo tras un evento (paridad mockup para jurado).',
+    wowVisualAlt: 'Mockup wow UC1 tras evento rush',
     actions: {
       rush: 'Simular lote rush',
       qaFail: 'Simular fallo QA',
@@ -290,31 +299,12 @@ export const es: Messages = {
     },
     copilotTitle: 'Copiloto IA — Qué cambió',
     copilotIdle: 'Inyecta rush o fallo QA para ver el orden propuesto y la explicación.',
-    explanations: {
-      rush: {
-        alertBanner: 'Evento inyectado: Lote rush — ventana de cliente en riesgo.',
-        summary: 'Se adelantó PO 1002307551 para proteger la ventana del 2026-07-06.',
-        bullets: [
-          'PO 1002307551 pasó por delante de PO 1001759341.',
-          'Motivo: fecha fin SAP 2026-07-06 y prioridad 2.',
-          'Se evitaron ~1,5 h de changeover: misma especie SWCO en Línea 1.',
-        ],
-        impact: 'Impacto: ventana de cliente protegida · Changeover neto: −1,5 h (heurística demo).',
-      },
-      qa_fail: {
-        alertBanner: 'Evento inyectado: Test QA fallido — lote en hold y cola reordenada.',
-        summary: 'PO 1001858227 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
-        bullets: [
-          'PO 1001858227 en HOLD según log pass/fail (demo).',
-          'Posiciones siguientes ajustadas; sin escritura en ERP — valida el programador.',
-          'Bloques SWCO siguientes sin cambiar especie donde sea posible.',
-        ],
-        impact: 'Impacto: la línea sigue; lote fallido aislado hasta disposición.',
-      },
-    },
-    footerStats: '{count} lotes activos en cola (datos demo).',
+    footerStats: '{count} lotes activos en cola (POs estilo Pasco).',
     acceptedNote: 'Aceptación humana registrada (demo). Sin actualización ERP en vivo.',
-    mockNote: 'Sustituir mock por BFF → replan Data API + explain-replan Agent según docs/hackathon/uc1-mvp-scope.md.',
+    apiNoteLocal:
+      'API con forma BFF en local (plantDemoServer). Configura VITE_API_BASE_APP hacia core-api; VITE_USE_MSW=true en dev.',
+    apiNoteBff:
+      'Conectado al BFF (VITE_API_BASE_APP). Las viñetas deben venir del Agent explain-replan cuando el servicio de David esté en vivo.',
   },
   demoBreeding: {
     eyebrow: 'Syngenta UC4 · Unificación R&D',

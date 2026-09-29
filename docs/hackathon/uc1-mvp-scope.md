@@ -1,140 +1,124 @@
-# UC1 MVP scope — Syngenta hackathon (GreenByte)
+# UC1 demo target (B+) — Syngenta hackathon (GreenByte)
 
-**Status:** Team-selected use case  
+**Status:** Team-selected use case · **Demo day target** (not minimal MVP only)  
 **Persona:** Seed conditioning line scheduler (Pasco)  
-**Product route:** `/demo/plant` (MVP UI) · `/demo/plant/tour` (guided narrative)  
+**Routes:** `/demo/plant` (interactive demo) · `/demo/plant/tour` (5-step story)  
 **Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7
 
 ---
 
-## 1. Decision summary
+## 1. Scope tiers
 
-GreenByte delivers **Use Case 1 — Plant Capacity Utilization** only for hackathon week.
-
-| Option | Scope | Verdict |
+| Tier | Name | Purpose |
 | --- | --- | --- |
-| A — Static demo | Fixed copy, no replan | Rejected (fails Syngenta demo-ready criteria) |
-| **B — MVP (chosen)** | One line, queue + inject rush/QA + explained replan + human accept | **Build this** |
-| C — Full plant | Multi-line Gantt, sales chat, manual drag-drop | Stretch / post-hackathon |
+| A | Technical MVP | Table + inject — proves Syngenta minimum |
+| **B+** | **Demo target (this doc)** | **What we show judges** — matches initial GreenByte offer + brief |
+| C | Vision | Multi-line Gantt, sales chat, UC4 |
+
+We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferred.
 
 ---
 
-## 2. What Syngenta wants (from `2026_Use_Case_Briefs.pdf`)
+## 2. Gap we closed (offer vs table-only)
 
-- **Problem:** Manual run order; no visibility into which batch blocks a customer order; no record of why the plan changed.
-- **Success:** Ranked conditioning schedule with a **stated reason per position**; live injection of **rush batch** or **failed QA**; re-sequence + **plain-language explanation**; human validates before the plan is final.
-- **Constraints:** No live ERP; frame as **recommendation + explanation**, not an optimal solver bake-off; GenAI is central (explain/triage), not decorative text.
-- **Out of scope:** Treatment/packing after conditioning, second facility, plant-floor sensors, harvest arrival prediction.
-- **Stretch:** “Explain my batch” chat for sales (not MVP).
-
----
-
-## 3. Business value (why B wins)
-
-- Directly addresses **on-time customer shipments** and **line utilization** (changeover-aware sequencing).
-- Trust: scheduler keeps control; system documents **why** the plan changed (audit + less stress).
-- Demo narrative judges understand in one screen: **before → event → after + copilot**.
-
----
-
-## 4. Explainability (non-negotiable)
-
-| Layer | Responsibility |
+| Initial GreenByte offer | Demo target B+ |
 | --- | --- |
-| **Data API (Camilo)** | Heuristic replan; returns structured `moves[]` and rule-based `reasons[]` (priority, SAP finish, species/changeover, QA flags). |
-| **Agent API (David)** | `POST /explain-replan`: NL summary + bullets **only** from structured diff/payload (no invented POs or dates). |
-| **BFF (Mauricio)** | Orchestrates event → replan → explain; single JSON contract to React; timeouts/fallback if Agent down. |
-| **UI** | Shows queue diff (highlight moved rows) + copilot panel; never a lone score without text. |
+| Wow mockup (timeline + copilot) | Simplified **timeline strip** + **full-width wow PNG** after event |
+| Pasco-style POs / SAP story | SWCO PO set + **reason per row** + position diff |
+| BFF + Data + Agent story | **`plantDemoApi`** + **MSW handlers** same paths as `core-api` |
+| 5-step narrative | Prominent **tour CTA** + live screen on same UC |
+| GenAI explain | **`explanation` object** in API response (Agent replaces template when live) |
 
 ---
 
-## 5. UX specification (MVP screen)
+## 3. Syngenta brief (unchanged minimum)
 
-### 5.1 Flow
-
-```text
-[Calm queue] → [Inject: Rush | QA fail] → [Proposed queue + Copilot “What changed”] → [Accept plan]
-```
-
-### 5.2 Layout (matches wow mockup `uc1-plant-capacity-wow.png`)
-
-1. **Header:** Pasco conditioning — Line 1; status badge (Calm / Event active).
-2. **Alert bar** (after event): Syngenta-style injected event message.
-3. **Queue table:** Position, PO, species, kg, scheduled finish, status; at-risk flag on near-due batches.
-4. **Event actions (demo):** “Simulate rush batch” / “Simulate QA failure” (live inject for judges).
-5. **Copilot panel:** Title “AI Copilot — What changed”; bullets (moves, changeover impact, customer window).
-6. **Footer:** Batch count + **Accept schedule** (logs acceptance; no ERP write).
-
-### 5.3 Guided tour
-
-`/demo/plant/tour` keeps the five-step **story** for stakeholders; `/demo/plant` is the **build target** for the live product demo.
+- Ranked queue with reasons; inject **rush** or **failed QA** live; replan + plain-language explanation; human accepts; no live ERP; recommendation not opaque solver output.
 
 ---
 
-## 6. Application responses (BFF contract intent)
+## 4. Layer 1 — Demo day (required)
 
-### `GET /demo/plant/lines/{lineId}/queue`
+| # | Deliverable | Owner |
+| --- | --- | --- |
+| 1 | `/demo/plant` queue + rush/QA + copilot + accept | Mauricio (UI) — **in repo** |
+| 2 | BFF contract: `GET queue`, `POST events`, `POST accept`, `POST reset` | Mauricio — MSW + `plantDemoServer` until Lambda |
+| 3 | Pasco ETL → PostgreSQL; `POST replan` + `GET queue` | Camilo |
+| 4 | `POST explain-replan` from structured diff (no invented POs) | David |
+| 5 | Wire `VITE_API_BASE_APP` to deployed BFF | Mauricio / infra |
+| 6 | Demo script: tour (2 min) → live inject → accept | Team |
 
-- `queue[]`: ranked rows with stable `po`, species, kg, finish, status, optional `reasonShort`, `atRisk`.
+### 4.1 UI blocks on `/demo/plant`
 
-### `POST /demo/plant/events`
+1. Header + **Demo target B+** badge  
+2. Event bar (rush / QA)  
+3. Queue table with **reason column** and **previous position** on moves  
+4. Copilot panel (`explanation` from API)  
+5. **Timeline strip** (simplified) after event  
+6. **Wow mockup image** (EN/ES) after event  
+7. Accept schedule + audit message  
 
-Body example: `{ "type": "rush" | "qa_fail", "po": "..." }`
+### 4.2 API shapes (frontend ↔ BFF)
 
-Response:
+See §6 in previous revision — `PlantEventResponse` includes `diff` + `explanation`.
 
-- `queue[]` — new order  
-- `diff.moves[]` — `{ po, fromPosition, toPosition }`  
-- `diff.reasons[]` — machine-readable rule hits  
-- `explanation.summary` — one sentence  
-- `explanation.bullets[]` — copilot bullets  
-- `impact` — optional (e.g. changeover hours saved, customer window)
+Implementation reference:
 
-### `POST /demo/plant/schedule/accept`
+- Types: `frontend/src/demo/plant/plantDemoTypes.ts`
+- Local/MSW server: `frontend/src/demo/plant/plantDemoServer.ts`
+- Client: `frontend/src/services/plantDemoApi.ts`
+- MSW: `frontend/src/mocks/handlers/plantDemoHandlers.ts`
 
-- `{ acceptedAt, lineId, planVersion }` for human-in-the-loop audit.
-
-### `GET /demo/plant/batches/{po}/summary`
-
-- Panel/detail stretch; optional for MVP if table columns suffice.
-
----
-
-## 7. Data (Camilo)
-
-Source (local, not in git):  
-`Hackathon 2026 - Use Cases/.../UC1 - Plant Capacity Utilization/Pasco LSV and SSV Conditioning sheets and data.xlsx`
-
-Seed priority sheets: line schedules, Excel SAP data, conditioning logs, LSV/SSV pass-fail logs.
-
-MVP seeds **Line 1** only; expand lines post-hackathon.
+When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **plantDemoServer** serves the contract on the client (static S3 demo). When `VITE_USE_MSW=true`, MSW intercepts HTTP in dev.
 
 ---
 
-## 8. Hackathon in / out
+## 5. Layer 2 — Stretch (if time)
 
-| In | Out |
+- Batch detail drawer: `GET /demo/plant/batches/{po}/summary`
+- Side-by-side before/after queue
+- Real rows from Pasco Excel seed (replace hardcoded PO list)
+- “Adjust manually” disabled with tooltip
+
+**Out:** UC4 product, multi-line, ERP write, sales chat, plant IoT.
+
+---
+
+## 6. Week checklist
+
+### Mauricio (UI + BFF)
+
+- [ ] OpenAPI for §4.2 paths under `backend/docs/api/`
+- [ ] Lambda handlers orchestrate Camilo replan → David explain
+- [ ] Point production demo env at BFF URL
+- [ ] Keep MSW handlers in sync with OpenAPI
+
+### Camilo (Data API)
+
+- [ ] Seed Pasco Excel (Line 1 priority)
+- [ ] `GET /lines/line-1/queue`, `POST /schedule/replan`
+- [ ] Return `moves[]` + `reasons[]` for explain step
+
+### David (Agent API)
+
+- [ ] `POST /explain-replan` — input: diff JSON; output: `summary` + `bullets[]`
+- [ ] No direct DB reads; tools via Data API when needed
+
+---
+
+## 7. Client-facing answers (demo script)
+
+| Question | Answer |
 | --- | --- |
-| UC1 MVP UI + BFF routes | UC4 breeding product path (route may remain dormant) |
-| ETL Pasco → PostgreSQL | Live SAP/ERP |
-| Rush + QA inject | Multi-plant routing |
-| Explain-replan Agent | Sales “explain my batch” chat |
-| MSW mirrors BFF | Solver quality comparison |
-
----
-
-## 9. Team checklist (day 1)
-
-1. Agree OpenAPI for BFF paths above + sample JSON post-event.  
-2. Camilo: seed + `GET queue`, `POST replan`.  
-3. David: `explain-replan` from structured payload only.  
-4. Mauricio: wire env URLs; replace frontend mock state with BFF calls.  
-5. Demo script: calm queue → rush inject → read copilot → accept.
+| What problem? | Manual conditioning queue; late customer orders; no audit trail for plan changes. |
+| What do I do? | Review queue → inject rush or QA → read **what changed and why** → accept. |
+| What does the app return? | New queue + diff + copilot explanation + acceptance log — **no SAP write**. |
+| Why trust it? | Reasons tied to PO, SAP dates, species/changeover, QA flags — GenAI explains structured facts. |
 
 ---
 
 ## References
 
-- Syngenta briefs: `Hackathon 2026 - Use Cases/Shared - Hackathon 2026 - Use Cases/2026_Use_Case_Briefs.pdf`
-- Integration architecture: [syngenta-demo-architecture.md](./syngenta-demo-architecture.md)
-- Mockups: [mockups/README.md](./mockups/README.md)
+- [syngenta-demo-architecture.md](./syngenta-demo-architecture.md)
+- [mockups/uc1-plant-capacity-wow.png](./mockups/uc1-plant-capacity-wow.png)
+- Syngenta `2026_Use_Case_Briefs.pdf` (local `Hackathon 2026 - Use Cases/`)
