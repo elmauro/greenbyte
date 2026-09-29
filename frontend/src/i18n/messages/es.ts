@@ -32,33 +32,129 @@ export const es: Messages = {
     eyebrow: 'Hackathon Syngenta · Base técnica',
     title: 'Arquitectura del demo',
     subtitle:
-      'Vista de integración GreenByte: React y BFF en este repo; Data API y Agent API como servicios HTTP separados. Mismos diagramas que docs/hackathon/syngenta-demo-architecture.md.',
+      'Una plataforma compartida (React + BFF + Data + Agent) con dos briefs Syngenta mapeados abajo: UC1 capacidad de planta y UC4 unificación R&D.',
+    scopeNote:
+      'Documento v1.2 · Solo datos demo (Excel Pasco, CSVs UC4) · Diagramas técnicos de arquitectura en inglés; recorridos UC1/UC4 usan mockups en español con idioma ES.',
     docNote: 'Documento v1.2 · Sin conexión a sistemas productivos Syngenta.',
     links: {
       plant: 'Recorrido UC1',
       breeding: 'Recorrido UC4',
     },
+    useCasesTitle: 'Casos de uso Syngenta que cubre esta arquitectura',
+    genAiRoleLabel: 'Rol GenAI',
+    useCaseCards: [
+      {
+        id: 'UC1',
+        name: 'Capacidad de planta (Pasco)',
+        problem:
+          'Las líneas de acondicionamiento compiten por lotes; pedidos urgentes y fallos de QA obligan a replanear a mano sin explicación clara.',
+        genAiRole:
+          'Explicar en lenguaje natural los cambios tras el replan del Data API; aceptación humana — sin escribir en ERP.',
+      },
+      {
+        id: 'UC4',
+        name: 'Unificación de fuentes R&D',
+        problem:
+          'Ensayos, obs de campo, lab, pedigree y operaciones están en archivos distintos; el breeder necesita una respuesta con evidencia.',
+        genAiRole:
+          'Chat NL + triage R/A/G anclado a tools del Data API; override del breeder con auditoría.',
+      },
+    ],
+    fieldLabels: {
+      syngentaGoal: 'Criterios de éxito Syngenta (demo)',
+      data: 'Datos hackathon (repo)',
+      demoRoute: 'Recorrido GreenByte',
+    },
+    groups: {
+      shared: {
+        title: 'Plataforma compartida (ambos casos)',
+        intro:
+          'Todo flujo empieza igual: React solo llama al BFF; ETL carga Excel o CSV a PostgreSQL; el Agent no lee archivos crudos en runtime — solo SQL vía Data API.',
+      },
+      uc1: {
+        title: 'UC1 — Arquitectura capacidad de planta',
+        intro:
+          'UI de cola → evento (rush o QA) → replan Data API → Agent explica el diff → aceptación humana.',
+        syngentaGoal: 'Recomendaciones con explicación; validación humana; sin SAP en vivo.',
+        dataSource:
+          'Excel Pasco LSV/SSV (schedules, órdenes SAP, logs de acondicionamiento, pass/fail).',
+      },
+      uc4: {
+        title: 'UC4 — Arquitectura unificación R&D',
+        intro:
+          'Pregunta en NL → BFF reenvía al Agent → tools de solo lectura en Data API → triage + citas → override opcional auditado en BFF.',
+        syngentaGoal: 'Vista unificada; GenAI central; humano en el loop con auditoría de override.',
+        dataSource:
+          'Cinco CSVs UC4 (trials, germplasm/pedigree, obs campo, obs lab, operations) con TRIAL_GUID / MATERIAL_GUID.',
+      },
+    },
     teamTitle: 'Responsabilidades del equipo',
+    teamIntro:
+      'La propiedad es por capa; UC1 vs UC4 cambia sobre todo qué rutas BFF y endpoints Agent implementas — no la forma del contenedor.',
     teamTable: {
       role: 'Rol',
       owner: 'Responsable',
       responsibility: 'Alcance',
+      useCases: 'Enfoque UC1 / UC4',
     },
     teamRows: [
       {
         role: 'UI + BFF',
         owner: 'Mauricio / GreenByte',
         responsibility: 'Contrato único al React; CORS; MSW; persistencia de override',
+        useCases: 'UC1: /demo/plant/* cola, eventos, accept · UC4: /demo/breeding/* ask, dossier, override',
       },
       {
         role: 'Data API',
         owner: 'Camilo',
         responsibility: 'ETL, esquema, tools de solo lectura, calidad de datos',
+        useCases: 'UC1: cola, replan, batch · UC4: trial, material, obs, lab, ops',
       },
       {
         role: 'Agent API',
         owner: 'David',
         responsibility: 'Chat, triage, explain; llamadas tools al Data API',
+        useCases: 'UC1: explain-replan, suggest-rank opcional · UC4: /chat, /triage con tools',
+      },
+    ],
+    endpointsTitle: 'Endpoints ilustrativos (contrato BFF según UC elegido)',
+    endpointTable: {
+      layer: 'Capa',
+      examples: 'Ejemplos',
+      purpose: 'Propósito en este caso de uso',
+    },
+    uc1Endpoints: [
+      {
+        layer: 'BFF',
+        examples: 'GET /demo/plant/lines/{lineId}/queue · POST /demo/plant/events · POST /demo/plant/schedule/accept',
+        purpose: 'UI de cola, evento rush/QA, aceptación humana del plan',
+      },
+      {
+        layer: 'Data API',
+        examples: 'GET /lines/{id}/queue · POST /schedule/replan · GET /batches/{po}',
+        purpose: 'Datos Pasco, reorden heurístico, contexto de lote',
+      },
+      {
+        layer: 'Agent API',
+        examples: 'POST /explain-replan · POST /suggest-rank (opcional)',
+        purpose: 'Explicación NL del diff; sugerencia de ranking validada por BFF',
+      },
+    ],
+    uc4Endpoints: [
+      {
+        layer: 'BFF',
+        examples: 'POST /demo/breeding/ask · GET /demo/breeding/materials/{guid}/dossier · POST .../override',
+        purpose: 'Pregunta NL, dossier agregado, auditoría de override',
+      },
+      {
+        layer: 'Data API',
+        examples: 'GET /trials/{guid} · GET /materials/{guid}/pedigree · GET .../observations · GET .../operations',
+        purpose: 'Tools de solo lectura que llama el Agent (MCP vía HTTP)',
+      },
+      {
+        layer: 'Agent API',
+        examples: 'POST /chat · POST /triage',
+        purpose: 'Orquestación de tools, R/A/G con razones ancladas al JSON recuperado',
       },
     ],
     rulesTitle: 'Reglas de integración (día 1)',
@@ -127,7 +223,7 @@ export const es: Messages = {
         title: '1. La cola de siempre',
         plainLine: 'Primero miramos la lista de hoy en la Línea 1: quién va primero, segundo, tercero.',
         body: 'Cada fila es un lote: tipo de cultivo, peso y cuándo debería estar listo. Todo avanza; aún no hay alertas.',
-        imageSrc: '/demo/uc1-plant-baseline.png',
+        imageSrc: '/demo/es/uc1-plant-baseline.png',
         imageAlt: 'Cola base antes de cualquier evento',
       },
       {
@@ -146,7 +242,7 @@ export const es: Messages = {
         title: '4. Nuevo orden + explicación clara',
         plainLine: 'Aquí está el “wow”: cambia la cola y lees el motivo en palabras normales.',
         body: 'Por ejemplo: «Subimos el lote A porque vence antes y es el mismo cultivo en la misma línea — así evitamos una limpieza extra de máquina».',
-        imageSrc: '/demo/uc1-plant-capacity-wow.png',
+        imageSrc: '/demo/es/uc1-plant-capacity-wow.png',
         imageAlt: 'Tras el rush — cola replanificada y panel copiloto',
       },
       {
@@ -185,7 +281,7 @@ export const es: Messages = {
         title: '1. Un solo punto de partida',
         plainLine: 'En lugar de cinco archivos sueltos, imagina un escritorio con todo enlazado.',
         body: 'Ensayos, mediciones en campo, resultados de lab, árbol genealógico de la planta y actividades en parcela — accesibles desde el mismo hub demo.',
-        imageSrc: '/demo/uc4-breeding-baseline.png',
+        imageSrc: '/demo/es/uc4-breeding-baseline.png',
         imageAlt: 'Workspace unificado antes de la pregunta',
       },
       {
@@ -204,7 +300,7 @@ export const es: Messages = {
         title: '4. Recomendación que puedes cuestionar',
         plainLine: 'Verde, ámbar o rojo — más una frase del porqué — y la evidencia al lado.',
         body: 'Notas de campo, lab y pedigrí juntos para que revises la historia antes de confiar.',
-        imageSrc: '/demo/uc4-rd-unification-wow.png',
+        imageSrc: '/demo/es/uc4-rd-unification-wow.png',
         imageAlt: 'Dossier con triage y citas en el chat',
       },
       {

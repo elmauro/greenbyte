@@ -88,33 +88,127 @@ export const en = {
     eyebrow: 'Syngenta hackathon · Technical baseline',
     title: 'Demo architecture',
     subtitle:
-      'Integration view for GreenByte: React and BFF in this repo; Data API and Agent API as separate HTTP services. Same diagrams as docs/hackathon/syngenta-demo-architecture.md.',
+      'One shared platform (React + BFF + Data + Agent), with two Syngenta briefs mapped below: UC1 Plant Capacity and UC4 R&D Unification.',
+    scopeNote:
+      'Document v1.2 · Demo data only (Pasco Excel, UC4 CSVs) · Architecture diagram PNGs are English in all locales; UC walkthrough mockups follow EN/ES locale.',
     docNote: 'Document version 1.2 · No live Syngenta production connections.',
     links: {
       plant: 'UC1 walkthrough',
       breeding: 'UC4 walkthrough',
     },
+    useCasesTitle: 'Syngenta use cases this architecture supports',
+    genAiRoleLabel: 'GenAI role',
+    useCaseCards: [
+      {
+        id: 'UC1',
+        name: 'Plant Capacity Utilization (Pasco)',
+        problem:
+          'Conditioning lines juggle many batches; rush orders and QA failures force manual replanning without clear explanations.',
+        genAiRole: 'Explain schedule changes in plain language after Data API replan; human accepts — no auto-write to ERP.',
+      },
+      {
+        id: 'UC4',
+        name: 'R&D Data Source Unification',
+        problem:
+          'Trials, field obs, lab results, pedigree, and operations live in separate files; breeders need one answer with evidence.',
+        genAiRole: 'NL chat + R/A/G triage grounded in Data API tool results; breeder override with audit trail.',
+      },
+    ],
+    fieldLabels: {
+      syngentaGoal: 'Syngenta success criteria (demo)',
+      data: 'Hackathon data (repo)',
+      demoRoute: 'GreenByte walkthrough',
+    },
+    groups: {
+      shared: {
+        title: 'Shared platform (both use cases)',
+        intro:
+          'Every flow starts the same: React calls only the BFF; ETL loads Excel or CSV into PostgreSQL; Agent never reads raw files at runtime — only Data API SQL.',
+      },
+      uc1: {
+        title: 'UC1 — Plant capacity architecture',
+        intro:
+          'Scheduler UI for line queue → inject event (rush or QA fail) → Data API replan → Agent explains diff → human accept.',
+        syngentaGoal: 'Recommendations with explanations; human validates; no live SAP connection.',
+        dataSource:
+          'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs).',
+      },
+      uc4: {
+        title: 'UC4 — R&D unification architecture',
+        intro:
+          'Breeder asks in natural language → BFF forwards to Agent → read-only tools on Data API → triage + citations → optional override logged by BFF.',
+        syngentaGoal: 'Unified view across sources; GenAI central; human in the loop with override audit.',
+        dataSource:
+          'Five UC4 CSVs (trials, germplasm/pedigree, field obs, lab obs, operations) keyed by TRIAL_GUID / MATERIAL_GUID.',
+      },
+    },
     teamTitle: 'Team responsibilities',
+    teamIntro:
+      'Ownership is split by layer; UC1 vs UC4 mainly changes which BFF routes and Agent endpoints you implement — not the container shape.',
     teamTable: {
       role: 'Role',
       owner: 'Owner',
       responsibility: 'Responsibility',
+      useCases: 'UC1 / UC4 focus',
     },
     teamRows: [
       {
         role: 'Product UI + BFF',
         owner: 'Mauricio / GreenByte',
         responsibility: 'Single API contract to React; CORS; MSW mocks; override persistence',
+        useCases: 'UC1: /demo/plant/* queue, events, accept · UC4: /demo/breeding/* ask, dossier, override',
       },
       {
         role: 'Data API',
         owner: 'Camilo',
         responsibility: 'ETL, schema, read-only tools, data quality',
+        useCases: 'UC1: queue, replan, batch summary · UC4: trial, material, obs, lab, ops tools',
       },
       {
         role: 'Agent API',
         owner: 'David',
         responsibility: 'Chat, triage, explain; tool calls to Data API',
+        useCases: 'UC1: explain-replan, optional suggest-rank · UC4: /chat, /triage with tool orchestration',
+      },
+    ],
+    endpointsTitle: 'Illustrative endpoints (align BFF contract to chosen UC)',
+    endpointTable: {
+      layer: 'Layer',
+      examples: 'Examples',
+      purpose: 'Purpose in this use case',
+    },
+    uc1Endpoints: [
+      {
+        layer: 'BFF',
+        examples: 'GET /demo/plant/lines/{lineId}/queue · POST /demo/plant/events · POST /demo/plant/schedule/accept',
+        purpose: 'Queue UI, inject rush/QA event, human accept plan',
+      },
+      {
+        layer: 'Data API',
+        examples: 'GET /lines/{id}/queue · POST /schedule/replan · GET /batches/{po}',
+        purpose: 'Pasco seed data, heuristic reorder, batch context',
+      },
+      {
+        layer: 'Agent API',
+        examples: 'POST /explain-replan · POST /suggest-rank (optional)',
+        purpose: 'NL explanation of schedule diff; optional rank suggestion validated by BFF',
+      },
+    ],
+    uc4Endpoints: [
+      {
+        layer: 'BFF',
+        examples: 'POST /demo/breeding/ask · GET /demo/breeding/materials/{guid}/dossier · POST .../override',
+        purpose: 'NL ask, aggregated dossier panel, breeder override audit',
+      },
+      {
+        layer: 'Data API',
+        examples: 'GET /trials/{guid} · GET /materials/{guid}/pedigree · GET .../observations · GET .../operations',
+        purpose: 'Read-only tools Agent calls (MCP-style over HTTP)',
+      },
+      {
+        layer: 'Agent API',
+        examples: 'POST /chat · POST /triage',
+        purpose: 'Tool orchestration, R/A/G with reason lines grounded in retrieved JSON',
       },
     ],
     rulesTitle: 'Integration rules (day 1)',

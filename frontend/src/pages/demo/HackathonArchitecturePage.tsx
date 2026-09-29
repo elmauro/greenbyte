@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArchitectureImageDiagram } from '../../components/demo/ArchitectureImageDiagram';
+import { ArchitectureSectionGroup } from '../../components/demo/ArchitectureSectionGroup';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import {
   hackathonArchitectureImages,
@@ -8,24 +9,25 @@ import {
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 
-type DiagramSection = {
+function DiagramBlock({
+  diagramKey,
+  title,
+  description,
+}: {
   diagramKey: HackathonArchitectureImageKey;
   title: string;
   description?: string;
-};
+}) {
+  const asset = hackathonArchitectureImages[diagramKey];
+  return (
+    <ArchitectureImageDiagram title={title} description={description} src={asset.src} alt={asset.alt} />
+  );
+}
 
 export function HackathonArchitecturePage() {
   const { messages: m } = useLocale();
   const a = m.demoArchitecture;
-
-  const sections: DiagramSection[] = [
-    { diagramKey: 'container', title: a.sections.container.title, description: a.sections.container.description },
-    { diagramKey: 'teamStack', title: a.sections.teamStack.title, description: a.sections.teamStack.description },
-    { diagramKey: 'uc1Flow', title: a.sections.uc1Flow.title, description: a.sections.uc1Flow.description },
-    { diagramKey: 'sequenceUc1', title: a.sections.uc1Sequence.title, description: a.sections.uc1Sequence.description },
-    { diagramKey: 'uc4Flow', title: a.sections.uc4Flow.title, description: a.sections.uc4Flow.description },
-    { diagramKey: 'sequenceUc4', title: a.sections.uc4Sequence.title, description: a.sections.uc4Sequence.description },
-  ];
+  const g = a.groups;
 
   return (
     <SiteLayout>
@@ -35,7 +37,7 @@ export function HackathonArchitecturePage() {
             <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{a.eyebrow}</p>
             <h1 className="mt-3 text-3xl font-bold text-brand-blue sm:text-4xl">{a.title}</h1>
             <p className="mt-4 text-lg text-gray-600">{a.subtitle}</p>
-            <p className="mt-3 text-sm text-gray-500">{a.docNote}</p>
+            <p className="mt-3 text-sm leading-relaxed text-gray-500">{a.scopeNote}</p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
                 to={paths.demoPlant}
@@ -53,9 +55,26 @@ export function HackathonArchitecturePage() {
           </div>
         </section>
 
-        <div className="site-container mt-12 max-w-[90rem] space-y-14">
+        <div className="site-container mt-12 max-w-[90rem] space-y-12">
+          <section className="rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-lg font-semibold text-gray-900">{a.useCasesTitle}</h2>
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              {a.useCaseCards.map((card) => (
+                <article key={card.id} className="rounded-xl border border-gray-200 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-brand-green">{card.id}</p>
+                  <h3 className="mt-2 font-semibold text-brand-blue">{card.name}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{card.problem}</p>
+                  <p className="mt-3 text-sm text-gray-700">
+                    <span className="font-medium">{a.genAiRoleLabel}:</span> {card.genAiRole}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section>
             <h2 className="text-lg font-semibold text-gray-900">{a.teamTitle}</h2>
+            <p className="mt-2 max-w-3xl text-sm text-gray-600">{a.teamIntro}</p>
             <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
               <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
                 <thead className="bg-gray-50">
@@ -63,6 +82,7 @@ export function HackathonArchitecturePage() {
                     <th className="px-4 py-3 font-semibold text-gray-700">{a.teamTable.role}</th>
                     <th className="px-4 py-3 font-semibold text-gray-700">{a.teamTable.owner}</th>
                     <th className="px-4 py-3 font-semibold text-gray-700">{a.teamTable.responsibility}</th>
+                    <th className="px-4 py-3 font-semibold text-gray-700">{a.teamTable.useCases}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
@@ -71,6 +91,7 @@ export function HackathonArchitecturePage() {
                       <td className="px-4 py-3 font-medium text-brand-blue">{row.role}</td>
                       <td className="px-4 py-3 text-gray-700">{row.owner}</td>
                       <td className="px-4 py-3 text-gray-600">{row.responsibility}</td>
+                      <td className="px-4 py-3 text-gray-600">{row.useCases}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -87,18 +108,64 @@ export function HackathonArchitecturePage() {
             </ol>
           </section>
 
-          {sections.map((section) => {
-            const asset = hackathonArchitectureImages[section.diagramKey];
-            return (
-              <ArchitectureImageDiagram
-                key={section.diagramKey}
-                title={section.title}
-                description={section.description}
-                src={asset.src}
-                alt={asset.alt}
-              />
-            );
-          })}
+          <ArchitectureSectionGroup title={g.shared.title} intro={g.shared.intro}>
+            <DiagramBlock
+              diagramKey="container"
+              title={a.sections.container.title}
+              description={a.sections.container.description}
+            />
+            <DiagramBlock
+              diagramKey="teamStack"
+              title={a.sections.teamStack.title}
+              description={a.sections.teamStack.description}
+            />
+          </ArchitectureSectionGroup>
+
+          <ArchitectureSectionGroup
+            title={g.uc1.title}
+            intro={g.uc1.intro}
+            syngentaLabel={a.fieldLabels.syngentaGoal}
+            syngentaGoal={g.uc1.syngentaGoal}
+            dataLabel={a.fieldLabels.data}
+            dataSource={g.uc1.dataSource}
+            demoRouteLabel={a.fieldLabels.demoRoute}
+            demoRoute={paths.demoPlant}
+          >
+            <DiagramBlock
+              diagramKey="uc1Flow"
+              title={a.sections.uc1Flow.title}
+              description={a.sections.uc1Flow.description}
+            />
+            <DiagramBlock
+              diagramKey="sequenceUc1"
+              title={a.sections.uc1Sequence.title}
+              description={a.sections.uc1Sequence.description}
+            />
+            <EndpointTable title={a.endpointsTitle} headers={a.endpointTable} rows={a.uc1Endpoints} />
+          </ArchitectureSectionGroup>
+
+          <ArchitectureSectionGroup
+            title={g.uc4.title}
+            intro={g.uc4.intro}
+            syngentaLabel={a.fieldLabels.syngentaGoal}
+            syngentaGoal={g.uc4.syngentaGoal}
+            dataLabel={a.fieldLabels.data}
+            dataSource={g.uc4.dataSource}
+            demoRouteLabel={a.fieldLabels.demoRoute}
+            demoRoute={paths.demoBreeding}
+          >
+            <DiagramBlock
+              diagramKey="uc4Flow"
+              title={a.sections.uc4Flow.title}
+              description={a.sections.uc4Flow.description}
+            />
+            <DiagramBlock
+              diagramKey="sequenceUc4"
+              title={a.sections.uc4Sequence.title}
+              description={a.sections.uc4Sequence.description}
+            />
+            <EndpointTable title={a.endpointsTitle} headers={a.endpointTable} rows={a.uc4Endpoints} />
+          </ArchitectureSectionGroup>
 
           <section className="rounded-xl border border-brand-green/20 bg-brand-green/5 p-6 text-sm text-gray-700">
             <p className="font-semibold text-brand-blue">{a.monolithTitle}</p>
@@ -107,5 +174,41 @@ export function HackathonArchitecturePage() {
         </div>
       </div>
     </SiteLayout>
+  );
+}
+
+function EndpointTable({
+  title,
+  headers,
+  rows,
+}: {
+  title: string;
+  headers: { layer: string; examples: string; purpose: string };
+  rows: { layer: string; examples: string; purpose: string }[];
+}) {
+  return (
+    <section>
+      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+      <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 font-semibold text-gray-700">{headers.layer}</th>
+              <th className="px-4 py-3 font-semibold text-gray-700">{headers.examples}</th>
+              <th className="px-4 py-3 font-semibold text-gray-700">{headers.purpose}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {rows.map((row) => (
+              <tr key={row.layer + row.examples}>
+                <td className="px-4 py-3 font-medium text-brand-blue">{row.layer}</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-800">{row.examples}</td>
+                <td className="px-4 py-3 text-gray-600">{row.purpose}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

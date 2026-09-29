@@ -1,9 +1,22 @@
 # GreenByte — Syngenta Hackathon Demo Architecture
 
-**Document version:** 1.2  
+**Document version:** 1.3  
 **Date:** 2026-09-29  
 **Team:** GreenByte (HatchWorks AI Hackathon — AgTech Edition)  
 **Status:** Proposed baseline for UC1 (Plant Capacity) and UC4 (R&D Data Unification)
+
+---
+
+## 0. Use-case alignment (Syngenta briefs)
+
+GreenByte prepares **two** hackathon candidates with **one** physical architecture. The same container (React → BFF → Data API + Agent API → PostgreSQL) applies to both; only **sources**, **BFF routes**, and **Agent responsibilities** change.
+
+| Use case | Persona | Demo route | Primary data | GenAI moment | Human in the loop |
+| --- | --- | --- | --- | --- | --- |
+| **UC1** Plant Capacity (Pasco) | Scheduler / plant ops | `/demo/plant` | Pasco conditioning Excel | Explain replan after rush or QA event | Accept schedule (no ERP write) |
+| **UC4** R&D Unification | Plant breeder | `/demo/breeding` | Five UC4 CSVs | NL ask + R/A/G triage via tools | Override recommendation + audit |
+
+**Web page:** Sections mirror this table — shared platform, then UC1 block (flow + sequence + endpoints), then UC4 block. Live: [demo/architecture](https://greenbyte-ag.com/demo/architecture).
 
 ---
 
@@ -95,11 +108,11 @@ This document describes the **integration architecture** for the Syngenta use-ca
 
 ## 4. Team responsibilities (integration view)
 
-| Role | Owner | Responsibility |
-| --- | --- | --- |
-| **Product UI + BFF** | Mauricio / GreenByte frontend | Single API contract to React; CORS; MSW mocks; optional override persistence |
-| **Data API** | Camilo | ETL, schema, read-only query/tools endpoints, data quality |
-| **Agent API** | David | Chat, triage, explain, tool-use calling Data API URLs |
+| Role | Owner | Responsibility | UC1 / UC4 focus |
+| --- | --- | --- | --- |
+| **Product UI + BFF** | Mauricio / GreenByte frontend | Single API contract to React; CORS; MSW mocks; optional override persistence | UC1: `/demo/plant/*` · UC4: `/demo/breeding/*` |
+| **Data API** | Camilo | ETL, schema, read-only query/tools endpoints, data quality | UC1: queue, replan, batch · UC4: trial, material, obs, lab, ops |
+| **Agent API** | David | Chat, triage, explain, tool-use calling Data API URLs | UC1: explain-replan · UC4: chat + triage |
 
 The **React app must not call Data or Agent APIs directly** in the demo environment (only the BFF), to simplify CORS, secrets, and fallback to MSW.
 
@@ -343,7 +356,15 @@ Replace **Sources** and **React** route name (`/demo/plant` vs `/demo/breeding`)
 
 ## 14. Web architecture page
 
-Live diagram PNGs and team integration summary: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture) (assets in `frontend/public/demo/architecture/`). This markdown file keeps ASCII copies for PDF and offline reference.
+Live page structure (aligned with Sections 0, 7, and 8):
+
+1. **Use-case cards** — UC1 vs UC4 problem and GenAI role (Syngenta brief language).
+2. **Team table** — same ownership as Section 4, with a UC1/UC4 column.
+3. **Shared platform** — container + team stack PNGs (Section 5).
+4. **UC1 section** — Pasco goal, data path, flow + sequence PNGs, endpoint table (Section 7.3).
+5. **UC4 section** — R&D goal, CSV sources, flow + sequence PNGs, endpoint table (Section 8.3).
+
+URL: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture). Assets: `frontend/public/demo/architecture/`. This markdown keeps ASCII copies for PDF and offline reference.
 
 ---
 
