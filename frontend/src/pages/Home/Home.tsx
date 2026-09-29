@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { useLocale } from '../../i18n';
+import { paths } from '../../routes/paths';
 
 const discoverCardImages = [
   'from-brand-green/80 to-brand-green-dark',
@@ -33,12 +35,18 @@ export function Home() {
             >
               {m.hero.ctaDiscover}
             </a>
-            <a
-              href="#precision"
+            <Link
+              to={paths.demoPlant}
               className="rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              {m.hero.ctaPrecision}
-            </a>
+              {m.hero.ctaDemoPlant}
+            </Link>
+            <Link
+              to={paths.demoBreeding}
+              className="rounded-full border border-white/80 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+            >
+              {m.hero.ctaDemoBreeding}
+            </Link>
           </div>
         </div>
       </section>

@@ -12,3 +12,5 @@ Initial documentation for `GreenByte`.
 - `adr-template.md`: template for architecture decisions.
 - `security-baseline.md`: initial security checklist.
 - `cost-baseline.md`: initial AWS cost guide.
+- `hackathon/syngenta-demo-architecture.md` (and `.pdf`): Syngenta hackathon demo architecture (BFF + Data API + Agent API).
+- `hackathon/mockups/`: UC1 and UC4 wow-moment UI mockups (PNG).

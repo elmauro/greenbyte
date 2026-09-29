@@ -11,6 +11,91 @@ export const es: Messages = {
     precision: 'Agricultura de precisión',
     sustainability: 'Sostenibilidad',
     news: 'Noticias',
+    demoPlant: 'Demo: Planta',
+    demoBreeding: 'Demo: Breeding',
+  },
+  demoCommon: {
+    labels: {
+      step: 'Paso',
+      of: 'de',
+      back: 'Atrás',
+      next: 'Siguiente',
+      finish: 'Finalizar',
+      restart: 'Reiniciar recorrido',
+    },
+    viewPlant: 'Ver recorrido UC1 — capacidad de planta',
+    viewBreeding: 'Ver recorrido UC4 — inteligencia de breeding',
+  },
+  demoPlant: {
+    eyebrow: 'Syngenta UC1 · Capacidad de planta',
+    title: 'Acondicionamiento Pasco — demo guiada',
+    subtitle:
+      'Recorrido de cómo un planner replanifica la Línea 1 cuando entra un lote urgente. Datos mock y UI conceptual — el humano valida cada plan.',
+    steps: [
+      {
+        title: '1. Base — cola estable Línea 1',
+        body: 'El planner abre la vista de planta. Los lotes están ordenados con PO, especie, kg y fechas SAP. La línea opera sin alertas.',
+        imageSrc: '/demo/uc1-plant-baseline.png',
+        imageAlt: 'Cola base antes de cualquier evento',
+      },
+      {
+        title: '2. Detectar pedido en riesgo',
+        body: 'El BFF carga órdenes SAP del extracto demo. Un lote tiene fecha cercana y prioridad alta; si baja en la cola, puede fallar la ventana de entrega.',
+        highlight: 'Ejemplo: PO 1002307551 — SWCO, fin 2026-07-06, prioridad 2.',
+      },
+      {
+        title: '3. Inyectar lote rush (evento)',
+        body: 'Operaciones marca un lote urgente. El evento va al Data API; heurísticas proponen nuevo orden (reglas de changeover por especie e historial Pasco).',
+        highlight: 'Humano en el loop: el sistema recomienda; el planner decide.',
+      },
+      {
+        title: '4. Momento clave — replan con explicación IA',
+        body: 'La cola se reordena. El Agent API explica en lenguaje claro qué PO subió o bajó y por qué (fecha SAP, prioridad, changeover evitado).',
+        imageSrc: '/demo/uc1-plant-capacity-wow.png',
+        imageAlt: 'Tras el rush — cola replanificada y panel copiloto',
+      },
+      {
+        title: '5. Aceptar el plan',
+        body: 'El planner revisa, acepta o ajusta manualmente. Plan aceptado queda registrado. Sin escritura a SAP live — solo demo según el brief.',
+        highlight: 'Siguiente: conectar BFF con APIs Data + Agent (doc de arquitectura).',
+      },
+    ],
+  },
+  demoBreeding: {
+    eyebrow: 'Syngenta UC4 · Unificación R&D',
+    title: 'Inteligencia de breeding — demo guiada',
+    subtitle:
+      'Recorrido de un breeder senior: una pregunta cruzando ensayos, campo, lab, pedigrí y operaciones — con override. CSVs mock unificados.',
+    steps: [
+      {
+        title: '1. Base — espacio unificado',
+        body: 'Hoy los datos viven en hojas separadas. El hub demo conecta cinco fuentes a un Data API de solo lectura — base para tools tipo MCP.',
+        imageSrc: '/demo/uc4-breeding-baseline.png',
+        imageAlt: 'Workspace unificado antes de la pregunta',
+      },
+      {
+        title: '2. Pregunta en lenguaje natural',
+        body: 'El breeder escribe en el chat. El BFF reenvía al Agent API, que planifica llamadas a tools — sin inventar IDs no recuperados.',
+        highlight:
+          'Ejemplo: «¿Qué líneas superaron 45 t/ha con baja enfermedad y pedigrí compartido?»',
+      },
+      {
+        title: '3. Agente invoca tools de solo lectura',
+        body: 'Ensayo, pedigrí, observaciones de campo y lab, operaciones. Hechos fusionados en dossier con citas (TRIAL_GUID, MATERIAL_GUID, traits).',
+        highlight: 'Regla: toda respuesta cita campos JSON recuperados.',
+      },
+      {
+        title: '4. Momento clave — dossier R / A / G',
+        body: 'Semáforo rojo, ámbar o verde con una línea de motivo. Paneles de campo, lab y pedigrí juntos — la promesa UC4 de un solo lugar.',
+        imageSrc: '/demo/uc4-rd-unification-wow.png',
+        imageAlt: 'Dossier con triage y citas en el chat',
+      },
+      {
+        title: '5. Override del breeder (auditoría)',
+        body: 'Acepta, ajusta u override. Queda en audit trail. Decisión final humana — requisito UC4.',
+        highlight: 'Siguiente: Agent + Data en vivo y persistencia de override en BFF.',
+      },
+    ],
   },
   lang: {
     switchLabel: 'Idioma',
@@ -24,6 +109,8 @@ export const es: Messages = {
       '¿Cómo pueden los agricultores proteger sus cultivos ante temperaturas extremas? GreenByte explora respuestas basadas en datos e IA — en colaboración con Syngenta para el hackathon.',
     ctaDiscover: 'Descubrir GreenByte',
     ctaPrecision: 'Agricultura de precisión',
+    ctaDemoPlant: 'Demo UC1 planta',
+    ctaDemoBreeding: 'Demo UC4 breeding',
   },
   intro: {
     title: 'GreenByte',

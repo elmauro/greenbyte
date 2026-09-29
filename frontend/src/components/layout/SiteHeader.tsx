@@ -1,16 +1,27 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useLocale } from '../../i18n';
+import { paths } from '../../routes/paths';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { messages: m } = useLocale();
+  const location = useLocation();
+  const onHome = location.pathname === paths.home;
 
-  const navItems = [
-    { label: m.nav.innovation, href: '#discover' },
-    { label: m.nav.precision, href: '#precision' },
-    { label: m.nav.sustainability, href: '#sustainability' },
-    { label: m.nav.news, href: '#news' },
+  const navItems = onHome
+    ? [
+        { label: m.nav.innovation, href: '#discover', router: false },
+        { label: m.nav.precision, href: '#precision', router: false },
+        { label: m.nav.sustainability, href: '#sustainability', router: false },
+        { label: m.nav.news, href: '#news', router: false },
+      ]
+    : [];
+
+  const demoItems = [
+    { label: m.nav.demoPlant, to: paths.demoPlant },
+    { label: m.nav.demoBreeding, to: paths.demoBreeding },
   ];
 
   return (
@@ -23,7 +34,7 @@ export function SiteHeader() {
       </div>
 
       <div className="site-container flex h-16 items-center justify-between gap-4">
-        <a href="#" className="flex items-center gap-3">
+        <Link to={paths.home} className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-green text-lg font-bold text-white">
             G
           </span>
@@ -31,13 +42,22 @@ export function SiteHeader() {
             <span className="block text-lg font-semibold text-brand-blue">GreenByte</span>
             <span className="hidden text-xs text-gray-500 sm:block">{m.header.brandSubtitle}</span>
           </div>
-        </a>
+        </Link>
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Main">
+        <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
           {navItems.map((item) => (
             <a key={item.href} href={item.href} className="nav-link">
               {item.label}
             </a>
+          ))}
+          {demoItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`nav-link ${location.pathname === item.to ? 'text-brand-green' : ''}`}
+            >
+              {item.label}
+            </Link>
           ))}
         </nav>
 
@@ -73,6 +93,17 @@ export function SiteHeader() {
                 >
                   {item.label}
                 </a>
+              </li>
+            ))}
+            {demoItems.map((item) => (
+              <li key={item.to}>
+                <Link
+                  to={item.to}
+                  className="block text-sm font-medium text-gray-800"
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                </Link>
               </li>
             ))}
           </ul>
