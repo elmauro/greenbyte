@@ -55,7 +55,7 @@ export const es: Messages = {
         id: 'UC4',
         name: 'Unificación de fuentes R&D',
         problem:
-          'Ensayos, obs de campo, lab, pedigree y operaciones están en archivos distintos; el breeder necesita una respuesta con evidencia.',
+          'Las cuatro familias de fuentes mock de Syngenta (ensayos, operaciones, lab, germplasm/pedigree) están en archivos distintos; el breeder necesita una respuesta con evidencia.',
         genAiRole:
           'Chat NL + triage R/A/G anclado a tools del Data API; override del breeder con auditoría.',
       },
@@ -85,7 +85,7 @@ export const es: Messages = {
           'Pregunta en NL → BFF reenvía al Agent → tools de solo lectura en Data API → triage + citas → override opcional auditado en BFF.',
         syngentaGoal: 'Vista unificada; GenAI central; humano en el loop con auditoría de override.',
         dataSource:
-          'Cinco CSVs UC4 (trials, germplasm/pedigree, obs campo, obs lab, operations) con TRIAL_GUID / MATERIAL_GUID.',
+          'Cuatro familias de fuentes Syngenta (ensayos incl. obs campo, operaciones, lab, germplasm/pedigree) — cinco CSV UC4 en el pack del hackathon, con TRIAL_GUID / MATERIAL_GUID.',
       },
     },
     teamTitle: 'Responsabilidades del equipo',
@@ -199,7 +199,7 @@ export const es: Messages = {
     eyebrow: 'Syngenta UC1 · Capacidad de planta',
     title: 'Planta de semillas Pasco — demo guiada',
     subtitle:
-      'Recorre qué pasa cuando entra un lote urgente. Pantallas de concepto y datos de prueba — siempre hay una persona que aprueba el plan.',
+      'Recorre el disparador “demo-ready” de Syngenta: lote rush o fallo de calidad (QA) → replan → explicación en lenguaje claro y visto bueno humano. Pantallas de concepto y datos tipo Pasco.',
     plainLanguage: {
       sectionTitle: 'La idea, en palabras simples',
       problemHeading: '¿Qué problema resolvemos?',
@@ -212,11 +212,12 @@ export const es: Messages = {
       walkthroughSteps: [
         'La lista normal de la Línea 1 — todo tranquilo.',
         'Un trabajo con fecha límite que no puede seguir bajando en la cola.',
-        'Llega algo urgente — toca proponer un nuevo orden.',
+        'Entra un lote rush o falla un test QA — hay que reordenar y explicar.',
         'La lista cambia en pantalla y el asistente explica el porqué en lenguaje cotidiano.',
         'El responsable dice “de acuerdo” (o lo ajusta) — la IA sugiere, la persona manda.',
       ],
-      tagline: 'En una frase: «¿Qué lote va primero cuando aparece un imprevisto?»',
+      tagline:
+        'En una frase: «¿Qué va primero cuando llega un rush o falla un test — y por qué?»',
     },
     steps: [
       {
@@ -233,17 +234,20 @@ export const es: Messages = {
         highlight: 'Ejemplo con datos demo: lote de maíz dulce, entrega 2026-07-06, prioridad alta.',
       },
       {
-        title: '3. Llega lo urgente',
-        plainLine: 'Operaciones avisa: «hay que subir este lote». El sistema propone un nuevo orden — respetando tiempos de limpieza entre cultivos distintos.',
-        body: 'Este paso es el disparador. En planta real se usa historial (cuánto tarda preparar y correr) para que la sugerencia tenga base, no corazonada.',
-        highlight: 'Clave: la herramienta recomienda; quien programa la línea decide.',
+        title: '3. Rush o QA fallido',
+        plainLine:
+          'En el hackathon Syngenta inyectas uno de dos eventos en vivo: un lote rush sorpresa, o un resultado pass/fail que obliga a reordenar la línea.',
+        body:
+          'En ambos casos el sistema propone un nuevo orden — respetando tiempos de changeover entre variedades y tamaños, con historial de acondicionamiento de los extracts Pasco (no un optimizador opaco).',
+        highlight:
+          'Mismo flujo para ambos: re-secuenciar → explicar en palabras normales → el programador valida antes de dar por final el plan.',
       },
       {
         title: '4. Nuevo orden + explicación clara',
         plainLine: 'Aquí está el “wow”: cambia la cola y lees el motivo en palabras normales.',
         body: 'Por ejemplo: «Subimos el lote A porque vence antes y es el mismo cultivo en la misma línea — así evitamos una limpieza extra de máquina».',
         imageSrc: '/demo/es/uc1-plant-capacity-wow.png',
-        imageAlt: 'Tras el rush — cola replanificada y panel copiloto',
+        imageAlt: 'Tras rush o evento QA — cola replanificada y panel copiloto',
       },
       {
         title: '5. Tú das el visto bueno',
@@ -257,7 +261,7 @@ export const es: Messages = {
     eyebrow: 'Syngenta UC4 · Unificación R&D',
     title: 'Investigación de variedades — demo guiada',
     subtitle:
-      'Recorre cómo un fitomejorador hace una pregunta y obtiene respuesta cruzando campo, lab y árbol genealógico — y conserva la última palabra. Solo CSVs de demo.',
+      'Recorre cómo un fitomejorador pregunta en lenguaje natural sobre las cuatro fuentes mock unificadas de Syngenta (ensayos incl. campo, operaciones, lab, germplasm/pedigree) — y conserva la última palabra. Solo CSVs de demo.',
     plainLanguage: {
       sectionTitle: 'La idea, en palabras simples',
       problemHeading: '¿Qué problema resolvemos?',
@@ -265,10 +269,10 @@ export const es: Messages = {
         'Antes de lanzar una variedad nueva, se prueban muchos candidatos durante años. Las notas están en Excel distintos, informes de lab y correos. Juntar una foto completa puede tardar semanas y frena todo el pipeline.',
       analogyHeading: 'Piénsalo como…',
       analogy:
-        'Un médico con el historial del paciente repartido en cinco carpetas. Preguntas «¿este tratamiento funciona?» y quieres una respuesta con analíticas y visitas — no una suposición.',
+        'Un médico con el historial repartido en cuatro carpetas (visitas, analíticas, antecedentes, notas de cuidado). Preguntas «¿funciona el tratamiento?» y quieres hechos — no una suposición.',
       walkthroughHeading: 'Lo que verás en los cinco pasos de abajo',
       walkthroughSteps: [
-        'Un solo espacio de trabajo que alcanza todas las fuentes de datos demo.',
+        'Un workspace conectado a las cuatro familias de fuentes Syngenta (cinco CSV en el pack del hackathon).',
         'Haces una pregunta normal en el chat.',
         'El asistente busca hechos en cada fuente (no inventa cifras).',
         'Ves una recomendación tipo semáforo con motivo breve y evidencias.',
@@ -279,8 +283,10 @@ export const es: Messages = {
     steps: [
       {
         title: '1. Un solo punto de partida',
-        plainLine: 'En lugar de cinco archivos sueltos, imagina un escritorio con todo enlazado.',
-        body: 'Ensayos, mediciones en campo, resultados de lab, árbol genealógico de la planta y actividades en parcela — accesibles desde el mismo hub demo.',
+        plainLine:
+          'En lugar de perseguir cuatro tipos de fuente desconectados, imagina un escritorio con todo enlazado.',
+        body:
+          'Ensayos (incl. observaciones de campo), operaciones en parcela, resultados de lab y germplasm/pedigree — las mismas cuatro familias del brief Syngenta, cargadas desde el set CSV UC4.',
         imageSrc: '/demo/es/uc4-breeding-baseline.png',
         imageAlt: 'Workspace unificado antes de la pregunta',
       },

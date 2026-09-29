@@ -30,7 +30,7 @@ export const en = {
     eyebrow: 'Syngenta UC1 · Plant Capacity',
     title: 'Pasco conditioning — guided demo',
     subtitle:
-      'Walk through what happens when an urgent seed batch shows up at the plant. Concept screens and demo data — a person always approves the plan.',
+      'Walk through Syngenta’s demo-ready trigger: a rush batch or a failed quality test forces a replan — with plain-language explanation and human sign-off. Concept screens and Pasco-style demo data only.',
     plainLanguage: {
       sectionTitle: 'The idea, in plain language',
       problemHeading: 'What problem are we solving?',
@@ -43,11 +43,12 @@ export const en = {
       walkthroughSteps: [
         'The normal waiting list for Line 1 — calm, no surprises yet.',
         'A job with a tight deadline that could slip if it stays too far back.',
-        'An urgent batch arrives — time to propose a new order.',
+        'A rush batch lands or a batch fails QA — time to re-sequence and explain.',
         'The list updates on screen and the assistant explains why in everyday words.',
         'The planner says yes (or tweaks it) — AI suggests, humans decide.',
       ],
-      tagline: 'In one line: “Which batch runs next when something urgent lands?”',
+      tagline:
+        'In one line: “What runs next when a rush order or a failed test hits the line — and why?”',
     },
     steps: [
       {
@@ -64,17 +65,20 @@ export const en = {
         highlight: 'Example from demo data: sweet-corn batch, finish date 2026-07-06, high priority.',
       },
       {
-        title: '3. Something urgent lands',
-        plainLine: 'Operations calls: “We need this batch moved up.” The system drafts a new order — respecting rules like cleanup time between crop types.',
-        body: 'This step is the trigger. Real plants use history (how long prep and run take) so suggestions are grounded in past runs, not guesswork.',
-        highlight: 'Important: the tool recommends; the planner stays in charge.',
+        title: '3. Rush batch or failed QA',
+        plainLine:
+          'Syngenta’s hackathon demo injects one of two events live: a surprise rush batch, or a pass/fail test that forces the line to reorder.',
+        body:
+          'Either way the system drafts a new run order — respecting changeover rules between varieties and sizes, using conditioning history from the Pasco extracts (not a black-box optimizer).',
+        highlight:
+          'Same flow for both triggers: re-sequence → explain in plain language → planner validates before the plan is final.',
       },
       {
         title: '4. New order + plain explanation',
         plainLine: 'This is the “aha” moment: the queue changes and you read why in normal language.',
         body: 'For example: “Moved batch A ahead of batch B because its due date is sooner and both are the same crop on the same line — so we avoided extra machine cleanup.”',
         imageSrc: '/demo/uc1-plant-capacity-wow.png',
-        imageAlt: 'After rush event — replanned queue and AI copilot panel',
+        imageAlt: 'After rush or QA event — replanned queue and AI copilot panel',
       },
       {
         title: '5. You sign off',
@@ -110,7 +114,7 @@ export const en = {
         id: 'UC4',
         name: 'R&D Data Source Unification',
         problem:
-          'Trials, field obs, lab results, pedigree, and operations live in separate files; breeders need one answer with evidence.',
+          'Syngenta’s four mock source families (trials, operations, lab, germplasm/pedigree) sit in disconnected files; breeders need one answer with evidence.',
         genAiRole: 'NL chat + R/A/G triage grounded in Data API tool results; breeder override with audit trail.',
       },
     ],
@@ -139,7 +143,7 @@ export const en = {
           'Breeder asks in natural language → BFF forwards to Agent → read-only tools on Data API → triage + citations → optional override logged by BFF.',
         syngentaGoal: 'Unified view across sources; GenAI central; human in the loop with override audit.',
         dataSource:
-          'Five UC4 CSVs (trials, germplasm/pedigree, field obs, lab obs, operations) keyed by TRIAL_GUID / MATERIAL_GUID.',
+          'Four Syngenta source families (trials incl. field obs, operations, lab, germplasm/pedigree) — five UC4 CSV files in the hackathon pack, keyed by TRIAL_GUID / MATERIAL_GUID.',
       },
     },
     teamTitle: 'Team responsibilities',
@@ -253,7 +257,7 @@ export const en = {
     eyebrow: 'Syngenta UC4 · R&D unification',
     title: 'Breeding intelligence — guided demo',
     subtitle:
-      'Walk through how a plant breeder asks one question and gets an answer pulled from field, lab, and family-tree data — then keeps the final say. Demo CSVs only.',
+      'Walk through how a breeder asks one question across Syngenta’s four unified mock sources (trials incl. field obs, operations, lab, germplasm/pedigree) — then keeps the final say. Demo CSVs only.',
     plainLanguage: {
       sectionTitle: 'The idea, in plain language',
       problemHeading: 'What problem are we solving?',
@@ -261,10 +265,10 @@ export const en = {
         'Before a new variety reaches farmers, breeders test many candidates for years. Notes live in different spreadsheets, lab exports, and emails. Pulling one picture together can take weeks — and slows the whole pipeline.',
       analogyHeading: 'Think of it like…',
       analogy:
-        'A doctor whose patient history is split across five folders. You ask “Is this treatment working?” and want one answer backed by labs, visits, and family history — not a guess.',
+        'A doctor whose patient history is split across four folders (visits, labs, family history, care notes). You ask “Is this treatment working?” and want one answer backed by facts — not a guess.',
       walkthroughHeading: 'What you will see in the five steps below',
       walkthroughSteps: [
-        'A single workspace that can reach all the demo data sources.',
+        'One workspace wired to all four Syngenta source families (five CSV files in the hackathon pack).',
         'You ask a normal question in the chat box.',
         'The assistant looks up facts from each source (it does not make up numbers).',
         'You see a traffic-light style recommendation with a short reason and evidence.',
@@ -275,8 +279,10 @@ export const en = {
     steps: [
       {
         title: '1. One place to start',
-        plainLine: 'Instead of five disconnected files, imagine one desk with everything linked.',
-        body: 'Trials, field measurements, lab results, plant family tree, and field activities — all reachable from the same demo hub.',
+        plainLine:
+          'Instead of chasing four disconnected source types, imagine one desk with everything linked.',
+        body:
+          'Trials (including field observations), field operations, lab results, and germplasm/pedigree — the same four families named in the Syngenta brief, loaded from the UC4 mock CSV set.',
         imageSrc: '/demo/uc4-breeding-baseline.png',
         imageAlt: 'Unified breeding workspace before a question',
       },
