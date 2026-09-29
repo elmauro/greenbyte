@@ -130,9 +130,9 @@ export const en = {
         title: 'Common container diagram',
         description: 'Frontend talks only to the BFF; Agent calls Data API for tools (MCP-style over HTTP).',
       },
-      generic: {
-        title: 'Generic template (UC1 or UC4)',
-        description: 'Replace sources (Excel vs CSV) and route (/demo/plant vs /demo/breeding).',
+      teamStack: {
+        title: 'Team stack (who owns what)',
+        description: 'Frontend and BFF in GreenByte; Data and Agent APIs as sibling services behind the BFF.',
       },
       uc1Flow: {
         title: 'UC1 — Plant capacity flow',

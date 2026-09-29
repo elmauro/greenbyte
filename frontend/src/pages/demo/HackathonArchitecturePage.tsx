@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ArchitectureDiagram } from '../../components/demo/ArchitectureDiagram';
+import { MermaidDiagram } from '../../components/demo/MermaidDiagram';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import {
-  hackathonArchitectureDiagrams,
-  type HackathonDiagramKey,
-} from '../../content/hackathonArchitectureDiagrams';
+  hackathonArchitectureMermaid,
+  type HackathonMermaidKey,
+} from '../../content/hackathonArchitectureMermaid';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 
 type DiagramSection = {
-  diagramKey: HackathonDiagramKey;
+  diagramKey: HackathonMermaidKey;
   title: string;
   description?: string;
 };
@@ -20,7 +20,7 @@ export function HackathonArchitecturePage() {
 
   const sections: DiagramSection[] = [
     { diagramKey: 'container', title: a.sections.container.title, description: a.sections.container.description },
-    { diagramKey: 'genericTemplate', title: a.sections.generic.title, description: a.sections.generic.description },
+    { diagramKey: 'teamStack', title: a.sections.teamStack.title, description: a.sections.teamStack.description },
     { diagramKey: 'uc1Flow', title: a.sections.uc1Flow.title, description: a.sections.uc1Flow.description },
     { diagramKey: 'sequenceUc1', title: a.sections.uc1Sequence.title, description: a.sections.uc1Sequence.description },
     { diagramKey: 'uc4Flow', title: a.sections.uc4Flow.title, description: a.sections.uc4Flow.description },
@@ -53,7 +53,7 @@ export function HackathonArchitecturePage() {
           </div>
         </section>
 
-        <div className="site-container mt-12 max-w-5xl space-y-14">
+        <div className="site-container mt-12 max-w-[90rem] space-y-14">
           <section>
             <h2 className="text-lg font-semibold text-gray-900">{a.teamTitle}</h2>
             <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
@@ -88,11 +88,11 @@ export function HackathonArchitecturePage() {
           </section>
 
           {sections.map((section) => (
-            <ArchitectureDiagram
+            <MermaidDiagram
               key={section.diagramKey}
               title={section.title}
               description={section.description}
-              diagram={hackathonArchitectureDiagrams[section.diagramKey]}
+              chart={hackathonArchitectureMermaid[section.diagramKey]}
             />
           ))}
 

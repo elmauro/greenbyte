@@ -74,9 +74,9 @@ export const es: Messages = {
         title: 'Diagrama de contenedores común',
         description: 'El front solo habla con el BFF; el Agent llama al Data API (estilo MCP vía HTTP).',
       },
-      generic: {
-        title: 'Plantilla genérica (UC1 o UC4)',
-        description: 'Cambiar fuentes (Excel vs CSV) y ruta (/demo/plant vs /demo/breeding).',
+      teamStack: {
+        title: 'Stack del equipo (quién hace qué)',
+        description: 'Frontend y BFF en GreenByte; APIs Data y Agent como servicios hermanos detrás del BFF.',
       },
       uc1Flow: {
         title: 'UC1 — Flujo capacidad de planta',
