@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -38,6 +39,8 @@ type GuidedDemoProps = {
   };
   otherDemo?: { label: string; href: string };
   architectureLink?: { label: string; href: string };
+  /** Same React widgets as /demo/plant (replaces optional step PNG). */
+  renderStepPreview?: (stepIndex: number) => ReactNode;
 };
 
 export function GuidedDemo({
@@ -49,6 +52,7 @@ export function GuidedDemo({
   labels,
   otherDemo,
   architectureLink,
+  renderStepPreview,
 }: GuidedDemoProps) {
   const [index, setIndex] = useState(0);
   const step = steps[index];
@@ -134,7 +138,8 @@ export function GuidedDemo({
                 </p>
               )}
             </div>
-            {step.imageSrc && (
+            {renderStepPreview?.(index)}
+            {!renderStepPreview && step.imageSrc && (
               <figure className="mt-8 w-full border-t border-gray-100 pt-8">
                 <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-md">
                   <img

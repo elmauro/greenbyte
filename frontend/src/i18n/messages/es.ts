@@ -221,6 +221,9 @@ export const es: Messages = {
       tagline:
         'En una frase: «¿Qué va primero cuando llega un rush o falla un test — y por qué?»',
     },
+    tourLivePreview: 'UI en vivo — mismos componentes que /demo/plant',
+    tourInjectNote:
+      'Vista previa tras inyectar rush (fallo QA usa la misma pantalla con estado HOLD). Prueba los botones en el demo interactivo.',
     steps: [
       {
         title: '1. La cola de siempre',
@@ -247,8 +250,6 @@ export const es: Messages = {
         title: '4. Nuevo orden + explicación clara',
         plainLine: 'Aquí está el “wow”: cambia la cola y lees el motivo en palabras normales.',
         body: 'Por ejemplo: «Subimos el lote A porque vence antes y es el mismo cultivo en la misma línea — así evitamos una limpieza extra de máquina».',
-        imageSrc: '/demo/es/uc1-plant-capacity-wow.png',
-        imageAlt: 'Tras rush o evento QA — cola replanificada y panel copiloto',
       },
       {
         title: '5. Tú das el visto bueno',

@@ -51,6 +51,9 @@ export const en = {
       tagline:
         'In one line: “What runs next when a rush order or a failed test hits the line — and why?”',
     },
+    tourLivePreview: 'Live UI — same components as /demo/plant',
+    tourInjectNote:
+      'Read-only preview after a rush inject (QA failure uses the same screen with HOLD status). Try buttons on the interactive demo.',
     steps: [
       {
         title: '1. The normal queue',
@@ -77,8 +80,6 @@ export const en = {
         title: '4. New order + plain explanation',
         plainLine: 'This is the “aha” moment: the queue changes and you read why in normal language.',
         body: 'For example: “Moved batch A ahead of batch B because its due date is sooner and both are the same crop on the same line — so we avoided extra machine cleanup.”',
-        imageSrc: '/demo/uc1-plant-capacity-wow.png',
-        imageAlt: 'After rush or QA event — replanned queue and AI copilot panel',
       },
       {
         title: '5. You sign off',

@@ -1,12 +1,17 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { GuidedDemo } from '../../components/demo/GuidedDemo';
+import { PlantTourStepPreview } from '../../components/plant/PlantTourStepPreview';
+import { buildPlantFlowSnapshots } from '../../demo/plant/plantFlowSnapshots';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 
 export function PlantCapacityTour() {
-  const { messages: m } = useLocale();
+  const { locale, messages: m } = useLocale();
   const d = m.demoPlant;
+  const snapshots = useMemo(() => buildPlantFlowSnapshots(locale), [locale]);
+
   return (
     <SiteLayout>
       <div className="site-container border-b border-gray-100 py-3 text-sm">
@@ -22,6 +27,9 @@ export function PlantCapacityTour() {
         steps={d.steps}
         labels={m.demoCommon.labels}
         architectureLink={{ label: m.demoCommon.viewArchitecture, href: paths.demoArchitecture }}
+        renderStepPreview={(stepIndex) => (
+          <PlantTourStepPreview stepIndex={stepIndex} snapshots={snapshots} />
+        )}
       />
     </SiteLayout>
   );
