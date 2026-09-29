@@ -3,7 +3,7 @@
 **Document version:** 1.3  
 **Date:** 2026-09-29  
 **Team:** GreenByte (HatchWorks AI Hackathon — AgTech Edition)  
-**Status:** Proposed baseline for UC1 (Plant Capacity) and UC4 (R&D Data Unification)
+**Status:** Team build focus **UC1 (Plant Capacity)** for hackathon week; UC4 sections retained as reference architecture only.
 
 ---
 

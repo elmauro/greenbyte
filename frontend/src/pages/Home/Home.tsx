@@ -42,10 +42,10 @@ export function Home() {
               {m.hero.ctaDemoPlant}
             </Link>
             <Link
-              to={paths.demoBreeding}
+              to={paths.demoArchitecture}
               className="rounded-full border border-white/80 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
             >
-              {m.hero.ctaDemoBreeding}
+              {m.hero.ctaArchitecture}
             </Link>
           </div>
         </div>

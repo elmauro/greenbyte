@@ -21,7 +21,6 @@ export function SiteHeader() {
 
   const demoItems = [
     { label: m.nav.demoPlant, to: paths.demoPlant },
-    { label: m.nav.demoBreeding, to: paths.demoBreeding },
     { label: m.nav.demoArchitecture, to: paths.demoArchitecture },
   ];
 
