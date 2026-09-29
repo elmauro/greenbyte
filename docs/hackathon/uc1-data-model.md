@@ -25,7 +25,7 @@ From the Syngenta brief: *take a batch list, plant capacity and open customer or
 Out of scope: treat/pack stage (`LSV/SSV Treatpack`, `Packaging Rates`), Seed Health, other facilities.
 
 ---
-
+ 
 ## 2. Source inventory
 
 Two workbooks:
