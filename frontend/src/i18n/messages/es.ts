@@ -35,11 +35,12 @@ export const es: Messages = {
     subtitle:
       'Una plataforma compartida (React + BFF + Data + Agent) con dos briefs Syngenta mapeados abajo: UC1 capacidad de planta y UC4 unificación R&D.',
     scopeNote:
-      'Documento v1.2 · Solo datos demo (Excel Pasco, CSVs UC4) · Diagramas técnicos de arquitectura en inglés; recorridos UC1/UC4 usan mockups en español con idioma ES.',
-    docNote: 'Documento v1.2 · Sin conexión a sistemas productivos Syngenta.',
+      'Documento v1.3 · Contrato BFF UC1 alineado a /demo/plant/flow · Solo datos demo · Diagramas técnicos en inglés.',
+    docNote: 'Documento v1.3 · Sin conexión a sistemas productivos Syngenta.',
     links: {
       plant: 'MVP UC1 (Línea 1)',
       tour: 'Tour guiado UC1',
+      flow: 'Mapa UI ↔ API UC1',
       breeding: 'Recorrido UC4',
     },
     useCasesTitle: 'Casos de uso Syngenta que cubre esta arquitectura',
@@ -51,7 +52,7 @@ export const es: Messages = {
         problem:
           'Las líneas de acondicionamiento compiten por lotes; pedidos urgentes y fallos de QA obligan a replanear a mano sin explicación clara.',
         genAiRole:
-          'Explicar en lenguaje natural los cambios tras el replan del Data API; aceptación humana — sin escribir en ERP.',
+          'Tras rush o QA: explicar el diff en lenguaje natural. Opcional: Q&A «Explicar mi lote» (sin cambiar cola). Aceptación humana — sin ERP.',
       },
       {
         id: 'UC4',
@@ -104,19 +105,20 @@ export const es: Messages = {
         role: 'UI + BFF',
         owner: 'Mauricio / GreenByte',
         responsibility: 'Contrato único al React; CORS; MSW; persistencia de override',
-        useCases: 'UC1: /demo/plant/* cola, eventos, accept · UC4: /demo/breeding/* ask, dossier, override',
+        useCases:
+          'UC1: /demo/plant/* cola, eventos, accept, reset, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
       },
       {
         role: 'Data API',
         owner: 'Camilo',
         responsibility: 'ETL, esquema, tools de solo lectura, calidad de datos',
-        useCases: 'UC1: cola, replan, batch · UC4: trial, material, obs, lab, ops',
+        useCases: 'UC1: cola, replan, GET /batches/{po} (tools Agent) · UC4: trial, material, obs, lab, ops',
       },
       {
         role: 'Agent API',
         owner: 'David',
         responsibility: 'Chat, triage, explain; llamadas tools al Data API',
-        useCases: 'UC1: explain-replan, suggest-rank opcional · UC4: /chat, /triage con tools',
+        useCases: 'UC1: explain-replan + explain batch (tools) · UC4: /chat, /triage con tools',
       },
     ],
     endpointsTitle: 'Endpoints ilustrativos (contrato BFF según UC elegido)',
@@ -128,8 +130,9 @@ export const es: Messages = {
     uc1Endpoints: [
       {
         layer: 'BFF',
-        examples: 'GET /demo/plant/lines/{lineId}/queue · POST /demo/plant/events · POST /demo/plant/schedule/accept',
-        purpose: 'UI de cola, evento rush/QA, aceptación humana del plan',
+        examples:
+          'GET .../queue · POST .../events (rush | qa_fail) · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
+        purpose: 'Tres triggers Syngenta: rush, QA, explicar lote + accept + reset demo',
       },
       {
         layer: 'Data API',

@@ -13,8 +13,10 @@ GreenByte prepares **two** hackathon candidates with **one** physical architectu
 
 | Use case | Persona | Demo route | Primary data | GenAI moment | Human in the loop |
 | --- | --- | --- | --- | --- | --- |
-| **UC1** Plant Capacity (Pasco) | Scheduler / plant ops | `/demo/plant` | Pasco conditioning Excel | Explain replan after rush or QA event | Accept schedule (no ERP write) |
+| **UC1** Plant Capacity (Pasco) | Scheduler / plant ops | `/demo/plant` · `/demo/plant/flow` | Pasco conditioning Excel | **Rush · QA fail · Explain batch** + replan narrative | Accept schedule (no ERP write) |
 | **UC4** R&D Unification | Plant breeder | `/demo/breeding` | Five UC4 CSVs | NL ask + R/A/G triage via tools | Override recommendation + audit |
+
+**UC1 backend handoff (3 triggers + JSON):** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · UI map: `/demo/plant/flow`.
 
 **Web page:** Sections mirror this table — shared platform, then UC1 block (flow + sequence + endpoints), then UC4 block. Live: [demo/architecture](https://greenbyte-ag.com/demo/architecture).
 
@@ -195,20 +197,19 @@ React Plant Demo ──► BFF (core-api)
 UI ── inject event ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI
 ```
 
-### 7.3 Suggested endpoints (illustrative)
+### 7.3 BFF endpoints (frontend contract — implemented in MSW + `plantDemoApi`)
 
-**BFF (frontend contract)**
-
-| Method | Path | Description |
+| Method | Path | Syngenta trigger / moment |
 | --- | --- | --- |
-| GET | `/demo/plant/lines/{lineId}/queue` | Current ranked queue |
-| POST | `/demo/plant/events` | Rush batch or QA failure |
-| POST | `/demo/plant/schedule/accept` | Human accepts plan |
-| GET | `/demo/plant/batches/{po}/summary` | Batch context for panel |
-| POST | `/demo/plant/batches/explain` | Sales nice-to-have: NL question about wait time / ship date / move-up (grounded in queue) |
-| POST | `/demo/plant/reset` | Demo helper: restore baseline queue (BFF-only; optional in Data) |
+| GET | `/demo/plant/lines/{lineId}/queue` | Page load — calm queue |
+| POST | `/demo/plant/events` | **Rush** (`type: rush`) or **QA fail** (`type: qa_fail`) |
+| POST | `/demo/plant/schedule/accept` | Human sign-off after replan |
+| POST | `/demo/plant/batches/explain` | **Explain my batch** (read-only Q&A) |
+| POST | `/demo/plant/reset` | Demo repeat — restore baseline queue |
 
-**UX timing, sequences, and response fields:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Interactive:** [frontend `/demo/plant/flow`](../../frontend/src/pages/demo/PlantUc1FlowGallery.tsx).
+**Deferred (not in current UI contract):** `GET /demo/plant/batches/{po}/summary` — batch drawer; use queue row + explain until added.
+
+**UX timing, sequences, JSON examples:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · **Interactive:** `/demo/plant/flow`.
 
 **Data API (Camilo)**
 

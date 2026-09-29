@@ -4,7 +4,7 @@
 **Contract types (frontend):** `frontend/src/demo/plant/plantDemoTypes.ts`  
 **Client:** `frontend/src/services/plantDemoApi.ts`  
 **Target BFF:** `core-api` (`/demo/plant/*`)  
-**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7 · **Live UI ↔ API:** `/demo/plant/flow` (React + `plantDemoServer` snapshots)
+**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7 · **Live UI ↔ API:** `/demo/plant/flow` · **Backend dev brief:** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
 
 The **browser calls only the BFF**. The BFF calls **Data API (Camilo)** and **Agent API (David)**. Today, if `VITE_API_BASE_APP` is unset, the same JSON is served by `plantDemoServer` on the client for static demo; production target is live BFF.
 
@@ -58,7 +58,7 @@ flowchart LR
 | 5 | Click **Reset queue** | Repeat demo | `POST /demo/plant/reset` `{ lineId }` | Reset demo state / reload baseline seed | Fresh **`queue[]`**, clear copilot & timeline |
 | 6 | Sales: pick PO + **Ask** | Anytime (nice-to-have) | `POST /demo/plant/batches/explain` `{ po, question, locale }` | Agent (+ Data tools for batch/queue context) | **`answer`**, **`citations[]`** → chat panel (no queue change) |
 
-**Tour (`/demo/plant/tour`):** no backend calls — narrative only.  
+**Tour (`/demo/plant/tour`):** read-only **same React components**; no live HTTP (uses `plantFlowSnapshots`).  
 **Backend owners per step:** see `/demo/plant/flow` → **Likely backend owners** (Mauricio · BFF, Camilo · Data API, David · Agent API).
 
 ---
@@ -145,58 +145,67 @@ sequenceDiagram
 
 ---
 
-## 7. Response payloads (summary)
+## 7. Request / response JSON (BFF)
 
-### `GET .../queue` → `PlantQueueResponse`
+**Canonical file (copy into Postman, contract tests, OpenAPI samples):** [../../backend/docs/api/uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json)
 
-```json
-{
-  "lineId": "line-1",
-  "planVersion": 1,
-  "queue": [
-    {
-      "po": "1002307551",
-      "species": "SWCO",
-      "kg": 2800,
-      "finish": "2026-07-06 09:00",
-      "status": "PLANNED",
-      "atRisk": true,
-      "reasonShort": "Priority 2 — customer window"
-    }
-  ]
-}
-```
+**Live in app:** `/demo/plant/flow` → pick step → **Response JSON** panel (same shapes).
 
-### `POST .../events` → `PlantEventResponse`
+Types: `frontend/src/demo/plant/plantDemoTypes.ts` · mock: `plantDemoServer.ts` · MSW: `plantDemoHandlers.ts`.
+
+### `GET /demo/plant/lines/line-1/queue` → `PlantQueueResponse`
+
+Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`. Full array in JSON file → `GET .../queue.response200`.
+
+### `POST /demo/plant/events` → `PlantEventResponse`
+
+**Request (rush):**
 
 ```json
-{
-  "lineId": "line-1",
-  "eventType": "rush",
-  "planVersion": 2,
-  "queue": [ "..." ],
-  "diff": {
-    "moves": [{ "po": "1002307551", "fromPosition": 3, "toPosition": 1 }],
-    "reasons": ["priority_2", "sap_finish_2026-07-06", "same_species_changeover"]
-  },
-  "explanation": {
-    "alertBanner": "Event injected: Rush batch — customer window at risk.",
-    "summary": "...",
-    "bullets": ["..."],
-    "impact": "..."
-  }
-}
+{ "type": "rush", "lineId": "line-1", "locale": "en" }
 ```
 
-### `POST .../batches/explain` → `PlantBatchExplainResponse`
+**Response (200, rush)** — PO `1002307551` moves 3→1; `previousPosition` on moved row; full `queue[]` + `explanation` in JSON file → `response200Rush`.
+
+**Request (QA):**
+
+```json
+{ "type": "qa_fail", "lineId": "line-1", "locale": "en" }
+```
+
+**Response (200, qa_fail)** — PO `1001858227` → `status: "HOLD"`, moved to end of list; see `response200QaFail`.
+
+**Errors:** `400` `{ "message": "Invalid event type" }` · `404` `{ "message": "Unknown line" }`.
+
+### `POST /demo/plant/batches/explain` → `PlantBatchExplainResponse`
+
+**Request:**
 
 ```json
 {
   "po": "1001858227",
-  "answer": "PO ... is position 2 ...",
-  "citations": ["PO 1001858227", "Line 1 queue v2", "2026-07-05 16:00"]
+  "question": "When does it ship?",
+  "locale": "en"
 }
 ```
+
+**Response (200)** — includes `answer`, `citations[]`, optional `suggestedFollowUps[]`. Separate HOLD example after QA in JSON file.
+
+**Errors:** `400` `{ "message": "po and question required" }` · `404` `{ "message": "Unknown batch" }`.
+
+### `POST /demo/plant/schedule/accept` → `PlantAcceptResponse`
+
+**Request:** `{ "lineId": "line-1" }`  
+**Response:** `{ "acceptedAt": "<ISO-8601>", "lineId": "line-1", "planVersion": 2 }` (example timestamp in JSON file).
+
+### `POST /demo/plant/reset` → `PlantQueueResponse`
+
+**Request:** `{ "lineId": "line-1" }`  
+**Response:** baseline queue, `planVersion: 1` (same as GET after reset).
+
+### Internal (BFF only — not browser)
+
+Data replan fragment and Agent `explain-replan` input/output sketches: `uc1-demo-response-examples.json` → `internalServices`.
 
 ---
 

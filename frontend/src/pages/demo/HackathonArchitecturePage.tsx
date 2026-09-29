@@ -51,6 +51,12 @@ export function HackathonArchitecturePage() {
               >
                 {a.links.tour}
               </Link>
+              <Link
+                to={paths.demoPlantFlow}
+                className="rounded-full border border-brand-blue/30 px-5 py-2.5 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5"
+              >
+                {a.links.flow}
+              </Link>
             </div>
           </div>
         </section>

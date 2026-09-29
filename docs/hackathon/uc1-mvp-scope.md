@@ -4,7 +4,8 @@
 **Persona:** Seed conditioning line scheduler (Pasco)  
 **Routes:** `/demo/plant` (interactive demo) · `/demo/plant/tour` (5-step story)  
 **Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7  
-**UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/plant/flow`
+**UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/plant/flow`  
+**Backend handoff (Rush · QA · Explain batch):** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
 
 ---
 
@@ -49,15 +50,16 @@ We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferre
 | 5 | Wire `VITE_API_BASE_APP` to deployed BFF | Mauricio / infra |
 | 6 | Demo script: tour (2 min) → live inject → accept | Team |
 
-### 4.1 UI blocks on `/demo/plant`
+### 4.1 UI blocks on `/demo/plant` (current — matches site)
 
 1. Header + **Demo target B+** badge  
-2. Event bar (rush / QA)  
-3. Queue table with **reason column** and **previous position** on moves  
-4. Copilot panel (`explanation` from API)  
-5. **Timeline strip** (simplified) after event  
-6. **Wow mockup image** (EN/ES) after event  
-7. Accept schedule + audit message  
+2. **Simulate rush batch** / **Simulate QA failure** / **Reset**  
+3. **Calm state:** `PlantBaselineDashboard` (queue table, KPIs, sidebar chrome) — `GET queue`  
+4. **After inject:** `PlantScheduleWorkspace` (top bar, alert, **Gantt**, **AI copilot** cards, Accept / Adjust manually) — `POST events` response  
+5. **Explain my batch** (sales) — `POST batches/explain` (no queue change)  
+6. Accept schedule + audit message  
+
+**Tour:** `/demo/plant/tour` embeds the same components (read-only). **Flow map:** `/demo/plant/flow` (steps 03 / 03b / 07 = three triggers).  
 
 ### 4.2 API shapes (frontend ↔ BFF)
 

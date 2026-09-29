@@ -1,0 +1,340 @@
+{
+  "_comment": "Reference BFF payloads for UC1 Pasco Line 1. Source: frontend plantDemoServer + buildPlantFlowSnapshots('en'). Regenerate snapshots: cd frontend && npx tsx -e \"import { buildPlantFlowSnapshots } from './src/demo/plant/plantFlowSnapshots.ts'; console.log(JSON.stringify(buildPlantFlowSnapshots('en'), null, 2));\"",
+  "locale": "en",
+  "lineId": "line-1",
+  "endpoints": {
+    "GET /demo/plant/lines/{lineId}/queue": {
+      "description": "Baseline calm queue (planVersion 1). UI: PlantBaselineDashboard.",
+      "response200": {
+        "lineId": "line-1",
+        "planVersion": 1,
+        "queue": [
+          {
+            "po": "1001759341",
+            "species": "SWCO",
+            "kg": 4200,
+            "finish": "2026-07-04 11:30",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1001858227",
+            "species": "SWCO",
+            "kg": 3100,
+            "finish": "2026-07-05 16:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "SAP due date — monitor slot"
+          },
+          {
+            "po": "1002307551",
+            "species": "SWCO",
+            "kg": 2800,
+            "finish": "2026-07-06 09:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "Priority 2 — customer window"
+          },
+          {
+            "po": "1001984402",
+            "species": "CORN",
+            "kg": 5100,
+            "finish": "2026-07-07 14:00",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1002011199",
+            "species": "SWCO",
+            "kg": 3600,
+            "finish": "2026-07-08 10:00",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1001887703",
+            "species": "SWCO",
+            "kg": 2900,
+            "finish": "2026-06-30 08:00",
+            "status": "COMPLETE"
+          }
+        ]
+      },
+      "response404": { "message": "Unknown line" }
+    },
+    "POST /demo/plant/events": {
+      "description": "Trigger A (rush) or B (qa_fail). Returns PlantEventResponse.",
+      "requestRush": {
+        "type": "rush",
+        "lineId": "line-1",
+        "locale": "en"
+      },
+      "response200Rush": {
+        "lineId": "line-1",
+        "eventType": "rush",
+        "planVersion": 2,
+        "queue": [
+          {
+            "po": "1002307551",
+            "species": "SWCO",
+            "kg": 2800,
+            "finish": "2026-07-06 09:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "Rush: customer window 2026-07-06",
+            "previousPosition": 3
+          },
+          {
+            "po": "1001759341",
+            "species": "SWCO",
+            "kg": 4200,
+            "finish": "2026-07-04 11:30",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1001858227",
+            "species": "SWCO",
+            "kg": 3100,
+            "finish": "2026-07-05 16:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "SAP due date — monitor slot"
+          },
+          {
+            "po": "1001984402",
+            "species": "CORN",
+            "kg": 5100,
+            "finish": "2026-07-07 14:00",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1002011199",
+            "species": "SWCO",
+            "kg": 3600,
+            "finish": "2026-07-08 10:00",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1001887703",
+            "species": "SWCO",
+            "kg": 2900,
+            "finish": "2026-06-30 08:00",
+            "status": "COMPLETE"
+          }
+        ],
+        "diff": {
+          "moves": [{ "po": "1002307551", "fromPosition": 3, "toPosition": 1 }],
+          "reasons": ["priority_2", "sap_finish_2026-07-06", "same_species_changeover"]
+        },
+        "explanation": {
+          "alertBanner": "Event injected: Rush batch — customer window at risk.",
+          "summary": "Moved PO 1002307551 ahead to protect the 2026-07-06 customer window.",
+          "bullets": [
+            "Moved PO 1002307551 ahead of PO 1001759341.",
+            "Reason: SAP finish date 2026-07-06 and priority 2.",
+            "Avoided ~1.5h changeover: same species SWCO on Line 1."
+          ],
+          "impact": "Impact: Customer window protected · Net changeover: −1.5h (Pasco heuristic)."
+        }
+      },
+      "requestQaFail": {
+        "type": "qa_fail",
+        "lineId": "line-1",
+        "locale": "en"
+      },
+      "response200QaFail": {
+        "lineId": "line-1",
+        "eventType": "qa_fail",
+        "planVersion": 2,
+        "queue": [
+          {
+            "po": "1001759341",
+            "species": "SWCO",
+            "kg": 4200,
+            "finish": "2026-07-04 11:30",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1002307551",
+            "species": "SWCO",
+            "kg": 2800,
+            "finish": "2026-07-06 09:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "Priority 2 — customer window"
+          },
+          {
+            "po": "1001984402",
+            "species": "CORN",
+            "kg": 5100,
+            "finish": "2026-07-07 14:00",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1002011199",
+            "species": "SWCO",
+            "kg": 3600,
+            "finish": "2026-07-08 10:00",
+            "status": "PLANNED",
+            "reasonShort": "On plan"
+          },
+          {
+            "po": "1001887703",
+            "species": "SWCO",
+            "kg": 2900,
+            "finish": "2026-06-30 08:00",
+            "status": "COMPLETE"
+          },
+          {
+            "po": "1001858227",
+            "species": "SWCO",
+            "kg": 3100,
+            "finish": "2026-07-05 16:00",
+            "status": "HOLD",
+            "atRisk": true,
+            "reasonShort": "QA hold — pass/fail failed",
+            "previousPosition": 2
+          }
+        ],
+        "diff": {
+          "moves": [{ "po": "1001858227", "fromPosition": 2, "toPosition": 6 }],
+          "reasons": ["qa_fail_pass_fail_log", "isolate_hold", "resequence_downstream"]
+        },
+        "explanation": {
+          "alertBanner": "Event injected: Failed QA test — batch moved to hold and queue re-sequenced.",
+          "summary": "PO 1001858227 placed on QA hold; remaining SWCO batches keep flow without the failed slot.",
+          "bullets": [
+            "PO 1001858227 set to HOLD from LSV pass/fail log (Pasco seed data).",
+            "Downstream positions shifted; no ERP write — planner validates.",
+            "Next runnable SWCO batches grouped to limit changeover."
+          ],
+          "impact": "Impact: Line keeps moving; failed batch isolated until disposition."
+        }
+      },
+      "response400": { "message": "Invalid event type" },
+      "response404": { "message": "Unknown line" }
+    },
+    "POST /demo/plant/batches/explain": {
+      "description": "Trigger C — read-only Q&A. Context = current queue state (example: after rush, planVersion 2).",
+      "request": {
+        "po": "1001858227",
+        "question": "When does it ship?",
+        "locale": "en"
+      },
+      "response200": {
+        "po": "1001858227",
+        "answer": "On the current Line 1 plan, PO 1001858227 (SWCO, 3100 kg) shows **scheduled finish 2026-07-05 16:00**. It is **position 3** of 5; batches ahead must run first (same line, changeover rules).",
+        "citations": ["PO 1001858227", "Line 1 queue v2", "2026-07-05 16:00"],
+        "suggestedFollowUps": ["Why is it waiting?", "What would move it up?"]
+      },
+      "response200HoldExample": {
+        "_note": "Same request after qa_fail on PO 1001858227",
+        "po": "1001858227",
+        "answer": "PO 1001858227 is on **QA hold** after a failed pass/fail test. It has no ship date until the line scheduler releases or replans the batch. No automatic ERP write.",
+        "citations": ["PO 1001858227", "Line 1 queue v2", "2026-07-05 16:00", "LSV pass/fail log (Pasco demo)"],
+        "suggestedFollowUps": ["Who approves disposition?", "Which batches run first?"]
+      },
+      "response400": { "message": "po and question required" },
+      "response404": { "message": "Unknown batch" }
+    },
+    "POST /demo/plant/schedule/accept": {
+      "description": "Human sign-off after an event. No ERP write.",
+      "request": { "lineId": "line-1" },
+      "response200": {
+        "acceptedAt": "2026-09-29T23:10:03.807Z",
+        "lineId": "line-1",
+        "planVersion": 2
+      },
+      "response404": { "message": "Unknown line" }
+    },
+    "POST /demo/plant/reset": {
+      "description": "Restore baseline queue for repeat demos. Response is PlantQueueResponse (identical to GET after reset).",
+      "request": { "lineId": "line-1" },
+      "response200": {
+        "lineId": "line-1",
+        "planVersion": 1,
+        "queue": [
+          {
+            "po": "1001759341",
+            "species": "SWCO",
+            "kg": 4200,
+            "finish": "2026-07-04 11:30",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1001858227",
+            "species": "SWCO",
+            "kg": 3100,
+            "finish": "2026-07-05 16:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "SAP due date — monitor slot"
+          },
+          {
+            "po": "1002307551",
+            "species": "SWCO",
+            "kg": 2800,
+            "finish": "2026-07-06 09:00",
+            "status": "PLANNED",
+            "atRisk": true,
+            "reasonShort": "Priority 2 — customer window"
+          },
+          {
+            "po": "1001984402",
+            "species": "CORN",
+            "kg": 5100,
+            "finish": "2026-07-07 14:00",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1002011199",
+            "species": "SWCO",
+            "kg": 3600,
+            "finish": "2026-07-08 10:00",
+            "status": "PLANNED"
+          },
+          {
+            "po": "1001887703",
+            "species": "SWCO",
+            "kg": 2900,
+            "finish": "2026-06-30 08:00",
+            "status": "COMPLETE"
+          }
+        ]
+      }
+    }
+  },
+  "internalServices": {
+    "_note": "Not called from browser. Shapes for Camilo/David integration; BFF merges into PlantEventResponse.",
+    "Data POST /schedule/replan": {
+      "requestRush": { "type": "rush", "lineId": "line-1" },
+      "responseFragment": {
+        "queue": "[...QueueRow[] — see response200Rush.queue]",
+        "planVersion": 2,
+        "diff": {
+          "moves": [{ "po": "1002307551", "fromPosition": 3, "toPosition": 1 }],
+          "reasons": ["priority_2", "sap_finish_2026-07-06", "same_species_changeover"]
+        }
+      }
+    },
+    "Agent POST /explain-replan": {
+      "requestFragment": {
+        "locale": "en",
+        "eventType": "rush",
+        "diff": {
+          "moves": [{ "po": "1002307551", "fromPosition": 3, "toPosition": 1 }],
+          "reasons": ["priority_2", "sap_finish_2026-07-06", "same_species_changeover"]
+        },
+        "queueSnapshot": "[...optional — must not contradict diff]"
+      },
+      "responseFragment": {
+        "alertBanner": "...",
+        "summary": "...",
+        "bullets": ["..."],
+        "impact": "..."
+      }
+    }
+  }
+}
