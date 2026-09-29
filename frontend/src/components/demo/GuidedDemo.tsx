@@ -55,7 +55,7 @@ export function GuidedDemo({
         </div>
       </section>
 
-      <div className="site-container mt-10 max-w-5xl">
+      <div className="site-container mt-10 max-w-6xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-medium text-gray-500">
             {labels.step} {index + 1} {labels.of} {steps.length}
@@ -77,8 +77,8 @@ export function GuidedDemo({
           <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 sm:px-8">
             <h2 className="text-xl font-semibold text-gray-900">{step.title}</h2>
           </div>
-          <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-2 lg:items-start">
-            <div>
+          <div className="flex flex-col gap-8 p-6 sm:p-8">
+            <div className="max-w-3xl">
               <p className="leading-relaxed text-gray-700">{step.body}</p>
               {step.highlight && (
                 <p className="mt-4 rounded-lg border border-brand-green/30 bg-brand-green/5 px-4 py-3 text-sm font-medium text-brand-green-dark">
@@ -87,11 +87,11 @@ export function GuidedDemo({
               )}
             </div>
             {step.imageSrc && (
-              <figure className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+              <figure className="w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
                 <img
                   src={step.imageSrc}
                   alt={step.imageAlt ?? step.title}
-                  className="h-auto w-full object-cover object-top"
+                  className="h-auto w-full object-contain object-top"
                   loading="lazy"
                 />
                 <figcaption className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
