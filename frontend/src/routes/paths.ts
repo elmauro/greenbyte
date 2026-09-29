@@ -3,4 +3,5 @@ export const paths = {
   dashboard: '/dashboard',
   demoPlant: '/demo/plant',
   demoBreeding: '/demo/breeding',
+  demoArchitecture: '/demo/architecture',
 } as const;

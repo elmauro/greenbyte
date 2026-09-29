@@ -9,6 +9,8 @@ Conceptual **wow-moment** screens for Syngenta use cases. Colors align with Gree
 
 **Live walkthrough:** [https://greenbyte-ag.com/demo/plant](https://greenbyte-ag.com/demo/plant) and [https://greenbyte-ag.com/demo/breeding](https://greenbyte-ag.com/demo/breeding) (after deploy).
 
+**Architecture diagrams:** [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture)
+
 ## Intended routes (GreenByte frontend)
 
 - UC1: `/demo/plant` — line queue, event injection, explain panel.

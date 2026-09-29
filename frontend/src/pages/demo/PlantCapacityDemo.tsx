@@ -16,6 +16,7 @@ export function PlantCapacityDemo() {
         steps={d.steps}
         labels={m.demoCommon.labels}
         otherDemo={{ label: m.demoCommon.viewBreeding, href: paths.demoBreeding }}
+        architectureLink={{ label: m.demoCommon.viewArchitecture, href: paths.demoArchitecture }}
       />
     </SiteLayout>
   );

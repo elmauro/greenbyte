@@ -13,6 +13,7 @@ export const es: Messages = {
     news: 'Noticias',
     demoPlant: 'Demo: Planta',
     demoBreeding: 'Demo: Breeding',
+    demoArchitecture: 'Arquitectura',
   },
   demoCommon: {
     labels: {
@@ -25,6 +26,78 @@ export const es: Messages = {
     },
     viewPlant: 'Ver recorrido UC1 — capacidad de planta',
     viewBreeding: 'Ver recorrido UC4 — inteligencia de breeding',
+    viewArchitecture: 'Ver diagramas de arquitectura',
+  },
+  demoArchitecture: {
+    eyebrow: 'Hackathon Syngenta · Base técnica',
+    title: 'Arquitectura del demo',
+    subtitle:
+      'Vista de integración GreenByte: React y BFF en este repo; Data API y Agent API como servicios HTTP separados. Mismos diagramas que docs/hackathon/syngenta-demo-architecture.md.',
+    docNote: 'Documento v1.2 · Sin conexión a sistemas productivos Syngenta.',
+    links: {
+      plant: 'Recorrido UC1',
+      breeding: 'Recorrido UC4',
+    },
+    teamTitle: 'Responsabilidades del equipo',
+    teamTable: {
+      role: 'Rol',
+      owner: 'Responsable',
+      responsibility: 'Alcance',
+    },
+    teamRows: [
+      {
+        role: 'UI + BFF',
+        owner: 'Mauricio / GreenByte',
+        responsibility: 'Contrato único al React; CORS; MSW; persistencia de override',
+      },
+      {
+        role: 'Data API',
+        owner: 'Camilo',
+        responsibility: 'ETL, esquema, tools de solo lectura, calidad de datos',
+      },
+      {
+        role: 'Agent API',
+        owner: 'David',
+        responsibility: 'Chat, triage, explain; llamadas tools al Data API',
+      },
+    ],
+    rulesTitle: 'Reglas de integración (día 1)',
+    rules: [
+      'Contrato primero: OpenAPI o JSON compartido BFF ↔ front y BFF ↔ Data/Agent.',
+      'Mocks en paralelo: MSW refleja respuestas del BFF para demo offline.',
+      'Tools de solo lectura en Data API con límites y filtros permitidos.',
+      'Grounding del agente: contexto LLM solo desde JSON del Data API; citar IDs estables.',
+      'Timeouts y fallback en BFF si el Agent no responde.',
+    ],
+    sections: {
+      container: {
+        title: 'Diagrama de contenedores común',
+        description: 'El front solo habla con el BFF; el Agent llama al Data API (estilo MCP vía HTTP).',
+      },
+      generic: {
+        title: 'Plantilla genérica (UC1 o UC4)',
+        description: 'Cambiar fuentes (Excel vs CSV) y ruta (/demo/plant vs /demo/breeding).',
+      },
+      uc1Flow: {
+        title: 'UC1 — Flujo capacidad de planta',
+        description: 'Pasco: cola, eventos, replan, explicación, aceptación humana.',
+      },
+      uc1Sequence: {
+        title: 'UC1 — Secuencia (evento + replan + explain)',
+        description: 'Orden de llamadas ante lote rush o fallo de QA.',
+      },
+      uc4Flow: {
+        title: 'UC4 — Flujo unificación R&D',
+        description: 'CSVs unificados, pregunta NL, tools, triage, auditoría de override.',
+      },
+      uc4Sequence: {
+        title: 'UC4 — Secuencia (ask + tools)',
+        description: 'BFF reenvía chat; Agent recupera hechos antes de responder.',
+      },
+    },
+    monolithTitle: 'Monolito vs distribuido',
+    monolithBody:
+      'Para jurado puede bastar la historia “copiloto”. El equipo implementa tres servicios + BFF. Diagramas de una sola caja (todo en core-api) son vista lógica; el despliegue físico sigue el diagrama de contenedores.',
   },
   demoPlant: {
     eyebrow: 'Syngenta UC1 · Capacidad de planta',

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export type DemoStep = {
   title: string;
@@ -22,6 +23,7 @@ type GuidedDemoProps = {
     restart: string;
   };
   otherDemo?: { label: string; href: string };
+  architectureLink?: { label: string; href: string };
 };
 
 export function GuidedDemo({
@@ -31,6 +33,7 @@ export function GuidedDemo({
   steps,
   labels,
   otherDemo,
+  architectureLink,
 }: GuidedDemoProps) {
   const [index, setIndex] = useState(0);
   const step = steps[index];
@@ -44,18 +47,28 @@ export function GuidedDemo({
           <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{eyebrow}</p>
           <h1 className="mt-3 text-3xl font-bold text-brand-blue sm:text-4xl">{title}</h1>
           <p className="mt-4 text-lg text-gray-600">{subtitle}</p>
-          {otherDemo && (
-            <a
-              href={otherDemo.href}
-              className="mt-6 inline-flex text-sm font-semibold text-brand-green hover:text-brand-green-dark"
-            >
-              {otherDemo.label} →
-            </a>
-          )}
+          <div className="mt-6 flex flex-wrap gap-4">
+            {otherDemo && (
+              <Link
+                to={otherDemo.href}
+                className="inline-flex text-sm font-semibold text-brand-green hover:text-brand-green-dark"
+              >
+                {otherDemo.label} →
+              </Link>
+            )}
+            {architectureLink && (
+              <Link
+                to={architectureLink.href}
+                className="inline-flex text-sm font-semibold text-brand-blue hover:text-brand-blue/80"
+              >
+                {architectureLink.label} →
+              </Link>
+            )}
+          </div>
         </div>
       </section>
 
-      <div className="site-container mt-10 max-w-6xl">
+      <div className="site-container mt-10 max-w-[90rem]">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-medium text-gray-500">
             {labels.step} {index + 1} {labels.of} {steps.length}
@@ -77,8 +90,8 @@ export function GuidedDemo({
           <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 sm:px-8">
             <h2 className="text-xl font-semibold text-gray-900">{step.title}</h2>
           </div>
-          <div className="flex flex-col gap-8 p-6 sm:p-8">
-            <div className="max-w-3xl">
+          <div className="p-6 sm:p-8">
+            <div className="w-full max-w-3xl">
               <p className="leading-relaxed text-gray-700">{step.body}</p>
               {step.highlight && (
                 <p className="mt-4 rounded-lg border border-brand-green/30 bg-brand-green/5 px-4 py-3 text-sm font-medium text-brand-green-dark">
@@ -87,14 +100,17 @@ export function GuidedDemo({
               )}
             </div>
             {step.imageSrc && (
-              <figure className="w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
-                <img
-                  src={step.imageSrc}
-                  alt={step.imageAlt ?? step.title}
-                  className="h-auto w-full object-contain object-top"
-                  loading="lazy"
-                />
-                <figcaption className="border-t border-gray-100 px-4 py-2 text-xs text-gray-500">
+              <figure className="mt-8 w-full border-t border-gray-100 pt-8">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-100 shadow-md">
+                  <img
+                    src={step.imageSrc}
+                    alt={step.imageAlt ?? step.title}
+                    className="block h-auto min-h-[240px] w-full max-w-none object-contain object-center sm:min-h-[320px] lg:min-h-[420px]"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <figcaption className="mt-2 text-center text-xs text-gray-500">
                   {step.imageAlt ?? 'Concept mockup — demo data only'}
                 </figcaption>
               </figure>

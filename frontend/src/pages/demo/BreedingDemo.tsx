@@ -16,6 +16,7 @@ export function BreedingDemo() {
         steps={d.steps}
         labels={m.demoCommon.labels}
         otherDemo={{ label: m.demoCommon.viewPlant, href: paths.demoPlant }}
+        architectureLink={{ label: m.demoCommon.viewArchitecture, href: paths.demoArchitecture }}
       />
     </SiteLayout>
   );

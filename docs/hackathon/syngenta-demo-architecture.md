@@ -45,7 +45,7 @@ This document describes the **integration architecture** for the Syngenta use-ca
 | **SSM** | AWS Systems Manager Parameter Store; store for non-secret and secret config (preferred over committing keys). |
 | **UC1** | Use Case 1 — Plant Capacity Utilization (Pasco conditioning plant scheduling). |
 | **UC4** | Use Case 4 — R&D Data Source Unification (trials, pedigree, field/lab observations). |
-| **UI** | User interface; React demo pages under `/demo/plant` or `/demo/breeding`. |
+| **UI** | User interface; React pages under `/demo/plant`, `/demo/breeding`, and `/demo/architecture`. |
 
 ### 2.2 Syngenta and business context
 
@@ -341,7 +341,13 @@ Replace **Sources** and **React** route name (`/demo/plant` vs `/demo/breeding`)
 
 ---
 
-## 14. UI mockups (wow moment)
+## 14. Web architecture page
+
+Live diagrams and team integration summary: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture) (same ASCII diagrams as this document).
+
+---
+
+## 15. UI mockups (wow moment)
 
 | Use case | Mockup |
 | --- | --- |

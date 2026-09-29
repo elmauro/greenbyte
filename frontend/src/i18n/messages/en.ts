@@ -11,6 +11,7 @@ export const en = {
     news: 'News',
     demoPlant: 'Demo: Plant',
     demoBreeding: 'Demo: Breeding',
+    demoArchitecture: 'Architecture',
   },
   demoCommon: {
     labels: {
@@ -23,6 +24,7 @@ export const en = {
     },
     viewPlant: 'View UC1 plant capacity walkthrough',
     viewBreeding: 'View UC4 breeding intelligence walkthrough',
+    viewArchitecture: 'View architecture diagrams',
   },
   demoPlant: {
     eyebrow: 'Syngenta UC1 · Plant Capacity',
@@ -58,6 +60,77 @@ export const en = {
         highlight: 'Next build: live BFF wiring to Data + Agent APIs (see architecture doc).',
       },
     ],
+  },
+  demoArchitecture: {
+    eyebrow: 'Syngenta hackathon · Technical baseline',
+    title: 'Demo architecture',
+    subtitle:
+      'Integration view for GreenByte: React and BFF in this repo; Data API and Agent API as separate HTTP services. Same diagrams as docs/hackathon/syngenta-demo-architecture.md.',
+    docNote: 'Document version 1.2 · No live Syngenta production connections.',
+    links: {
+      plant: 'UC1 walkthrough',
+      breeding: 'UC4 walkthrough',
+    },
+    teamTitle: 'Team responsibilities',
+    teamTable: {
+      role: 'Role',
+      owner: 'Owner',
+      responsibility: 'Responsibility',
+    },
+    teamRows: [
+      {
+        role: 'Product UI + BFF',
+        owner: 'Mauricio / GreenByte',
+        responsibility: 'Single API contract to React; CORS; MSW mocks; override persistence',
+      },
+      {
+        role: 'Data API',
+        owner: 'Camilo',
+        responsibility: 'ETL, schema, read-only tools, data quality',
+      },
+      {
+        role: 'Agent API',
+        owner: 'David',
+        responsibility: 'Chat, triage, explain; tool calls to Data API',
+      },
+    ],
+    rulesTitle: 'Integration rules (day 1)',
+    rules: [
+      'Contract first: OpenAPI or shared JSON for BFF ↔ frontend and BFF ↔ Data/Agent.',
+      'Parallel mocks: MSW mirrors BFF responses for offline demo.',
+      'Read-only tools on Data API with limits and allowed filters.',
+      'Agent grounding: LLM context from Data API JSON only; cite stable IDs.',
+      'BFF timeouts and fallback if Agent is unavailable.',
+    ],
+    sections: {
+      container: {
+        title: 'Common container diagram',
+        description: 'Frontend talks only to the BFF; Agent calls Data API for tools (MCP-style over HTTP).',
+      },
+      generic: {
+        title: 'Generic template (UC1 or UC4)',
+        description: 'Replace sources (Excel vs CSV) and route (/demo/plant vs /demo/breeding).',
+      },
+      uc1Flow: {
+        title: 'UC1 — Plant capacity flow',
+        description: 'Pasco conditioning: queue, events, replan, explain, human accept.',
+      },
+      uc1Sequence: {
+        title: 'UC1 — Sequence (event + replan + explain)',
+        description: 'Order of calls when a rush batch or QA failure is injected.',
+      },
+      uc4Flow: {
+        title: 'UC4 — R&D unification flow',
+        description: 'Unified CSVs, NL question, tools, triage, breeder override audit.',
+      },
+      uc4Sequence: {
+        title: 'UC4 — Sequence (ask + tools)',
+        description: 'BFF forwards chat; Agent retrieves facts before answering.',
+      },
+    },
+    monolithTitle: 'Monolith vs distributed',
+    monolithBody:
+      'Judges may see a single “copilot” story. The team implements three services + BFF. Legacy single-box diagrams (everything in core-api) are logical only; physical deployment follows the container diagram above.',
   },
   demoBreeding: {
     eyebrow: 'Syngenta UC4 · R&D unification',
