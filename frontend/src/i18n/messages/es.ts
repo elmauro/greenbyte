@@ -361,6 +361,17 @@ export const es: Messages = {
       footerTotal: '{count} lotes · Tiempo total: {runtime}',
       demoRuntime: '5d 2h 45m',
       adjustManually: 'Ajustar manualmente',
+      layoutVertical: 'Vertical',
+      layoutHorizontal: 'Horizontal',
+      layoutToggleAria: 'Disposición de la línea de tiempo',
+      holdShort: 'En retención',
+    },
+    pagination: {
+      rowsPerPage: 'Filas por página',
+      showing: 'Mostrando {from}–{to} de {total}',
+      prev: 'Anterior',
+      next: 'Siguiente',
+      pageOf: 'Página {page} de {totalPages}',
     },
     baselineDashboard: {
       tagline: 'SEMILLA. PLAN. CRECE.',

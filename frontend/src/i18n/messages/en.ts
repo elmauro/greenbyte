@@ -188,6 +188,17 @@ export const en = {
       footerTotal: '{count} batches · Total runtime: {runtime}',
       demoRuntime: '5d 2h 45m',
       adjustManually: 'Adjust manually',
+      layoutVertical: 'Vertical',
+      layoutHorizontal: 'Horizontal',
+      layoutToggleAria: 'Timeline layout',
+      holdShort: 'On hold',
+    },
+    pagination: {
+      rowsPerPage: 'Rows per page',
+      showing: 'Showing {from}–{to} of {total}',
+      prev: 'Previous',
+      next: 'Next',
+      pageOf: 'Page {page} of {totalPages}',
     },
     baselineDashboard: {
       tagline: 'SEED. PLAN. GROW.',

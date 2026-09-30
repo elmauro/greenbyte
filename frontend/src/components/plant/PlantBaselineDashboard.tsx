@@ -12,7 +12,9 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
-import { PlantProgramGantt } from './PlantProgramGantt';
+import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
+import { PlantListPagination } from './PlantListPagination';
+import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
 import { PlantHelpDrawer } from './ux/PlantHelpDrawer';
 import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
@@ -114,8 +116,10 @@ export function PlantBaselineDashboard({
   const b = m.plantMvp.baselineDashboard;
   const ux = m.plantMvp.ux;
   const copy = m.plantMvp;
+  const paginationCopy = m.plantMvp.pagination;
   const isUx = experience === 'ux';
   const schedule = m.plantMvp.scheduleShell;
+  const enablePagination = !staticPreview && !compact;
   const hi = new Set(highlightColumns);
   const active = queue.filter((r) => r.status !== 'COMPLETE');
   const totalKg = active.reduce((s, r) => s + r.kg, 0);
@@ -165,6 +169,41 @@ export function PlantBaselineDashboard({
       setSelectedPo((prev) => Array.from(new Set([...prev, ...shownPo])));
     }
   }
+
+  const [queuePage, setQueuePage] = useState(1);
+  const [queuePageSize, setQueuePageSize] = useState<PlantPageSize>(10);
+  const [schedulePage, setSchedulePage] = useState(1);
+  const [schedulePageSize, setSchedulePageSize] = useState<PlantPageSize>(10);
+  const [ganttLayout, setGanttLayout] = useState<ScheduleGanttLayout>('vertical');
+
+  const queuePageSizeEff: PlantPageSize = enablePagination
+    ? queuePageSize
+    : (Math.max(displayQueue.length, 1) as PlantPageSize);
+  const queuePag = useListPagination(displayQueue, queuePage, queuePageSizeEff);
+  const paginatedQueueRows = queuePag.pageItems;
+
+  const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
+  const schedulePageSizeEff: PlantPageSize = enablePagination
+    ? schedulePageSize
+    : (Math.max(scheduleActive.length, 1) as PlantPageSize);
+  const schedulePag = useListPagination(scheduleActive, schedulePage, schedulePageSizeEff);
+
+  useEffect(() => {
+    setQueuePage(1);
+  }, [queueFilter, queue.length, queuePageSize]);
+
+  useEffect(() => {
+    setSchedulePage(1);
+  }, [queue.length, schedulePageSize]);
+
+  useEffect(() => {
+    if (queuePag.safePage !== queuePage) setQueuePage(queuePag.safePage);
+  }, [queuePag.safePage, queuePage]);
+
+  useEffect(() => {
+    if (schedulePag.safePage !== schedulePage) setSchedulePage(schedulePag.safePage);
+  }, [schedulePag.safePage, schedulePage]);
+
   const bellWrapRef = useRef<HTMLDivElement>(null);
   const bellMenuId = useId();
 
@@ -425,7 +464,7 @@ export function PlantBaselineDashboard({
               </td>
             </tr>
           )}
-          {displayQueue.map((row) => {
+          {paginatedQueueRows.map((row) => {
             const sp = speciesDisplay(row.species, locale);
             const isComplete = row.status === 'COMPLETE';
             const isHold = row.status === 'HOLD';
@@ -632,6 +671,22 @@ export function PlantBaselineDashboard({
               </div>
             )}
             {queueTable}
+            {enablePagination && (
+              <PlantListPagination
+                page={queuePag.safePage}
+                pageSize={queuePageSize}
+                totalPages={queuePag.totalPages}
+                from={queuePag.from}
+                to={queuePag.to}
+                total={queuePag.total}
+                onPageChange={setQueuePage}
+                onPageSizeChange={(size) => {
+                  setQueuePageSize(size);
+                  setQueuePage(1);
+                }}
+                labels={paginationCopy}
+              />
+            )}
           </>
         );
       case 'scheduling':
@@ -641,11 +696,45 @@ export function PlantBaselineDashboard({
             <div className="overflow-hidden rounded-xl border border-gray-200">
               {eventPendingReview && schedulingLayout === 'full' ? (
                 <div className="flex flex-col lg:flex-row">
-                  <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} />
+                  <PlantProgramGantt
+                    rows={schedulePag.pageItems}
+                    rushPo={rushPo}
+                    compact={compact}
+                    layout={ganttLayout}
+                    onLayoutChange={setGanttLayout}
+                    page={schedulePag.safePage}
+                    pageSize={schedulePageSizeEff}
+                    totalRows={schedulePag.total}
+                    totalPages={schedulePag.totalPages}
+                    from={schedulePag.from}
+                    to={schedulePag.to}
+                    onPageChange={setSchedulePage}
+                    onPageSizeChange={(size) => {
+                      setSchedulePageSize(size);
+                      setSchedulePage(1);
+                    }}
+                  />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
               ) : (
-                <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} />
+                <PlantProgramGantt
+                  rows={schedulePag.pageItems}
+                  rushPo={rushPo}
+                  compact={compact}
+                  layout={ganttLayout}
+                  onLayoutChange={setGanttLayout}
+                  page={schedulePag.safePage}
+                  pageSize={schedulePageSizeEff}
+                  totalRows={schedulePag.total}
+                  totalPages={schedulePag.totalPages}
+                  from={schedulePag.from}
+                  to={schedulePag.to}
+                  onPageChange={setSchedulePage}
+                  onPageSizeChange={(size) => {
+                    setSchedulePageSize(size);
+                    setSchedulePage(1);
+                  }}
+                />
               )}
             </div>
             {isUx && eventPendingReview && explanation && (
