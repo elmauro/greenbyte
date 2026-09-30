@@ -1,7 +1,6 @@
 import type { PlantFlowSnapshots } from '../../demo/plant/plantFlowSnapshots';
 import { useLocale } from '../../i18n';
 import { PlantBaselineDashboard } from './PlantBaselineDashboard';
-import { PlantScheduleWorkspace } from './PlantScheduleWorkspace';
 
 type PlantTourStepPreviewProps = {
   /** Guided tour step index 0–4 */
@@ -20,6 +19,7 @@ export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPrev
         <PlantBaselineDashboard
           queue={snapshots.load.queue}
           compact
+          showProgramTimeline={stepIndex >= 1}
           highlightColumns={stepIndex === 1 ? ['finish', 'status'] : undefined}
         />
       </div>
@@ -34,12 +34,13 @@ export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPrev
       {stepIndex === 2 && (
         <p className="mb-3 text-sm text-gray-600">{m.demoPlant.tourInjectNote}</p>
       )}
-      <PlantScheduleWorkspace
+      <PlantBaselineDashboard
         queue={rush.queue}
         eventType="rush"
         explanation={rush.explanation}
         accepted={stepIndex >= 4}
         acceptDisabled={stepIndex < 4}
+        defaultSection="scheduling"
         compact
       />
     </div>

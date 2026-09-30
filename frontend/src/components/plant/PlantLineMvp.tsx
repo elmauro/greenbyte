@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PlantEventType, PlantExplanation, QueueRow } from '../../demo/plant/plantDemoTypes';
+import type {
+  PlantEventType,
+  PlantExplanation,
+  PlantQueueResponse,
+  QueueRow,
+} from '../../demo/plant/plantDemoTypes';
+import { getPlantEventExplanation } from '../../demo/plant/plantDemoServer';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
+import { getApiConnectionMode } from '../../services/apiConfig';
 import { plantDemoApi } from '../../services/plantDemoApi';
-import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantBaselineDashboard } from './PlantBaselineDashboard';
-import { PlantScheduleWorkspace } from './PlantScheduleWorkspace';
 
 export function PlantLineMvp() {
   const { locale, messages: m } = useLocale();
@@ -18,20 +23,75 @@ export function PlantLineMvp() {
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  /** Plan version user accepted — ignore stale `lastEvent` from BFF poll for this version. */
+  const acceptedPlanVersionRef = useRef<number | null>(null);
+
+  const applyQueueSnapshot = useCallback((res: PlantQueueResponse) => {
+    setQueue(res.queue);
+
+    if (res.planVersion <= 1 && !res.lastEvent) {
+      acceptedPlanVersionRef.current = null;
+      setEventType(null);
+      setExplanation(null);
+      setMoves([]);
+      setAccepted(false);
+      return;
+    }
+
+    if (
+      acceptedPlanVersionRef.current != null &&
+      res.planVersion === acceptedPlanVersionRef.current
+    ) {
+      setEventType(null);
+      setExplanation(null);
+      setAccepted(true);
+      return;
+    }
+
+    if (res.lastEvent) {
+      acceptedPlanVersionRef.current = null;
+      setEventType(res.lastEvent);
+      setExplanation(getPlantEventExplanation(res.lastEvent, locale));
+      setAccepted(false);
+    }
+  }, [locale]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
     try {
       const res = await plantDemoApi.getQueue();
-      setQueue(res.queue);
+      applyQueueSnapshot(res);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyQueueSnapshot]);
+
+  const pollQueueFromBff = useCallback(async () => {
+    if (getApiConnectionMode() !== 'bff' || busy) return;
+    try {
+      const res = await plantDemoApi.getQueue();
+      applyQueueSnapshot(res);
+    } catch {
+      /* ignore transient poll errors */
+    }
+  }, [applyQueueSnapshot, busy]);
 
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
+
+  useEffect(() => {
+    if (getApiConnectionMode() !== 'bff') return;
+    const id = window.setInterval(() => void pollQueueFromBff(), 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pollQueueFromBff();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [pollQueueFromBff]);
 
   async function inject(type: PlantEventType) {
     setBusy(true);
@@ -39,6 +99,7 @@ export function PlantLineMvp() {
       const res = await plantDemoApi.postEvent(type, locale);
       setQueue(res.queue);
       setMoves(res.diff.moves);
+      acceptedPlanVersionRef.current = null;
       setEventType(type);
       setExplanation(res.explanation);
       setAccepted(false);
@@ -55,6 +116,7 @@ export function PlantLineMvp() {
       setEventType(null);
       setMoves([]);
       setExplanation(null);
+      acceptedPlanVersionRef.current = null;
       setAccepted(false);
     } finally {
       setBusy(false);
@@ -64,8 +126,12 @@ export function PlantLineMvp() {
   async function acceptPlan() {
     setBusy(true);
     try {
-      await plantDemoApi.postAccept();
+      const res = await plantDemoApi.postAccept();
+      acceptedPlanVersionRef.current = res.planVersion;
       setAccepted(true);
+      setEventType(null);
+      setExplanation(null);
+      setMoves([]);
     } finally {
       setBusy(false);
     }
@@ -162,9 +228,9 @@ export function PlantLineMvp() {
 
         {loading ? (
           <p className="text-sm text-gray-500">{copy.loading}</p>
-        ) : eventType && explanation ? (
+        ) : (
           <>
-            <PlantScheduleWorkspace
+            <PlantBaselineDashboard
               queue={queue}
               eventType={eventType}
               explanation={explanation}
@@ -172,12 +238,6 @@ export function PlantLineMvp() {
               acceptDisabled={busy}
               onAccept={() => void acceptPlan()}
             />
-            <PlantBatchExplainChat queue={queue} />
-          </>
-        ) : (
-          <>
-            <PlantBaselineDashboard queue={queue} />
-            <PlantBatchExplainChat queue={queue} />
           </>
         )}
 

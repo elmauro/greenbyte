@@ -28,6 +28,8 @@ export type PlantQueueResponse = {
   lineId: string;
   queue: QueueRow[];
   planVersion: number;
+  /** Set when plan was changed by rush/QA (BFF reads from Dynamo). */
+  lastEvent?: PlantEventType | null;
 };
 
 export type PlantEventResponse = {
