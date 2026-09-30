@@ -1,13 +1,40 @@
-import type { PlantFlowStepConfig } from '../../../content/plantFlowSteps';
+import type { PlantFlowPreviewKind, PlantFlowStepConfig } from '../../../content/plantFlowSteps';
 import type { PlantFlowSnapshots } from '../../../demo/plant/plantFlowSnapshots';
 import { useLocale } from '../../../i18n';
+import type { PlantNavSection } from '../PlantBaselineDashboard';
 import { PlantBaselineDashboard } from '../PlantBaselineDashboard';
-import { PlantScheduleWorkspace } from '../PlantScheduleWorkspace';
 
 type PlantFlowStepPreviewProps = {
   step: PlantFlowStepConfig;
   snapshots: PlantFlowSnapshots;
 };
+
+function defaultSectionForPreview(preview: PlantFlowPreviewKind): PlantNavSection {
+  switch (preview) {
+    case 'load':
+      return 'dashboard';
+    case 'at_risk':
+    case 'rush':
+    case 'qa':
+      return 'queue';
+    case 'copilot':
+    case 'timeline':
+    case 'accept':
+      return 'scheduling';
+    case 'explain':
+      return 'dashboard';
+    default:
+      return 'dashboard';
+  }
+}
+
+function schedulingLayoutForPreview(
+  preview: PlantFlowPreviewKind,
+): 'full' | 'timeline-only' | undefined {
+  if (preview === 'copilot') return 'full';
+  if (preview === 'timeline' || preview === 'accept') return 'timeline-only';
+  return undefined;
+}
 
 export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewProps) {
   const { messages: m } = useLocale();
@@ -30,6 +57,28 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
     );
   }
 
+  const flowShell = {
+    compact: true as const,
+    staticPreview: true as const,
+    defaultSection: defaultSectionForPreview(step.preview),
+    schedulingLayout: schedulingLayoutForPreview(step.preview),
+  };
+
+  if (step.preview === 'load') {
+    return <PlantBaselineDashboard key={step.id} {...flowShell} queue={snapshots.load.queue} />;
+  }
+
+  if (step.preview === 'at_risk') {
+    return (
+      <PlantBaselineDashboard
+        key={step.id}
+        {...flowShell}
+        queue={snapshots.load.queue}
+        highlightColumns={['finish', 'status']}
+      />
+    );
+  }
+
   if (
     step.preview === 'rush' ||
     step.preview === 'qa' ||
@@ -37,25 +86,21 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
     step.preview === 'timeline' ||
     step.preview === 'accept'
   ) {
-    const eventType = step.preview === 'qa' ? 'qa_fail' : 'rush';
-    const data = step.preview === 'qa' ? qa : rush;
+    const isQa = step.preview === 'qa';
+    const data = isQa ? qa : rush;
     return (
-      <PlantScheduleWorkspace
+      <PlantBaselineDashboard
+        key={step.id}
+        {...flowShell}
         queue={data.queue}
-        eventType={eventType}
+        eventType={isQa ? 'qa_fail' : 'rush'}
         explanation={data.explanation}
         accepted={step.preview === 'accept'}
         acceptDisabled={step.preview !== 'accept'}
-        compact
+        schedulingLayout={flowShell.schedulingLayout ?? 'full'}
       />
     );
   }
 
-  return (
-    <PlantBaselineDashboard
-      queue={snapshots.load.queue}
-      highlightColumns={step.preview === 'at_risk' ? ['finish', 'status'] : undefined}
-      compact
-    />
-  );
+  return <PlantBaselineDashboard key={step.id} {...flowShell} queue={snapshots.load.queue} />;
 }

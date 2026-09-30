@@ -101,10 +101,14 @@ export function acceptPlan(state, lineId) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
+  const nextState = { ...state, lastEvent: null };
   return {
-    acceptedAt: new Date().toISOString(),
-    lineId,
-    planVersion: state.planVersion,
+    state: nextState,
+    response: {
+      acceptedAt: new Date().toISOString(),
+      lineId,
+      planVersion: state.planVersion,
+    },
   };
 }
 

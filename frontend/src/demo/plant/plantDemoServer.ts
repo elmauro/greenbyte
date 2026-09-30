@@ -170,6 +170,7 @@ class PlantDemoServer {
 
   accept(lineId: string): { acceptedAt: string; lineId: string; planVersion: number } {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
+    this.lastEvent = null;
     return {
       acceptedAt: new Date().toISOString(),
       lineId,

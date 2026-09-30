@@ -5,9 +5,11 @@ import { plantDemoApi } from '../../services/plantDemoApi';
 
 type PlantBatchExplainChatProps = {
   queue: QueueRow[];
+  /** Inside plant shell AI Copilot nav — parent supplies page title. */
+  embedded?: boolean;
 };
 
-export function PlantBatchExplainChat({ queue }: PlantBatchExplainChatProps) {
+export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExplainChatProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
   const selectable = useMemo(() => queue.filter((r) => r.status !== 'COMPLETE'), [queue]);
@@ -34,8 +36,8 @@ export function PlantBatchExplainChat({ queue }: PlantBatchExplainChatProps) {
   return (
     <section className="rounded-xl border border-brand-blue/20 bg-brand-blue/5 p-5 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-blue">{copy.eyebrow}</p>
-      <h3 className="mt-1 text-lg font-semibold text-gray-900">{copy.title}</h3>
-      <p className="mt-2 text-sm text-gray-600">{copy.subtitle}</p>
+      {!embedded && <h3 className="mt-1 text-lg font-semibold text-gray-900">{copy.title}</h3>}
+      <p className={`text-sm text-gray-600 ${embedded ? 'mt-2' : 'mt-2'}`}>{copy.subtitle}</p>
 
       <div className="mt-4 flex flex-wrap gap-3">
         <label className="flex flex-col text-sm">

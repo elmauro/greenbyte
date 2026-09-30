@@ -1,7 +1,7 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
 import { acceptPlan } from '../../services/plantDemo/logic.js';
-import { loadState } from '../../services/plantDemo/stateRepository.js';
+import { loadState, saveState } from '../../services/plantDemo/stateRepository.js';
 
 export async function handler(event) {
   const body = parseJsonBody(event) ?? {};
@@ -9,7 +9,9 @@ export async function handler(event) {
 
   try {
     const state = await loadState(lineId);
-    return jsonResponse(200, acceptPlan(state, lineId));
+    const { state: nextState, response } = acceptPlan(state, lineId);
+    await saveState(lineId, nextState);
+    return jsonResponse(200, response);
   } catch (err) {
     if (err.message === 'Unknown line') {
       return jsonResponse(404, { message: 'Unknown line' });
