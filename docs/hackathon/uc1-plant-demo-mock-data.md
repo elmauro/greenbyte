@@ -32,7 +32,7 @@ These three rows stay at the top so scripted events still work:
 2. **1001884747** — `qa_fail` event → **HOLD**, moved to tail.
 3. **1002307551** — `rush` event → moved to position 1; real SAP priority **2**, qty **6400 kg**.
 
-All other **PLANNED** rows come from `lsv_line_1.csv` (sorted by output kg, finish dates mapped to **2026-07-07+** for the demo window).
+Other **PLANNED** rows merge **`main.csv`** (LSVLN1 **NEW**) with **`line_1_schedule.csv`** batches whose comments reference **Line 1** (`INT Ln1`), deduped by PO, top ~32 by kg. Finish dates map to **2026-07-07+** for the hackathon window (~**35** planned rows for pagination demos).
 
 ## When real API is wired
 
