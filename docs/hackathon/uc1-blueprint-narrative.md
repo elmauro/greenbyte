@@ -15,6 +15,15 @@ That list does **not** appear by magic in our app. In real life it comes from **
 
 GreenByte’s demo **does not plug into live SAP**. We use the same **ideas** and Pasco-style sample data.
 
+### SAP and the quality log — in this project
+
+| Name | In the real plant | In our hackathon |
+| --- | --- | --- |
+| **SAP** | The **ERP system** (production orders, priority, dates). Not a spreadsheet. | We **do not connect** to live SAP. Planners export reports from SAP and paste them into **Pasco’s Excel workbook** (e.g. **Line 1 Schedule**, **Excel SAP data**). That Excel is our stand-in for “what SAP knows.” |
+| **Quality log** (pass/fail log) | Lab/plant records **Pass** or **Fail** per batch (PO, line, reason: Dent, etc.). | Same workbook: sheet **`LSV Pass_Fail Log`**. A new **Fail** row means “QA failed” — not a new PO in the queue. |
+
+Demo today: we **pretend a row landed** via ingest API (Postman), not by opening Excel in the browser.
+
 ---
 
 ## Act 1 — Calm morning
