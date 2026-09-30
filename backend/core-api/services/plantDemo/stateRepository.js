@@ -37,6 +37,8 @@ export async function loadState(lineId) {
     planVersion: item.planVersion,
     lastEvent: item.lastEvent ?? null,
     acceptedPlanVersion: item.acceptedPlanVersion ?? null,
+    pendingExplanation: item.pendingExplanation ?? null,
+    pendingDiff: item.pendingDiff ?? null,
   };
 }
 
@@ -52,6 +54,8 @@ export async function saveState(lineId, state) {
         planVersion: state.planVersion,
         lastEvent: state.lastEvent ?? null,
         acceptedPlanVersion: state.acceptedPlanVersion ?? null,
+        pendingExplanation: state.pendingExplanation ?? null,
+        pendingDiff: state.pendingDiff ?? null,
         updatedAt: now,
       }),
     }),

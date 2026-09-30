@@ -7,6 +7,7 @@ import type {
   PlantExplanation,
   QueueRow,
 } from '../../demo/plant/plantDemoTypes';
+import { PLANT_LINES, plantLineById } from '../../demo/plant/plantLines';
 import { speciesDisplay } from '../../demo/plant/plantSpeciesDisplay';
 import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
@@ -42,13 +43,20 @@ type PlantBaselineDashboardProps = {
   staticPreview?: boolean;
   /** Scheduling section layout when a replan is pending review. */
   schedulingLayout?: 'full' | 'timeline-only';
-  /** Lovable UX port — same GreenByte styles, richer flows. */
+  /** UX experience — same GreenByte styles, richer flows. */
   experience?: PlantDashboardExperience;
   /** Controlled nav (UX route + URL section). */
   section?: PlantNavSection;
   onSectionChange?: (section: PlantNavSection) => void;
   /** UX route: approval history entries (local demo session). */
   uxApprovalHistory?: PlantUxHistoryEntry[];
+  /** PO highlighted on schedule when a replan is pending (from BFF diff / queue). */
+  eventHighlightPo?: string;
+  /** Lines with a valid demo_line_id. Omit on tour and flow previews. */
+  selectedLineId?: string;
+  onLineChange?: (lineId: string) => void;
+  /** Line switch in flight — dim the data area, keep nav and the line control. */
+  dataRefreshing?: boolean;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -111,8 +119,14 @@ export function PlantBaselineDashboard({
   section: controlledSection,
   onSectionChange,
   uxApprovalHistory = [],
+  eventHighlightPo,
+  selectedLineId,
+  onLineChange,
+  dataRefreshing = false,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
+  const lineSelectId = useId();
+  const selectedLine = plantLineById(selectedLineId);
   const b = m.plantMvp.baselineDashboard;
   const ux = m.plantMvp.ux;
   const copy = m.plantMvp;
@@ -129,7 +143,7 @@ export function PlantBaselineDashboard({
   /** Rush/QA still awaiting human accept — hide event chrome once accepted. */
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
-  const rushPo = eventType === 'rush' ? '1002307551' : undefined;
+  const rushPo = eventHighlightPo;
   const visibleNav = NAV_ITEMS.filter(
     (item) => showProgramTimeline || item.id === 'dashboard' || item.id === 'queue',
   );
@@ -181,6 +195,13 @@ export function PlantBaselineDashboard({
   const paginatedQueueRows = queuePag.pageItems;
 
   const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
+
+  useEffect(() => {
+    setQueueFilter('all');
+    setSelectedPo([]);
+    setCompareOpen(false);
+    setQueuePage(1);
+  }, [selectedLineId]);
 
   useEffect(() => {
     setQueuePage(1);
@@ -261,7 +282,9 @@ export function PlantBaselineDashboard({
       case 'dashboard':
         return b.sectionDashboard;
       case 'queue':
-        return b.sectionQueue;
+        return onLineChange
+          ? copy.lineQueueHeading.replace('{line}', copy.lineNames[selectedLine.id])
+          : b.sectionQueue;
       case 'scheduling':
         return b.sectionScheduling;
       case 'copilot':
@@ -352,8 +375,12 @@ export function PlantBaselineDashboard({
       <span className="text-brand-green">✓</span>
       <div>
         <p className="font-semibold">{ux.calmTitle}</p>
-        <p className="text-sm">{ux.calmBody}</p>
-        <p className="text-sm opacity-80">{ux.calmMeta}</p>
+        <p className="text-sm">{ux.calmBody.replace('{line}', copy.lineNames[selectedLine.id])}</p>
+        <p className="text-sm opacity-80">
+          {ux.calmMeta
+            .replace('{finish}', nextRow ? formatFinish(nextRow.finish, locale, b.finishFormat) : '—')
+            .replace('{utilization}', String(utilization))}
+        </p>
       </div>
     </div>
   );
@@ -771,7 +798,28 @@ export function PlantBaselineDashboard({
         <div className="min-w-0 flex-1 bg-white p-4 sm:p-6">
           <header className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-4">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">{b.pageTitle}</h2>
+              {onLineChange ? (
+                <div>
+                  <label htmlFor={lineSelectId} className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {copy.lineSelectLabel}
+                  </label>
+                  <select
+                    id={lineSelectId}
+                    className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900"
+                    value={selectedLine.id}
+                    onChange={(event) => onLineChange(event.target.value)}
+                  >
+                    {PLANT_LINES.map((line) => (
+                      <option key={line.id} value={line.id}>
+                        {copy.lineNames[line.id]} — {line.sheet}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">{selectedLine.workCenter}</p>
+                </div>
+              ) : (
+                <h2 className="text-xl font-bold text-gray-900">{b.pageTitle}</h2>
+              )}
               <p className="mt-1 text-sm font-medium text-brand-green">
                 {eventPendingReview ? b.moodLineEvent : b.moodLine}
               </p>
@@ -919,7 +967,7 @@ export function PlantBaselineDashboard({
             </nav>
           )}
 
-          <section className="mt-5">
+          <section className={`mt-5 ${dataRefreshing ? 'opacity-60' : ''}`}>
             <div className="flex flex-wrap items-center gap-3">
               <h3 className="text-lg font-semibold text-gray-900">{sectionTitle()}</h3>
               {pill && (

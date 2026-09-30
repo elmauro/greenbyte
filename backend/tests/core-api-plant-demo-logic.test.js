@@ -12,7 +12,8 @@ describe('plant demo logic', () => {
     expect(res.planVersion).toBe(1);
     expect(res.lastEvent).toBeNull();
     expect(res.queue.length).toBeGreaterThanOrEqual(30);
-    expect(res.queue[2].po).toBe('1002307551');
+    expect(res.queue.map((r) => r.po)).toContain('1002307551');
+    expect(res.queue.map((r) => r.po)).toContain('1001883359');
   });
 
   it('rush moves PO 1002307551 to position 1', () => {
@@ -20,7 +21,10 @@ describe('plant demo logic', () => {
     const { state: next, response } = applyEvent(state, 'line-1', 'rush', 'en');
     expect(next.planVersion).toBe(2);
     expect(next.lastEvent).toBe('rush');
-    expect(getQueueResponse(next, 'line-1').lastEvent).toBe('rush');
+    const queueRes = getQueueResponse(next, 'line-1');
+    expect(queueRes.lastEvent).toBe('rush');
+    expect(queueRes.pendingExplanation?.summary).toMatch(/1002307551/);
+    expect(queueRes.pendingDiff?.moves).toHaveLength(1);
     expect(response.queue[0].po).toBe('1002307551');
     expect(response.diff.moves).toHaveLength(1);
     expect(response.explanation.summary).toMatch(/1002307551/);

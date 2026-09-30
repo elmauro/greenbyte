@@ -6,8 +6,9 @@
 
 export const PASCO_LINE1_BASELINE = [
   { po: '1001759341', species: 'SWCO', kg: 4200, finish: '2026-07-04 11:30', status: 'PLANNED' },
-  { po: '1001884747', species: 'SWCO', kg: 9800, finish: '2026-07-05 16:00', status: 'PLANNED', atRisk: true, reasonShort: 'SAP due date — monitor slot' },
-  { po: '1002307551', species: 'SWCO', kg: 6400, finish: '2026-07-06 09:00', status: 'PLANNED', atRisk: true, reasonShort: 'Priority 2 — customer window' },
+  { po: '1001884747', species: 'SWCO', kg: 9800, finish: '2026-07-05 16:00', status: 'PLANNED', atRisk: true, reasonShort: 'SAP due date — monitor slot', customerOrderId: 'CO-44102' },
+  { po: '1001883359', species: 'SWCO', kg: 50852, finish: '2026-07-05 18:00', status: 'PLANNED', reasonShort: 'On plan — alternate QA script B' },
+  { po: '1002307551', species: 'SWCO', kg: 6400, finish: '2026-07-06 09:00', status: 'PLANNED', atRisk: true, reasonShort: 'Priority 2 — customer window', customerOrderId: 'CO-44821' },
   { po: '1002266913', species: 'PECO', kg: 164940, finish: '2026-07-07 10:00', status: 'PLANNED' },
   { po: '1002051116', species: 'SWCO', kg: 105666, finish: '2026-07-07 14:00', status: 'PLANNED' },
   { po: '1002178923', species: 'SWCO', kg: 82570, finish: '2026-07-07 16:00', status: 'PLANNED' },

@@ -169,7 +169,7 @@ POST /demo/plant/batches/explain
 GET /demo/plant/lines/line-1/queue
 ```
 
-**Response:** `PlantQueueResponse` — `{ lineId, planVersion, queue[] }`
+**Response:** `PlantQueueResponse` — `{ lineId, planVersion, queue[], lastEvent?, acceptedPlanVersion?, pendingExplanation?, pendingDiff? }` (pending fields when a replan awaits accept)
 
 **Camilo:** `GET /lines/line-1/queue` from PostgreSQL (Pasco seed).  
 **UI:** `PlantBaselineDashboard` — steps 01–02 on `/demo/plant/flow`.
@@ -205,6 +205,8 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 
 **Browser rule:** React calls **only BFF** (`plantDemoApi.ts`). Never call Data or Agent from the browser.
 
+**Simulation today:** BFF handlers call `dataApiClient.js` and `agentApiClient.js`, which implement the **same paths and JSON** as Camilo/David until `DATA_API_BASE_URL` / `AGENT_API_BASE_URL` are set. Full BFF ↔ service map: [uc1-bff-data-agent-route-map.md](../../../docs/hackathon/uc1-bff-data-agent-route-map.md).
+
 ---
 
 ## 8. Implementation checklist (backend)
@@ -213,7 +215,8 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 - [x] Lambda BFF handlers match MSW + `plantDemoHandlers.ts` status codes (stub + Dynamo — `core-api`, GREENBYTE-003)
 - [ ] Camilo: replan rules for `rush` and `qa_fail` produce **`moves`** + **`reasons`**
 - [ ] David: `explain-replan` input = Data output only; batch explain = tools, no DB direct
-- [ ] Env: Data + Agent base URLs (SSM / env vars) for BFF orchestration
+- [x] Env: `DATA_API_BASE_URL` / `AGENT_API_BASE_URL` on `core-api` (optional; stubs when empty)
+- [x] BFF orchestration module: `runEvent.js` → Data replan → Agent explain → Dynamo
 - [ ] Deploy: set `VITE_API_BASE_APP` to API Gateway BFF stage
 
 ---

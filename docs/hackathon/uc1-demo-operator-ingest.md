@@ -39,6 +39,32 @@ Content-Type: application/json
 
 **Response:** `PlantEventResponse` with `source: "sap_priority_change"`, `eventType: "rush"`.
 
+**Alternate rush PO (script B):** same body with `"po": "1002174855"` (must exist in queue).
+
+---
+
+## Rush — SAP COISPI refresh / surprise batch (script C)
+
+Simulates a **new active PO** landing on Line 1 from SAP refresh, then replanned to head.
+
+```http
+POST /demo/plant/ingest/sap-queue-refresh
+Content-Type: application/json
+
+{
+  "lineId": "line-1",
+  "locale": "en",
+  "po": "1002408120",
+  "species": "SWCO",
+  "kg": 6200,
+  "scheduledFinish": "2026-07-07 08:00",
+  "priority": 2
+}
+```
+
+**Response:** `PlantEventResponse` with `source: "sap_queue_refresh"`, `eventType: "rush"`.  
+**Data API target (Camilo):** `POST /schedule/refresh-from-sap` with the same JSON shape.
+
 ---
 
 ## QA fail — LSV pass/fail log row (stub)
@@ -60,6 +86,19 @@ Content-Type: application/json
 ```
 
 **Response:** `PlantEventResponse` with `source: "pass_fail_log"`, `eventType: "qa_fail"`.
+
+**Alternate QA (script B — Discolored):**
+
+```json
+{
+  "lineId": "line-1",
+  "locale": "en",
+  "po": "1001883359",
+  "passFail": "Fail",
+  "failedFor": "Discolored",
+  "equipmentId": "Line 1"
+}
+```
 
 ---
 

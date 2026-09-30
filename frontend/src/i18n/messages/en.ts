@@ -44,25 +44,33 @@ export const en = {
       analogyHeading: 'Think of it like…',
       analogy:
         'A car shop with six jobs booked. A walk-in says “I need my car today.” You shuffle the queue — but you want a clear reason before you bump someone else, especially if switching job types costs an hour of setup.',
-      walkthroughHeading: 'What you will see in the five steps below',
+      walkthroughHeading: 'What you will see in the six steps below',
       walkthroughSteps: [
-        'The normal waiting list for Line 1 — calm, no surprises yet.',
-        'A job with a tight deadline that could slip if it stays too far back.',
-        'A rush batch lands or a batch fails QA — time to re-sequence and explain.',
-        'The list updates on screen and the assistant explains why in everyday words.',
-        'The planner says yes (or tweaks it) — AI suggests, humans decide.',
+        'Pick Line 1 or Line 2. The list is that line’s open queue — active, not complete.',
+        'A job with a tight deadline (and demo customer-order proxies on key POs).',
+        'SAP priority changes — an existing PO moves up (ingest, not a UI button).',
+        'A failed pass/fail test puts a batch on HOLD and re-sequences the line.',
+        'Scheduling + copilot show the new order and plain-language reasons.',
+        'The planner accepts — demo audit only, no ERP write.',
       ],
       tagline:
         'In one line: “What runs next when a rush order or a failed test hits the line — and why?”',
     },
     tourLivePreview: 'Live UI — same components as /demo/plant',
-    tourInjectNote:
-      'Read-only preview after a rush inject (QA failure uses the same screen with HOLD status). Try buttons on the interactive demo.',
+    tourLinePreviewNote:
+      'This picture stays the scripted Line 1 snapshot. On /demo/plant, Line 2 loads the open queue for LSVLN2.',
+    tourInjectNoteRush:
+      'Read-only preview after POST /demo/plant/ingest/sap-priority-change (operator / Data API). Live demo polls GET queue ~every 5s.',
+    tourInjectNoteQa:
+      'Read-only preview after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Alternate PO: 1001883359 / Discolored (see operator doc).',
+    tourSapRefreshHint:
+      'Syngenta “surprise batch”: POST /demo/plant/ingest/sap-queue-refresh adds PO 1002408120 — map: /demo/plant/flow?step=03c',
     steps: [
       {
         title: '1. The normal queue',
-        plainLine: 'First we look at today’s list on Line 1 — who goes first, second, third.',
-        body: 'Each row is a batch: crop type, weight, and when it must be finished. Everything is moving; nothing is flashing red yet.',
+        plainLine:
+          'The scheduler picks a line. Only lines with a demo_line_id are in the list: Line 1 (Line 1 Schedule) and Line 2 (Line 2 Schedule).',
+        body: 'GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue — active, non-complete orders for that line. Each row is a batch: crop, weight, and scheduled finish.',
         highlight: 'See UI ↔ API map: /demo/plant/flow?step=01',
       },
       {
@@ -72,24 +80,31 @@ export const en = {
         highlight: 'Example from demo data: sweet-corn batch, finish date 2026-07-06, high priority. Map: /demo/plant/flow?step=02',
       },
       {
-        title: '3. Rush batch or failed QA',
+        title: '3. Rush — priority on an existing PO',
         plainLine:
-          'Syngenta’s hackathon demo injects one of two events live: a surprise rush batch, or a pass/fail test that forces the line to reorder.',
+          'Operators post SAP priority / finish signals to BFF ingest; the scheduler UI has no rush button — it reacts when the queue poll shows a pending replan.',
         body:
-          'Either way the system drafts a new run order — respecting changeover rules between varieties and sizes, using conditioning history from the Pasco extracts (not a black-box optimizer).',
-        highlight:
-          'Same flow for both triggers: re-sequence → explain in plain language → planner validates before the plan is final.',
+          'In gold.v_open_queue, PO 1002307551 sits on Line 2 (LSVLN2). The scripted preview still shows a priority move and cites the customer window (CO-44821 proxy) and changeover — not a black-box solver.',
+        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · Also: sap-queue-refresh (step 03c) for a new PO on COISPI refresh.',
       },
       {
-        title: '4. New order + plain explanation',
-        plainLine: 'This is the “aha” moment: the queue changes and you read why in normal language.',
-        body: 'For example: “Moved batch A ahead of batch B because its due date is sooner and both are the same crop on the same line — so we avoided extra machine cleanup.”',
+        title: '4. QA fail — pass/fail log',
+        plainLine: 'A Fail row (Dent on PO 1001884747 in Pasco extracts) triggers HOLD and downstream re-sequence.',
+        body:
+          'Same human loop: copilot bullets name the PO and fail reason; planner accepts on Scheduling. Script B: PO 1001883359 / Discolored.',
+        highlight: 'Map: /demo/plant/flow?step=03b',
       },
       {
-        title: '5. You sign off',
-        plainLine: 'You accept the plan or adjust it yourself. Nothing is sent to live factory systems in this hackathon demo.',
-        body: 'That keeps trust: software helps you decide faster, it does not auto-run the plant.',
-        highlight: 'Coming next in the build: live hooks to our data and AI services (see Architecture page).',
+        title: '5. Scheduling + copilot',
+        plainLine: 'Gantt and copilot read explanation + diff from the BFF (Agent when live; dynamic stub today).',
+        body: 'GET queue while pending exposes pendingExplanation and pendingDiff so the live app matches this preview after ingest.',
+        highlight: '/demo/plant/flow?step=04 · Poll: step=05',
+      },
+      {
+        title: '6. You sign off',
+        plainLine: 'Accept schedule logs demo audit only — no SAP write.',
+        body: 'Camilo/David plug in behind the same BFF paths when Data and Agent URLs are set; the React app unchanged.',
+        highlight: 'Architecture: /demo/architecture · Operator curl: docs/hackathon/uc1-demo-operator-ingest.md',
       },
     ],
   },
@@ -97,21 +112,24 @@ export const en = {
     eyebrow: 'UC1 integration map',
     title: 'UI controls ↔ BFF ↔ JSON (live components)',
     subtitle:
-      'Left: real React widgets with the same mock JSON as plantDemoServer. Right: HTTP contract. Export PNGs later from this page (Playwright) — no hotspot drift.',
-    componentNote: 'Data source: plantDemoServer snapshots (matches plantDemoTypes.ts).',
-    previewHeading: 'UI preview (components + mock data)',
-    previewNote: 'On /demo/plant the same fields come from GET /demo/plant/lines/line-1/queue via plantDemoApi.',
-    liveDemoCta: 'Try live Line 1 demo',
-    tourLink: '5-step story',
+      'Left: the same React widgets as the plant screen. Right: the HTTP contract. The live queue is gold.v_open_queue; these pictures use the scripted snapshot so rush and QA stay on one story.',
+    componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue from gold.v_open_queue.',
+    previewHeading: 'UI preview',
+    previewNote:
+      'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2) and the BFF reads gold.v_open_queue.',
+    liveDemoCta: 'Try the live plant demo',
+    tourLink: '6-step story',
     stepNavLabel: 'Flow steps',
     prev: 'Previous',
     next: 'Next',
     backendOwnersLabel: 'Likely backend owners (hackathon)',
     backendOwners: {
-      s01: 'Mauricio · BFF (core-api) proxies → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (Pasco seed).',
+      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue on PostgreSQL (line-1 = LSVLN1, line-2 = LSVLN2).',
       s02: 'Same as step 01 — no extra service; Camilo · Data API (queue fields).',
       s03:
-        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change → Camilo · POST /schedule/replan → David · POST /explain-replan.',
+      s03c:
+        'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh → Camilo · POST /schedule/refresh-from-sap (target) → David · explain-replan.',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + hold rules → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF merges explanation into event response.',
@@ -121,12 +139,13 @@ export const en = {
         'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (batch Q&A) · tools on Camilo · Data API.',
     },
     triggers: {
-      s01: 'User opens /demo/plant — useEffect calls plantDemoApi.getQueue().',
+      s01: 'User opens /demo/plant and picks a line — plantDemoApi.getQueue(lineId).',
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
+      s03c: 'Operator simulates COISPI refresh — POST /demo/plant/ingest/sap-queue-refresh (new PO 1002408120).',
       s03b: 'Operator posts pass/fail Fail row — POST /demo/plant/ingest/pass-fail-log.',
-      s04: 'Copilot fills from POST response explanation (BFF calls Agent explain-replan).',
-      s05: 'Timeline derives from event response queue[] — no GET /timeline.',
+      s04: 'Copilot from explanation (ingest response + GET pendingExplanation on poll).',
+      s05: 'Gantt from GET queue after poll — queue[] + eventHighlightPo from pendingDiff.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
       s07: 'User asks in sales panel — POST /demo/plant/batches/explain.',
     },
@@ -134,6 +153,7 @@ export const en = {
       s01: 'Queue table — page load',
       s02: 'Scheduled finish & at-risk rows',
       s03: 'SAP priority ingest',
+      s03c: 'SAP queue refresh (surprise PO)',
       s03b: 'Pass/fail log ingest',
       s04: 'AI Copilot — what changed',
       s05: 'Schedule timeline / Gantt',
@@ -148,12 +168,19 @@ export const en = {
       'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
     links: {
-      tour: 'Guided story (5 steps)',
-      tourCta: 'Start with the 5-step story',
+      tour: 'Guided story (6 steps)',
+      tourCta: 'Start with the 6-step story',
       architecture: 'Integration architecture',
       flowSlides: 'UI ↔ API flow (live map)',
       backMvp: 'Back to Line 1 demo',
     },
+    lineSelectLabel: 'Conditioning line',
+    lineNames: {
+      'line-1': 'Line 1',
+      'line-2': 'Line 2',
+    },
+    lineLoadError: 'Could not load this line.',
+    lineQueueHeading: '{line} queue',
     lineTitle: 'Line 1 queue',
     lineSubtitle: 'Calm baseline — replans appear when Data API or BFF ingest receives new source rows (poll every ~5s).',
     loading: 'Loading queue…',
@@ -254,6 +281,7 @@ export const en = {
       title: 'Events come from data — not from this screen',
       body: 'Syngenta UC1: rush and QA replans trigger when SAP schedule data or LSV pass/fail rows update. Operators or Data API POST to BFF ingest; this UI polls the queue and shows notifications when a replan is pending.',
       sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      sapRefreshPath: 'POST /demo/plant/ingest/sap-queue-refresh',
       passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
       operatorDoc: 'Operator curl examples: docs/hackathon/uc1-demo-operator-ingest.md',
     },
@@ -273,7 +301,7 @@ export const en = {
       'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
       badge: 'UX preview',
-      title: 'Line 1 — Lovable UX on GreenByte styles',
+      title: 'Pasco conditioning — UX preview',
       subtitle:
         'Same BFF queue and accept flow as the classic demo. Compare navigation, help, and notifications side-by-side.',
       classicLink: 'Open classic Line 1 demo',
@@ -300,8 +328,8 @@ export const en = {
       pillApproved: 'Plan approved',
       pillApprovedSub: 'Please confirm the queue order',
       calmTitle: 'Calm and stable',
-      calmBody: 'No schedule changes waiting · Line 1 is on plan',
-      calmMeta: 'Next completion: Jul 2, 2026 · Line utilization 78%',
+      calmBody: 'No schedule changes waiting · {line} is on plan',
+      calmMeta: 'Next completion: {finish} · Line utilization {utilization}%',
       amberTitle: 'Schedule change waiting for your approval',
       amberBody: 'Review the timeline and summary, then approve if you agree. Nothing is sent to SAP automatically.',
       goSchedule: 'Go to Schedule',

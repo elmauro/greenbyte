@@ -217,25 +217,33 @@ export const es: Messages = {
       analogyHeading: 'Piénsalo como…',
       analogy:
         'Un taller mecánico con seis trabajos en cola. Entra uno urgente: “necesito el carro hoy”. Reordenar tiene sentido, pero quieres saber por qué antes de dejar atrás a otro cliente — sobre todo si cambiar de tipo de trabajo cuesta una hora de preparación.',
-      walkthroughHeading: 'Lo que verás en los cinco pasos de abajo',
+      walkthroughHeading: 'Lo que verás en los seis pasos de abajo',
       walkthroughSteps: [
-        'La lista normal de la Línea 1 — todo tranquilo.',
-        'Un trabajo con fecha límite que no puede seguir bajando en la cola.',
-        'Entra un lote rush o falla un test QA — hay que reordenar y explicar.',
-        'La lista cambia en pantalla y el asistente explica el porqué en lenguaje cotidiano.',
-        'El responsable dice “de acuerdo” (o lo ajusta) — la IA sugiere, la persona manda.',
+        'Elige Línea 1 o Línea 2. La lista es la cola abierta de esa línea: activas, no completas.',
+        'Un trabajo con fecha límite y proxies de pedido cliente en POs clave.',
+        'Cambio de prioridad SAP — un PO existente sube (ingest, no botón en UI).',
+        'Un Fail en pass/fail pone un lote en HOLD y reordena la línea.',
+        'Programación + copiloto muestran el nuevo orden y el porqué.',
+        'El programador acepta — solo auditoría demo, sin escritura ERP.',
       ],
       tagline:
         'En una frase: «¿Qué va primero cuando llega un rush o falla un test — y por qué?»',
     },
     tourLivePreview: 'UI en vivo — mismos componentes que /demo/plant',
-    tourInjectNote:
-      'Vista previa tras inyectar rush (fallo QA usa la misma pantalla con estado HOLD). Prueba los botones en el demo interactivo.',
+    tourLinePreviewNote:
+      'Esta imagen sigue el snapshot del guion de la Línea 1. En /demo/plant, la Línea 2 carga la cola abierta de LSVLN2.',
+    tourInjectNoteRush:
+      'Vista previa tras POST /demo/plant/ingest/sap-priority-change (operador / Data API). El demo en vivo hace poll GET cola ~cada 5 s.',
+    tourInjectNoteQa:
+      'Vista previa tras POST /demo/plant/ingest/pass-fail-log — HOLD + replan. PO alternativo: 1001883359 / Discolored (doc operador).',
+    tourSapRefreshHint:
+      'Lote sorpresa Syngenta: POST /demo/plant/ingest/sap-queue-refresh añade PO 1002408120 — mapa: /demo/plant/flow?step=03c',
     steps: [
       {
         title: '1. La cola de siempre',
-        plainLine: 'Primero miramos la lista de hoy en la Línea 1: quién va primero, segundo, tercero.',
-        body: 'Cada fila es un lote: tipo de cultivo, peso y cuándo debería estar listo. Todo avanza; aún no hay alertas.',
+        plainLine:
+          'El programador elige la línea. Solo entran las que tienen demo_line_id: Línea 1 (Line 1 Schedule) y Línea 2 (Line 2 Schedule).',
+        body: 'GET /demo/plant/lines/{lineId}/queue lee gold.v_open_queue: órdenes activas y no completas de esa línea. Cada fila es un lote: cultivo, kilos y fin programado.',
         highlight: 'Mapa UI ↔ API: /demo/plant/flow?step=01',
       },
       {
@@ -245,24 +253,31 @@ export const es: Messages = {
         highlight: 'Ejemplo: maíz dulce, 2026-07-06. Mapa: /demo/plant/flow?step=02',
       },
       {
-        title: '3. Rush o QA fallido',
+        title: '3. Rush — prioridad en un PO existente',
         plainLine:
-          'En el hackathon Syngenta inyectas uno de dos eventos en vivo: un lote rush sorpresa, o un resultado pass/fail que obliga a reordenar la línea.',
+          'Operadores publican señales SAP al ingest del BFF; la UI del programador no tiene botón rush — reacciona cuando el poll muestra replan pendiente.',
         body:
-          'En ambos casos el sistema propone un nuevo orden — respetando tiempos de changeover entre variedades y tamaños, con historial de acondicionamiento de los extracts Pasco (no un optimizador opaco).',
-        highlight:
-          'Mismo flujo para ambos: re-secuenciar → explicar en palabras normales → el programador valida antes de dar por final el plan.',
+          'En gold.v_open_queue el PO 1002307551 está en la Línea 2 (LSVLN2). La vista previa del guion igual muestra un movimiento por prioridad, con ventana de cliente (proxy CO-44821) y changeover — no un solver opaco.',
+        highlight: 'Mapa UI ↔ API: /demo/plant/flow?step=03 · También sap-queue-refresh (paso 03c) para PO nuevo en refresh COISPI.',
       },
       {
-        title: '4. Nuevo orden + explicación clara',
-        plainLine: 'Aquí está el “wow”: cambia la cola y lees el motivo en palabras normales.',
-        body: 'Por ejemplo: «Subimos el lote A porque vence antes y es el mismo cultivo en la misma línea — así evitamos una limpieza extra de máquina».',
+        title: '4. Fallo QA — log pass/fail',
+        plainLine: 'Una fila Fail (Dent en PO 1001884747 en extractos Pasco) dispara HOLD y resecuencia.',
+        body:
+          'Mismo ciclo humano: copiloto cita PO y motivo Fail; aceptación en Programación. Guion B: PO 1001883359 / Discolored.',
+        highlight: 'Mapa: /demo/plant/flow?step=03b',
       },
       {
-        title: '5. Tú das el visto bueno',
-        plainLine: 'Aceptas el plan o lo retocas. En esta demo del hackathon no escribimos en sistemas reales de fábrica.',
-        body: 'Así se gana confianza: el software ayuda a decidir más rápido, no corre la planta solo.',
-        highlight: 'Próximo paso del build: conectar datos e IA en vivo (página Arquitectura).',
+        title: '5. Programación + copiloto',
+        plainLine: 'Gantt y copiloto leen explanation + diff del BFF (Agent en vivo; stub dinámico hoy).',
+        body: 'GET cola con replan pendiente expone pendingExplanation y pendingDiff — igual que /demo/plant tras ingest.',
+        highlight: '/demo/plant/flow?step=04 · Poll: paso=05',
+      },
+      {
+        title: '6. Visto bueno',
+        plainLine: 'Accept schedule solo audita en demo — sin escritura SAP.',
+        body: 'Camilo/David se enchufan detrás de los mismos paths BFF; React sin cambios.',
+        highlight: 'Arquitectura: /demo/architecture · curl operador: docs/hackathon/uc1-demo-operator-ingest.md',
       },
     ],
   },
@@ -270,21 +285,24 @@ export const es: Messages = {
     eyebrow: 'Mapa de integración UC1',
     title: 'Controles UI ↔ BFF ↔ JSON (componentes en vivo)',
     subtitle:
-      'Izquierda: widgets React con el mismo mock JSON que plantDemoServer. Derecha: contrato HTTP. Los PNG se exportan después desde esta página (Playwright), sin desfase.',
-    componentNote: 'Fuente de datos: snapshots plantDemoServer (plantDemoTypes.ts).',
-    previewHeading: 'Vista previa UI (componentes + mock)',
-    previewNote: 'En /demo/plant los mismos campos vienen del GET /demo/plant/lines/line-1/queue vía plantDemoApi.',
-    liveDemoCta: 'Probar demo Línea 1 en vivo',
-    tourLink: 'Historia en 5 pasos',
+      'Izquierda: los mismos widgets que la pantalla de planta. Derecha: el contrato HTTP. La cola en vivo es gold.v_open_queue; estas imágenes usan el snapshot del guion para que rush y QA sigan una sola historia.',
+    componentNote: 'Snapshot de la vista previa: plantDemoServer. /demo/plant en vivo: GET cola desde gold.v_open_queue.',
+    previewHeading: 'Vista previa UI',
+    previewNote:
+      'En /demo/plant el selector llama GET /demo/plant/lines/{lineId}/queue (line-1 o line-2) y el BFF lee gold.v_open_queue.',
+    liveDemoCta: 'Probar el demo de planta en vivo',
+    tourLink: 'Historia en 6 pasos',
     stepNavLabel: 'Pasos del flujo',
     prev: 'Anterior',
     next: 'Siguiente',
     backendOwnersLabel: 'Responsables backend (hackathon)',
     backendOwners: {
-      s01: 'Mauricio · BFF (core-api) → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (seed Pasco).',
+      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue lee gold.v_open_queue en PostgreSQL (line-1 = LSVLN1, line-2 = LSVLN2).',
       s02: 'Igual que paso 01 — sin servicio extra; Camilo · Data API (campos de cola).',
       s03:
-        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change → Camilo · POST /schedule/replan → David · POST /explain-replan.',
+      s03c:
+        'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh → Camilo · POST /schedule/refresh-from-sap (objetivo) → David · explain-replan.',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + reglas hold → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF integra explanation en la respuesta del evento.',
@@ -294,12 +312,13 @@ export const es: Messages = {
         'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API · tools sobre Camilo · Data API.',
     },
     triggers: {
-      s01: 'Usuario abre /demo/plant — useEffect llama plantDemoApi.getQueue().',
+      s01: 'Usuario abre /demo/plant y elige línea — plantDemoApi.getQueue(lineId).',
       s02: 'Misma respuesta GET — la UI usa finish, atRisk, reasonShort (sin segunda petición).',
       s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
+      s03c: 'Operador simula refresh COISPI — POST /demo/plant/ingest/sap-queue-refresh (PO nuevo 1002408120).',
       s03b: 'Operador publica fila Fail en pass/fail — POST /demo/plant/ingest/pass-fail-log.',
-      s04: 'Copiloto desde explanation en la respuesta POST (BFF → Agent explain-replan).',
-      s05: 'Timeline desde queue[] del evento — no hay GET /timeline.',
+      s04: 'Copiloto desde explanation (respuesta ingest + pendingExplanation en poll).',
+      s05: 'Gantt tras poll GET — queue[] + eventHighlightPo desde pendingDiff.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
       s07: 'Pregunta en panel ventas — POST /demo/plant/batches/explain.',
     },
@@ -307,6 +326,7 @@ export const es: Messages = {
       s01: 'Tabla de cola — carga inicial',
       s02: 'Fecha programada y filas en riesgo',
       s03: 'Ingest prioridad SAP',
+      s03c: 'Refresh cola SAP (PO sorpresa)',
       s03b: 'Ingest log pass/fail',
       s04: 'Copiloto IA — qué cambió',
       s05: 'Timeline / Gantt de programación',
@@ -321,12 +341,19 @@ export const es: Messages = {
       'Espacio del programador: la cola se actualiza cuando llegan datos upstream (prioridad SAP / log pass-fail). Revisa Programación y acepta — sin escritura ERP.',
     demoTargetBadge: 'Demo target B+ · Alineado al brief Syngenta + mockups wow GreenByte.',
     links: {
-      tour: 'Historia guiada (5 pasos)',
-      tourCta: 'Empezar por la historia en 5 pasos',
+      tour: 'Historia guiada (6 pasos)',
+      tourCta: 'Empezar por la historia en 6 pasos',
       architecture: 'Arquitectura de integración',
       flowSlides: 'Flujo UI ↔ API (mapa en vivo)',
       backMvp: 'Volver al demo Línea 1',
     },
+    lineSelectLabel: 'Línea de acondicionamiento',
+    lineNames: {
+      'line-1': 'Línea 1',
+      'line-2': 'Línea 2',
+    },
+    lineLoadError: 'No se pudo cargar esta línea.',
+    lineQueueHeading: 'Cola {line}',
     lineTitle: 'Cola Línea 1',
     lineSubtitle: 'Estado estable — los replanes aparecen cuando ingest/BFF recibe filas nuevas (poll ~5 s).',
     loading: 'Cargando cola…',
@@ -427,6 +454,7 @@ export const es: Messages = {
       title: 'Los eventos vienen de los datos — no de esta pantalla',
       body: 'UC1 Syngenta: rush y QA se disparan cuando actualizan SAP o el log LSV pass/fail. Operadores o Data API hacen POST a ingest del BFF; esta UI hace poll de la cola y muestra notificaciones cuando hay replan pendiente.',
       sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      sapRefreshPath: 'POST /demo/plant/ingest/sap-queue-refresh',
       passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
       operatorDoc: 'Ejemplos curl: docs/hackathon/uc1-demo-operator-ingest.md',
     },
@@ -446,7 +474,7 @@ export const es: Messages = {
       'BFF en vivo (VITE_API_BASE_APP). Camilo Data + David Agent detrás del core-api — sin cambiar el frontend.',
     uxCompare: {
       badge: 'Vista previa UX',
-      title: 'Línea 1 — UX Lovable con estilos GreenByte',
+      title: 'Pasco acondicionamiento — vista UX',
       subtitle:
         'Mismo flujo BFF de cola y aceptación que el demo clásico. Compare navegación, ayuda y notificaciones.',
       classicLink: 'Abrir demo clásico Línea 1',
@@ -473,8 +501,8 @@ export const es: Messages = {
       pillApproved: 'Programa aprobado',
       pillApprovedSub: 'Confirme el orden en la cola',
       calmTitle: 'Tranquilo y estable',
-      calmBody: 'Sin cambios pendientes · Línea 1 según plan',
-      calmMeta: 'Próximo fin: 2 jul 2026 · Utilización 78%',
+      calmBody: 'Sin cambios pendientes · {line} según plan',
+      calmMeta: 'Próximo fin: {finish} · Utilización {utilization}%',
       amberTitle: 'Cambio de programa pendiente de aprobación',
       amberBody: 'Revise la línea de tiempo y el resumen; apruebe si está de acuerdo. Nada se envía a SAP de forma automática.',
       goSchedule: 'Ir a Programación',

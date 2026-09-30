@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { plantLineById } from '../../demo/plant/plantLines';
 import { useLocale } from '../../i18n';
 import { usePlantDemoQueue } from '../../hooks/usePlantDemoQueue';
 import { paths } from '../../routes/paths';
@@ -7,18 +8,23 @@ import { PlantBaselineDashboard } from './PlantBaselineDashboard';
 export function PlantLineMvp() {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const line = plantLineById(searchParams.get('line'));
 
   const {
     queue,
     eventType,
     explanation,
+    eventHighlightPo,
     accepted,
     planAcknowledged,
     loading,
+    refreshing,
     busy,
     acceptPlan,
     connectionMode,
-  } = usePlantDemoQueue(locale);
+    loadError,
+  } = usePlantDemoQueue(locale, line.id);
 
   return (
     <div className="pb-16">
@@ -51,7 +57,9 @@ export function PlantLineMvp() {
       <div className="site-container mt-8 max-w-7xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-brand-blue">{copy.lineTitle}</h2>
+            <h2 className="text-xl font-semibold text-brand-blue">
+              {copy.lineNames[line.id]} — {line.sheet}
+            </h2>
             <p className="text-sm text-gray-500">{copy.lineSubtitle}</p>
           </div>
           <span
@@ -68,6 +76,7 @@ export function PlantLineMvp() {
           <p className="mt-1 leading-relaxed">{copy.dataFeed.body}</p>
           <ul className="mt-2 list-inside list-disc space-y-1 font-mono text-xs text-gray-800">
             <li>{copy.dataFeed.sapPath}</li>
+            <li>{copy.dataFeed.sapRefreshPath}</li>
             <li>{copy.dataFeed.passFailPath}</li>
           </ul>
           <p className="mt-2 text-xs text-gray-600">{copy.dataFeed.operatorDoc}</p>
@@ -76,15 +85,26 @@ export function PlantLineMvp() {
         {loading ? (
           <p className="text-sm text-gray-500">{copy.loading}</p>
         ) : (
+          <>
+            {loadError && <p className="text-sm font-medium text-brand-red">{copy.lineLoadError}</p>}
           <PlantBaselineDashboard
             queue={queue}
             eventType={eventType}
             explanation={explanation}
+            eventHighlightPo={eventHighlightPo}
             accepted={accepted}
             planAcknowledged={planAcknowledged}
             acceptDisabled={busy}
+            selectedLineId={line.id}
+            dataRefreshing={refreshing}
+            onLineChange={(nextId) => {
+              const params = new URLSearchParams(searchParams);
+              params.set('line', nextId);
+              setSearchParams(params, { replace: true });
+            }}
             onAccept={() => void acceptPlan()}
           />
+          </>
         )}
 
         {accepted && (

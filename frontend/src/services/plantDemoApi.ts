@@ -1,3 +1,7 @@
+import {
+  DEFAULT_DEMO_QA_FAIL_PO,
+  DEFAULT_DEMO_RUSH_PO,
+} from '../demo/plant/plantEventUtils';
 import { PLANT_DEMO_LINE_ID, plantDemoServer } from '../demo/plant/plantDemoServer';
 import type {
   PlantAcceptResponse,
@@ -6,6 +10,7 @@ import type {
   PlantEventType,
   PlantIngestPassFailRequest,
   PlantIngestSapPriorityRequest,
+  PlantIngestSapQueueRefreshRequest,
   PlantQueueResponse,
 } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n';
@@ -56,17 +61,25 @@ async function resetDemo(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueu
 async function postIngestPassFailLog(
   locale: Locale,
   lineId: string = PLANT_DEMO_LINE_ID,
+  overrides: Partial<PlantIngestPassFailRequest> = {},
 ): Promise<PlantEventResponse> {
   const body: PlantIngestPassFailRequest = {
     lineId,
     locale,
-    po: '1001884747',
+    po: DEFAULT_DEMO_QA_FAIL_PO,
     passFail: 'Fail',
     failedFor: 'Dent',
     equipmentId: 'Line 1',
+    ...overrides,
   };
   if (!useHttp) {
-    return { ...plantDemoServer.applyEvent(lineId, 'qa_fail', locale), source: 'pass_fail_log' };
+    return {
+      ...plantDemoServer.applyEvent(lineId, 'qa_fail', locale, {
+        focusPo: body.po,
+        failedFor: body.failedFor,
+      }),
+      source: 'pass_fail_log',
+    };
   }
   const { data } = await axiosApp.post<PlantEventResponse>(`/demo/plant/ingest/pass-fail-log`, body);
   return data;
@@ -75,19 +88,65 @@ async function postIngestPassFailLog(
 async function postIngestSapPriorityChange(
   locale: Locale,
   lineId: string = PLANT_DEMO_LINE_ID,
+  overrides: Partial<PlantIngestSapPriorityRequest> = {},
 ): Promise<PlantEventResponse> {
   const body: PlantIngestSapPriorityRequest = {
     lineId,
     locale,
-    po: '1002307551',
+    po: DEFAULT_DEMO_RUSH_PO,
     priority: 2,
     scheduledFinish: '2026-07-06 09:00',
+    ...overrides,
   };
   if (!useHttp) {
-    return { ...plantDemoServer.applyEvent(lineId, 'rush', locale), source: 'sap_priority_change' };
+    return {
+      ...plantDemoServer.applyEvent(lineId, 'rush', locale, {
+        focusPo: body.po,
+        priority: body.priority,
+        scheduledFinish: body.scheduledFinish,
+      }),
+      source: 'sap_priority_change',
+    };
   }
   const { data } = await axiosApp.post<PlantEventResponse>(
     `/demo/plant/ingest/sap-priority-change`,
+    body,
+  );
+  return data;
+}
+
+async function postIngestSapQueueRefresh(
+  locale: Locale,
+  lineId: string = PLANT_DEMO_LINE_ID,
+  overrides: Partial<PlantIngestSapQueueRefreshRequest> = {},
+): Promise<PlantEventResponse> {
+  const body: PlantIngestSapQueueRefreshRequest = {
+    lineId,
+    locale,
+    po: '1002408120',
+    species: 'SWCO',
+    kg: 6200,
+    scheduledFinish: '2026-07-07 08:00',
+    priority: 2,
+    ...overrides,
+  };
+  if (!useHttp) {
+    return {
+      ...plantDemoServer.applySapQueueRefresh(lineId, locale, {
+        po: body.po,
+        focusPo: body.po,
+        species: body.species,
+        kg: body.kg,
+        scheduledFinish: body.scheduledFinish ?? body.finish,
+        finish: body.finish,
+        priority: body.priority,
+        customerOrderId: body.customerOrderId,
+      }),
+      source: 'sap_queue_refresh',
+    };
+  }
+  const { data } = await axiosApp.post<PlantEventResponse>(
+    `/demo/plant/ingest/sap-queue-refresh`,
     body,
   );
   return data;
@@ -113,6 +172,7 @@ export const plantDemoApi = {
   postEvent,
   postIngestPassFailLog,
   postIngestSapPriorityChange,
+  postIngestSapQueueRefresh,
   postAccept,
   resetDemo,
   postBatchExplain,

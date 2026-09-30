@@ -1,8 +1,10 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
+import { dataReplanRequestFromPassFailIngest } from '../../services/plantDemo/ingestToDataReplan.js';
 import { runPlantEvent } from '../../services/plantDemo/runEvent.js';
+import { loadState } from '../../services/plantDemo/stateRepository.js';
 
-const DEMO_FAIL_PO = '1001884747';
+const DEFAULT_FAIL_PO = '1001884747';
 
 function parseLocale(body) {
   const loc = body?.locale;
@@ -19,20 +21,23 @@ export async function handler(event) {
   const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
   const locale = parseLocale(body);
   const passFail = body.passFail ?? body.pass_fail;
-  const po = body.po ?? DEMO_FAIL_PO;
+  const po = body.po ?? DEFAULT_FAIL_PO;
 
   if (passFail !== 'Fail') {
     return jsonResponse(400, { message: 'Only passFail Fail triggers replan in demo ingest' });
   }
 
-  if (po !== DEMO_FAIL_PO) {
-    return jsonResponse(400, {
-      message: `Demo ingest supports PO ${DEMO_FAIL_PO} (Pasco Fail/Dent). Received: ${po}`,
-    });
-  }
-
   try {
-    const response = await runPlantEvent(lineId, 'qa_fail', locale, 'pass_fail_log');
+    const state = await loadState(lineId);
+    const row = state.queue.find((r) => r.po === po);
+    if (!row || row.status === 'COMPLETE') {
+      return jsonResponse(400, {
+        message: `PO ${po} is not in the active queue for line ${lineId}`,
+      });
+    }
+
+    const replanRequest = dataReplanRequestFromPassFailIngest({ ...body, lineId, locale, po });
+    const response = await runPlantEvent(replanRequest, 'pass_fail_log');
     return jsonResponse(200, response);
   } catch (err) {
     if (err.message === 'Unknown line') {

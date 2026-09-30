@@ -49,7 +49,8 @@ We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferre
 | Mock queue from Pasco CSV subset (~36 rows; [uc1-plant-demo-mock-data.md](./uc1-plant-demo-mock-data.md)) | Full **476**-row Line 1 Schedule or **202**-PO SAP sheet in UI |
 | ETL target: Camilo **GET queue** + **POST replan** from PostgreSQL | Auto-ingest from live COISPI |
 
-**Syngenta alignment detail:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md) §3.1 (met / partial / deferred per brief item).
+**Syngenta alignment detail:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md) §3.1 (met / partial / deferred per brief item).  
+**Widen demo (fixed replans / L1 only):** [uc1-demo-breadth-roadmap.md](./uc1-demo-breadth-roadmap.md) — P1 replans before P2 multi-line.
 
 ---
 
@@ -137,6 +138,8 @@ When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **
 | What do I do? | Review queue → inject rush or QA → read **what changed and why** → accept. |
 | What does the app return? | New queue + diff + copilot explanation + acceptance log — **no SAP write**. |
 | Why trust it? | Reasons tied to PO, SAP dates, species/changeover, QA flags — GenAI explains structured facts. |
+
+**Honest scope vs Syngenta wording (rush refresh, customer orders, COISPI queue):** scripted lines for judges — [uc1-judge-wording-gaps.md](./uc1-judge-wording-gaps.md).
 
 ---
 

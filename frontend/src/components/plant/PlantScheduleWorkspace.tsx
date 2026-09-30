@@ -1,4 +1,4 @@
-import type { PlantEventType, PlantExplanation, QueueRow } from '../../demo/plant/plantDemoTypes';
+import type { PlantExplanation, QueueRow } from '../../demo/plant/plantDemoTypes';
 import { useLocale } from '../../i18n';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
 import { PlantDemoTopBar } from './PlantDemoTopBar';
@@ -6,28 +6,28 @@ import { PlantProgramGantt } from './PlantProgramGantt';
 
 type PlantScheduleWorkspaceProps = {
   queue: QueueRow[];
-  eventType: PlantEventType | null;
   explanation: PlantExplanation | null;
   accepted: boolean;
   onAccept?: () => void;
   acceptDisabled?: boolean;
   compact?: boolean;
+  eventHighlightPo?: string;
 };
 
 export function PlantScheduleWorkspace({
   queue,
-  eventType,
   explanation,
   accepted,
   onAccept,
   acceptDisabled,
   compact = false,
+  eventHighlightPo,
 }: PlantScheduleWorkspaceProps) {
   const { messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
   const copy = m.plantMvp;
   const activeCount = queue.filter((r) => r.status !== 'COMPLETE').length;
-  const rushPo = eventType === 'rush' ? '1002307551' : undefined;
+  const rushPo = eventHighlightPo;
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">

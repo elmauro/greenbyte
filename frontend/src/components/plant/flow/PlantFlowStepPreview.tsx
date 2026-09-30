@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import type { PlantFlowPreviewKind, PlantFlowStepConfig } from '../../../content/plantFlowSteps';
 import type { PlantFlowSnapshots } from '../../../demo/plant/plantFlowSnapshots';
+import { primaryPoFromPending } from '../../../demo/plant/plantEventUtils';
+import { plantLineById, type PlantLineId } from '../../../demo/plant/plantLines';
 import { useLocale } from '../../../i18n';
 import type { PlantNavSection } from '../PlantBaselineDashboard';
 import { PlantBaselineDashboard } from '../PlantBaselineDashboard';
@@ -15,6 +18,7 @@ function defaultSectionForPreview(preview: PlantFlowPreviewKind): PlantNavSectio
       return 'dashboard';
     case 'at_risk':
     case 'rush':
+    case 'rush_refresh':
     case 'qa':
       return 'queue';
     case 'copilot':
@@ -38,6 +42,7 @@ function schedulingLayoutForPreview(
 
 export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewProps) {
   const { messages: m } = useLocale();
+  const [lineId, setLineId] = useState<PlantLineId>('line-1');
   const sales = m.plantMvp.salesChat;
   const rush = snapshots.rush;
   const qa = snapshots.qa;
@@ -65,7 +70,20 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
   };
 
   if (step.preview === 'load') {
-    return <PlantBaselineDashboard key={step.id} {...flowShell} queue={snapshots.load.queue} />;
+    return (
+      <div>
+        {lineId === 'line-2' && (
+          <p className="mb-3 text-sm text-gray-600">{m.demoPlant.tourLinePreviewNote}</p>
+        )}
+        <PlantBaselineDashboard
+          key={step.id}
+          {...flowShell}
+          queue={snapshots.load.queue}
+          selectedLineId={lineId}
+          onLineChange={(nextId) => setLineId(plantLineById(nextId).id)}
+        />
+      </div>
+    );
   }
 
   if (step.preview === 'at_risk') {
@@ -81,20 +99,25 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
 
   if (
     step.preview === 'rush' ||
+    step.preview === 'rush_refresh' ||
     step.preview === 'qa' ||
     step.preview === 'copilot' ||
     step.preview === 'timeline' ||
     step.preview === 'accept'
   ) {
     const isQa = step.preview === 'qa';
-    const data = isQa ? qa : rush;
+    const isRefresh = step.preview === 'rush_refresh';
+    const data = isQa ? qa : isRefresh ? snapshots.refresh : rush;
+    const eventType = isQa ? 'qa_fail' : 'rush';
+    const highlightPo = primaryPoFromPending(eventType, data.diff, data.queue);
     return (
       <PlantBaselineDashboard
         key={step.id}
         {...flowShell}
         queue={data.queue}
-        eventType={isQa ? 'qa_fail' : 'rush'}
+        eventType={eventType}
         explanation={data.explanation}
+        eventHighlightPo={highlightPo}
         accepted={step.preview === 'accept'}
         acceptDisabled={step.preview !== 'accept'}
         schedulingLayout={flowShell.schedulingLayout ?? 'full'}

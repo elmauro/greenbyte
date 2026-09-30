@@ -1,13 +1,7 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
-import { dataReplanRequestFromLegacyEvent } from '../../services/plantDemo/ingestToDataReplan.js';
+import { dataReplanRequestFromSapQueueRefresh } from '../../services/plantDemo/ingestToDataReplan.js';
 import { runPlantEvent } from '../../services/plantDemo/runEvent.js';
-
-function parseLocale(body) {
-  const loc = body?.locale;
-  if (loc === 'es' || loc === 'en') return loc;
-  return 'en';
-}
 
 export async function handler(event) {
   const body = parseJsonBody(event);
@@ -16,21 +10,20 @@ export async function handler(event) {
   }
 
   const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
-  const locale = parseLocale(body);
-
-  if (body.type !== 'rush' && body.type !== 'qa_fail') {
-    return jsonResponse(400, { message: 'Invalid event type' });
+  const po = body.po;
+  if (!po || typeof po !== 'string') {
+    return jsonResponse(400, { message: 'po required (new or existing active PO)' });
   }
 
   try {
-    const replanRequest = dataReplanRequestFromLegacyEvent(body);
-    const response = await runPlantEvent(replanRequest, 'demo_inject_legacy');
+    const replanRequest = dataReplanRequestFromSapQueueRefresh({ ...body, lineId, po });
+    const response = await runPlantEvent(replanRequest, 'sap_queue_refresh');
     return jsonResponse(200, response);
   } catch (err) {
     if (err.message === 'Unknown line') {
       return jsonResponse(404, { message: 'Unknown line' });
     }
-    console.error('plant-demo-events', err);
+    console.error('plant-demo-ingest-sap-refresh', err);
     return jsonResponse(500, { message: 'Internal error' });
   }
 }

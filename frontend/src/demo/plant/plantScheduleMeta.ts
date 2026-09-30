@@ -8,6 +8,8 @@ export type PlantScheduleMeta = {
 export const PLANT_SCHEDULE_META: Record<string, PlantScheduleMeta> = {
   '1001759341': { client: 'Pacific Seeds', productCode: 'SWCO GSS2259P', priority: 3 },
   '1001884747': { client: 'Inland Grain', productCode: 'SWCO GH6055', priority: 3 },
+  '1001883359': { client: 'Inland Grain', productCode: 'SWCO GH6462S', priority: 3 },
+  '1002408120': { client: 'Rush contract', productCode: 'SWCO GH4927', priority: 2 },
   '1002307551': { client: 'Valley Co-op', productCode: 'SWCO OVERLAND CLX', priority: 2 },
   '1001887703': { client: 'Legacy contract', productCode: 'SWCO GSS2190', priority: 3 },
   '1002266913': { client: 'Columbia Pea', productCode: 'PECO IDALGO PEA', priority: 4 },

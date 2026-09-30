@@ -10,6 +10,9 @@ provider:
   environment:
     PROJECT_SLUG: greenbyte
     DEMO_PLANT_TABLE_NAME: greenbyte-${sls:stage}-demo-plant-state
+    # Optional — when set, BFF forwards to Camilo/David instead of in-Lambda stubs
+    DATA_API_BASE_URL: ${env:DATA_API_BASE_URL, ''}
+    AGENT_API_BASE_URL: ${env:AGENT_API_BASE_URL, ''}
   httpApi:
     cors:
       allowedOrigins:
@@ -46,6 +49,16 @@ functions:
 
   plantDemoQueue:
     handler: functions/plant-demo-queue/handler.handler
+    environment:
+      # Direct connection to public RDS. Empty values keep the Dynamo baseline.
+      # Set these in the deploy shell; do not commit the password.
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: GET
@@ -71,6 +84,13 @@ functions:
       - httpApi:
           method: POST
           path: /demo/plant/ingest/sap-priority-change
+
+  plantDemoIngestSapRefresh:
+    handler: functions/plant-demo-ingest-sap-refresh/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/ingest/sap-queue-refresh
 
   plantDemoReset:
     handler: functions/plant-demo-reset/handler.handler

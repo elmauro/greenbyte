@@ -1,9 +1,10 @@
-export type Uc1FlowSlideTitleKey = 's01' | 's02' | 's03' | 's03b' | 's04' | 's05' | 's06' | 's07';
+export type Uc1FlowSlideTitleKey = 's01' | 's02' | 's03' | 's03c' | 's03b' | 's04' | 's05' | 's06' | 's07';
 
 export type PlantFlowPreviewKind =
   | 'load'
   | 'at_risk'
   | 'rush'
+  | 'rush_refresh'
   | 'qa'
   | 'copilot'
   | 'timeline'
@@ -29,6 +30,7 @@ export type PlantFlowStepConfig = {
 export type PlantFlowResponseKeys = {
   load: true;
   rush: true;
+  refresh: true;
   qa: true;
   accept: true;
   explain: true;
@@ -41,15 +43,18 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's01',
     preview: 'load',
     method: 'GET',
-    path: '/demo/plant/lines/line-1/queue',
+    path: '/demo/plant/lines/{lineId}/queue',
     responseKey: 'load',
     mapping: [
+      { jsonPath: 'lineId', ui: 'Line selector — line-1 or line-2 (demo_line_id)' },
       { jsonPath: 'queue[].po', ui: 'PO column' },
       { jsonPath: 'queue[].species', ui: 'Species' },
       { jsonPath: 'queue[].kg', ui: 'Kg' },
       { jsonPath: 'queue[].finish', ui: 'Scheduled finish' },
       { jsonPath: 'queue[].status', ui: 'Status badge' },
       { jsonPath: 'queue[].reasonShort', ui: 'Reason column' },
+      { jsonPath: 'queue[].customerOrderId', ui: 'Customer order (demo proxy)' },
+      { jsonPath: 'pendingExplanation', ui: 'Copilot (when replan pending on poll)' },
     ],
   },
   {
@@ -58,7 +63,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's02',
     preview: 'at_risk',
     method: 'GET',
-    path: '/demo/plant/lines/line-1/queue',
+    path: '/demo/plant/lines/{lineId}/queue',
     responseKey: 'load',
     mapping: [
       { jsonPath: 'queue[].finish', ui: 'Scheduled finish (highlighted)' },
@@ -73,12 +78,44 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'rush',
     method: 'POST',
     path: '/demo/plant/ingest/sap-priority-change',
-    request: { po: '1002307551', priority: 2, lineId: 'line-1', locale: 'en|es' },
+    request: {
+      po: '1002307551',
+      priority: 2,
+      scheduledFinish: '2026-07-06 09:00',
+      lineId: 'line-1',
+      locale: 'en|es',
+    },
     responseKey: 'rush',
     mapping: [
       { jsonPath: 'queue[]', ui: 'Table reorder' },
-      { jsonPath: 'diff.moves[]', ui: 'Row highlight' },
+      { jsonPath: 'diff.moves[]', ui: 'Gantt highlight PO' },
+      { jsonPath: 'diff.reasons[]', ui: 'Includes customer_order when PO has order proxy' },
       { jsonPath: 'explanation.alertBanner', ui: 'Alert bar' },
+      { jsonPath: 'source', ui: 'sap_priority_change' },
+    ],
+  },
+  {
+    id: '03c',
+    titleKey: 's03c',
+    backendOwnerKey: 's03c',
+    preview: 'rush_refresh',
+    method: 'POST',
+    path: '/demo/plant/ingest/sap-queue-refresh',
+    request: {
+      po: '1002408120',
+      species: 'SWCO',
+      kg: 6200,
+      scheduledFinish: '2026-07-07 08:00',
+      priority: 2,
+      lineId: 'line-1',
+      locale: 'en|es',
+    },
+    responseKey: 'refresh',
+    mapping: [
+      { jsonPath: 'queue[0].po', ui: 'New PO at head after COISPI refresh' },
+      { jsonPath: 'diff.reasons[]', ui: 'sap_coispi_refresh, rush_new_po, customer_order' },
+      { jsonPath: 'explanation.summary', ui: 'Copilot — surprise batch narrative' },
+      { jsonPath: 'source', ui: 'sap_queue_refresh' },
     ],
   },
   {
@@ -92,7 +129,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     responseKey: 'qa',
     mapping: [
       { jsonPath: 'queue[].status=HOLD', ui: 'QA HOLD badge' },
-      { jsonPath: 'explanation', ui: 'Copilot + alert' },
+      { jsonPath: 'explanation.bullets[]', ui: 'Copilot cites failedFor (e.g. Dent, Discolored)' },
+      { jsonPath: 'source', ui: 'pass_fail_log' },
     ],
   },
   {
@@ -101,7 +139,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's04',
     preview: 'copilot',
     method: 'POST',
-    path: '/demo/plant/events (+ Agent explain-replan)',
+    path: 'Ingest → BFF → Data replan → Agent POST /explain-replan',
     responseKey: 'rush',
     mapping: [
       { jsonPath: 'explanation.summary', ui: 'Copilot lead' },
@@ -114,8 +152,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     titleKey: 's05',
     backendOwnerKey: 's05',
     preview: 'timeline',
-    method: 'POST',
-    path: '/demo/plant/events',
+    method: 'GET',
+    path: '/demo/plant/lines/{lineId}/queue (poll ~5s after ingest)',
     responseKey: 'rush',
     mapping: [
       { jsonPath: 'queue[].finish', ui: 'Timeline bar position' },

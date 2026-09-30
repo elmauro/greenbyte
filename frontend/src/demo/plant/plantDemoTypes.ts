@@ -9,6 +9,8 @@ export type QueueRow = {
   atRisk?: boolean;
   reasonShort?: string;
   previousPosition?: number;
+  /** Demo proxy for Syngenta open customer orders (ETL later). */
+  customerOrderId?: string;
 };
 
 export type QueueMove = {
@@ -24,6 +26,11 @@ export type PlantExplanation = {
   impact?: string;
 };
 
+export type PlantPlanDiff = {
+  moves: QueueMove[];
+  reasons: string[];
+};
+
 export type PlantQueueResponse = {
   lineId: string;
   queue: QueueRow[];
@@ -32,6 +39,10 @@ export type PlantQueueResponse = {
   lastEvent?: PlantEventType | null;
   /** Plan version the planner accepted (BFF); pending events are hidden when planVersion matches. */
   acceptedPlanVersion?: number | null;
+  /** Agent explanation for pending replan (GET queue while lastEvent is set). */
+  pendingExplanation?: PlantExplanation | null;
+  /** Data/Agent plan diff for pending replan — drives Gantt highlight and queue badges. */
+  pendingDiff?: PlantPlanDiff | null;
 };
 
 export type PlantEventResponse = {
@@ -39,7 +50,7 @@ export type PlantEventResponse = {
   eventType: PlantEventType;
   queue: QueueRow[];
   planVersion: number;
-  diff: { moves: QueueMove[]; reasons: string[] };
+  diff: PlantPlanDiff;
   explanation: PlantExplanation;
   /** Where the replan was triggered (ingest routes set this). */
   source?: string;
@@ -61,6 +72,19 @@ export type PlantIngestSapPriorityRequest = {
 };
 
 /** Operator / Data API — LSV pass/fail log row (demo primary trigger for QA fail). */
+/** SAP COISPI refresh — new or promoted active PO (Syngenta surprise rush). */
+export type PlantIngestSapQueueRefreshRequest = {
+  lineId?: string;
+  locale?: 'en' | 'es';
+  po: string;
+  species?: string;
+  kg?: number;
+  finish?: string;
+  scheduledFinish?: string;
+  priority?: number;
+  customerOrderId?: string;
+};
+
 export type PlantIngestPassFailRequest = {
   lineId?: string;
   locale?: 'en' | 'es';

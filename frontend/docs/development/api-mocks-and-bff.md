@@ -50,6 +50,8 @@ Restart `npm run dev`. UI code unchanged — only env vars.
 | `src/mocks/handlers/plantDemoHandlers.ts` | MSW routes = BFF contract |
 | `src/demo/plant/plantDemoServer.ts` | Mock business rules + JSON |
 | `src/demo/plant/plantDemoTypes.ts` | Types shared with backend docs |
+| `src/hooks/usePlantDemoQueue.ts` | Poll + pending Agent/Data fields from GET queue |
+| [uc1-bff-agent-ready-ui.md](./uc1-bff-agent-ready-ui.md) | Pending replan contract for Camilo/David via BFF |
 
 ## E2E
 

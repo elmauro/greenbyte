@@ -77,17 +77,21 @@ Use this table for demo-day and judge conversations. **Tier B+** is defined in [
 | --- | --- | --- |
 | Ranked queue with **reason per position** | Queue + `reasonShort`, replan diff, copilot copy | **Met** (mock/BFF; ETL replaces mock) |
 | **Inject rush** live; plan re-sequences | Operator ingest → poll → Scheduling + explain | **Met** (mechanism) |
-| Rush = surprise batch **or** urgency | Stub: **re-priority** of fixed PO **1002307551** only | **Partial** — second scenario (new PO on SAP refresh) backlog |
+| Rush = surprise batch **or** urgency | **Re-priority** (`sap-priority-change`) **or** new PO (`sap-queue-refresh`, default `1002408120`) | **Met** (demo mechanisms); production = real COISPI refresh (Camilo) |
 | **Inject failed QA** live | Ingest pass/fail → HOLD + resequence | **Met** (mechanism) |
 | QA grounded in **pass/fail log** | Anchor **1001884747** (Fail / Dent, Line 1) | **Met** (narrative); log not auto-polled |
 | Plain-language **explanation** + human **accept** | `explanation` + Accept schedule | **Met** (template; Agent replaces) |
 | **No live ERP** write | Accept = demo audit only | **Met** |
 | Transparent rules, not opaque solver | `diff.moves` + `diff.reasons` | **Met** |
-| Inputs: batch list, **capacity**, **customer orders**, changeover | Batch list partial-real; capacity = heuristic KPI; customer orders absent | **Partial** |
+| Inputs: batch list, **capacity**, **customer orders**, changeover | Batch list partial-real; **customer_order** demo proxies on key POs; capacity = heuristic KPI | **Partial** (orders not from live systems) |
 | **New batch arrives** (queue refresh) | Static baseline until SAP/ETL refresh story | **Partial** — documented in §5 |
 | Full Pasco multi-tab / multi-line data in UI | Single line demo; other tabs in ETL scope | **Deferred** (tier C / Camilo Phase 2) |
 
 **Bottom line:** GreenByte B+ **matches what Syngenta asks to prove in the room** (rush + QA inject, replan, explain, accept, no ERP). It **does not** yet deliver the **full** Pasco data surface (all lines, all active POs, customer-order-driven ranking, or both rush shapes). That split is **intentional** for hackathon week; gaps are backlog, not silent scope creep.
+
+**Expanding without changing the brief minimum:** see [uc1-demo-breadth-roadmap.md](./uc1-demo-breadth-roadmap.md) — **Priority 1** = parameterize replans (multiple POs / fail types on L1); **Priority 2** = multi-line UI (tier C).
+
+**Judge script (say explicitly):** [uc1-judge-wording-gaps.md](./uc1-judge-wording-gaps.md) — second rush via SAP refresh, customer orders in ranking, queue = active COISPI L1 not full mock.
 
 ---
 
@@ -169,7 +173,9 @@ Browser continues to call **BFF only**; events should eventually carry `source` 
 
 ## 8. Open items (backlog)
 
+- [ ] **Demo breadth P1:** ingest + replan logic accept **any queue PO**; document scenarios B ([uc1-demo-breadth-roadmap.md](./uc1-demo-breadth-roadmap.md)).
 - [ ] Data API: detect `Fail` rows and emit replan input (Camilo).
 - [ ] Optional second rush scenario: **new PO** enters head of queue from mock SAP refresh.
 - [ ] Mock **open customer orders** fed into ranking reasons.
+- [ ] **Demo breadth P2:** multi-line queue (tier C) or architecture-only narrative.
 - [ ] OpenAPI + event payload `source` field for traceability.

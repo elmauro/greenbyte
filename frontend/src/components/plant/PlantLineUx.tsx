@@ -4,6 +4,7 @@ import {
   appendPlantUxApprovalHistory,
   readPlantUxApprovalHistory,
 } from '../../demo/plant/plantUxApprovalHistory';
+import { plantLineById } from '../../demo/plant/plantLines';
 import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
 import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
@@ -27,25 +28,31 @@ export function PlantLineUx() {
   const session = useDemoSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const section = parseSection(searchParams.get('section'));
+  const line = plantLineById(searchParams.get('line'));
   const [approvalHistory, setApprovalHistory] = useState(() => readPlantUxApprovalHistory());
 
   const {
     queue,
     eventType,
     explanation,
+    eventHighlightPo,
     accepted,
     planAcknowledged,
     loading,
+    refreshing,
     busy,
     acceptPlan,
     connectionMode,
-  } = usePlantDemoQueue(locale);
+    loadError,
+  } = usePlantDemoQueue(locale, line.id);
 
   const onSectionChange = useCallback(
     (next: PlantNavSection) => {
-      setSearchParams({ section: next }, { replace: true });
+      const params = new URLSearchParams(searchParams);
+      params.set('section', next);
+      setSearchParams(params, { replace: true });
     },
-    [setSearchParams],
+    [searchParams, setSearchParams],
   );
 
   const handleAccept = useCallback(async () => {
@@ -95,6 +102,8 @@ export function PlantLineUx() {
         {loading ? (
           <p className="text-sm text-gray-500">{copy.loading}</p>
         ) : (
+          <>
+            {loadError && <p className="text-sm font-medium text-brand-red">{copy.lineLoadError}</p>}
           <PlantBaselineDashboard
             experience="ux"
             section={section}
@@ -102,12 +111,21 @@ export function PlantLineUx() {
             queue={queue}
             eventType={eventType}
             explanation={explanation}
+            eventHighlightPo={eventHighlightPo}
             accepted={accepted}
             planAcknowledged={planAcknowledged}
             acceptDisabled={busy}
             uxApprovalHistory={approvalHistory}
+            selectedLineId={line.id}
+            dataRefreshing={refreshing}
+            onLineChange={(nextId) => {
+              const params = new URLSearchParams(searchParams);
+              params.set('line', nextId);
+              setSearchParams(params, { replace: true });
+            }}
             onAccept={() => void handleAccept()}
           />
+          </>
         )}
         {accepted && (
           <p className="text-center text-sm font-medium text-brand-green-dark">{copy.acceptedNote}</p>

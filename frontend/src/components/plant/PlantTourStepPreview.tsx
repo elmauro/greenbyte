@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import type { PlantFlowSnapshots } from '../../demo/plant/plantFlowSnapshots';
+import { primaryPoFromPending } from '../../demo/plant/plantEventUtils';
+import { plantLineById, type PlantLineId } from '../../demo/plant/plantLines';
 import { useLocale } from '../../i18n';
 import type { PlantNavSection, QueueColumnHighlight } from './PlantBaselineDashboard';
 import { PlantBaselineDashboard } from './PlantBaselineDashboard';
 
 type PlantTourStepPreviewProps = {
-  /** Guided tour step index 0–4 */
+  /** Guided tour step index 0–5 */
   stepIndex: number;
   snapshots: PlantFlowSnapshots;
 };
@@ -14,7 +17,7 @@ function tourStepNav(stepIndex: number): {
   showProgramTimeline: boolean;
   highlightColumns?: QueueColumnHighlight[];
   schedulingLayout?: 'full' | 'timeline-only';
-  withRushEvent: boolean;
+  mode: 'calm' | 'rush' | 'qa';
   accepted: boolean;
 } {
   switch (stepIndex) {
@@ -22,7 +25,7 @@ function tourStepNav(stepIndex: number): {
       return {
         defaultSection: 'dashboard',
         showProgramTimeline: false,
-        withRushEvent: false,
+        mode: 'calm',
         accepted: false,
       };
     case 1:
@@ -30,37 +33,44 @@ function tourStepNav(stepIndex: number): {
         defaultSection: 'queue',
         showProgramTimeline: true,
         highlightColumns: ['finish', 'status'],
-        withRushEvent: false,
+        mode: 'calm',
         accepted: false,
       };
     case 2:
       return {
         defaultSection: 'queue',
         showProgramTimeline: true,
-        withRushEvent: true,
+        mode: 'rush',
         accepted: false,
       };
     case 3:
       return {
-        defaultSection: 'scheduling',
+        defaultSection: 'queue',
         showProgramTimeline: true,
-        schedulingLayout: 'full',
-        withRushEvent: true,
+        mode: 'qa',
         accepted: false,
       };
     case 4:
       return {
         defaultSection: 'scheduling',
         showProgramTimeline: true,
+        schedulingLayout: 'full',
+        mode: 'qa',
+        accepted: false,
+      };
+    case 5:
+      return {
+        defaultSection: 'scheduling',
+        showProgramTimeline: true,
         schedulingLayout: 'timeline-only',
-        withRushEvent: true,
+        mode: 'qa',
         accepted: true,
       };
     default:
       return {
         defaultSection: 'dashboard',
         showProgramTimeline: true,
-        withRushEvent: false,
+        mode: 'calm',
         accepted: false,
       };
   }
@@ -69,30 +79,52 @@ function tourStepNav(stepIndex: number): {
 export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPreviewProps) {
   const { messages: m } = useLocale();
   const label = m.demoPlant.tourLivePreview;
-  const rush = snapshots.rush;
   const cfg = tourStepNav(stepIndex);
+  const [lineId, setLineId] = useState<PlantLineId>('line-1');
+  const showLineControl = stepIndex === 0;
 
-  const queue = cfg.withRushEvent ? rush.queue : snapshots.load.queue;
+  const eventData =
+    cfg.mode === 'rush' ? snapshots.rush : cfg.mode === 'qa' ? snapshots.qa : null;
+  const queue = eventData?.queue ?? snapshots.load.queue;
+  const eventType = cfg.mode === 'rush' ? 'rush' : cfg.mode === 'qa' ? 'qa_fail' : undefined;
+  const explanation = eventData?.explanation;
+  const eventHighlightPo =
+    eventType && eventData
+      ? primaryPoFromPending(eventType, eventData.diff, eventData.queue)
+      : undefined;
 
   return (
     <div key={`tour-preview-${stepIndex}`} className="mt-8 w-full border-t border-gray-100 pt-8">
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-green">{label}</p>
-      {stepIndex === 2 && (
-        <p className="mb-3 text-sm text-gray-600">{m.demoPlant.tourInjectNote}</p>
+      {(stepIndex === 2 || stepIndex === 3) && (
+        <p className="mb-3 text-sm text-gray-600">
+          {stepIndex === 2 ? m.demoPlant.tourInjectNoteRush : m.demoPlant.tourInjectNoteQa}
+        </p>
+      )}
+      {stepIndex === 3 && (
+        <p className="mb-3 text-xs text-gray-500">{m.demoPlant.tourSapRefreshHint}</p>
+      )}
+      {showLineControl && lineId === 'line-2' && (
+        <p className="mb-3 text-sm text-gray-600">{m.demoPlant.tourLinePreviewNote}</p>
       )}
       <PlantBaselineDashboard
         key={`tour-dashboard-${stepIndex}`}
         queue={queue}
+        selectedLineId={showLineControl ? lineId : undefined}
+        onLineChange={
+          showLineControl ? (nextId) => setLineId(plantLineById(nextId).id) : undefined
+        }
         compact
         staticPreview
         showProgramTimeline={cfg.showProgramTimeline}
         defaultSection={cfg.defaultSection}
         highlightColumns={cfg.highlightColumns}
         schedulingLayout={cfg.schedulingLayout ?? 'full'}
-        eventType={cfg.withRushEvent ? 'rush' : undefined}
-        explanation={cfg.withRushEvent ? rush.explanation : undefined}
+        eventType={eventType ?? null}
+        explanation={explanation ?? null}
+        eventHighlightPo={eventHighlightPo}
         accepted={cfg.accepted}
-        acceptDisabled={stepIndex !== 4}
+        acceptDisabled={stepIndex !== 5}
       />
     </div>
   );

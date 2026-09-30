@@ -1,4 +1,6 @@
-import { BASE_QUEUE, EXPLANATIONS, PLANT_DEMO_LINE_ID } from './constants.js';
+import { BASE_QUEUE, PLANT_DEMO_LINE_ID } from './constants.js';
+import { appendCustomerReason, customerMetaForPo } from './customerOrderMeta.js';
+import { buildExplainReplan } from './explanationBuilder.js';
 
 function cloneQueue(rows) {
   return rows.map((r) => ({ ...r }));
@@ -26,6 +28,8 @@ export function createBaselineState() {
     planVersion: 1,
     lastEvent: null,
     acceptedPlanVersion: null,
+    pendingExplanation: null,
+    pendingDiff: null,
   };
 }
 
@@ -44,10 +48,12 @@ export function getQueueResponse(state, lineId) {
     planVersion: state.planVersion,
     lastEvent: pendingEvent ? state.lastEvent : null,
     acceptedPlanVersion,
+    pendingExplanation: pendingEvent ? state.pendingExplanation ?? null : null,
+    pendingDiff: pendingEvent ? state.pendingDiff ?? null : null,
   };
 }
 
-export function applyEvent(state, lineId, type, locale) {
+export function applyEvent(state, lineId, type, locale, options = {}) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
@@ -57,7 +63,7 @@ export function applyEvent(state, lineId, type, locale) {
   const reasons = [];
 
   if (type === 'rush') {
-    const rushPo = '1002307551';
+    const rushPo = options.focusPo ?? '1002307551';
     const fromIdx = next.findIndex((r) => r.po === rushPo);
     const toIdx = 0;
     if (fromIdx > toIdx) {
@@ -66,16 +72,18 @@ export function applyEvent(state, lineId, type, locale) {
       next.splice(toIdx, 0, row);
       moves.push({ po: rushPo, fromPosition: fromIdx + 1, toPosition: toIdx + 1 });
       reasons.push('priority_2', 'sap_finish_2026-07-06', 'same_species_changeover');
+      appendCustomerReason(reasons, rushPo);
     }
   } else if (type === 'qa_fail') {
-    const failPo = '1001884747';
+    const failPo = options.focusPo ?? '1001884747';
+    const failedFor = options.failedFor ?? 'Dent';
     const failIdx = next.findIndex((r) => r.po === failPo);
     if (failIdx >= 0) {
       next[failIdx] = { ...next[failIdx], status: 'HOLD', previousPosition: failIdx + 1 };
       const [held] = next.splice(failIdx, 1);
       next.push(held);
       moves.push({ po: failPo, fromPosition: failIdx + 1, toPosition: next.length });
-      reasons.push('qa_fail_pass_fail_log', 'isolate_hold', 'resequence_downstream');
+      reasons.push('qa_fail_pass_fail_log', 'isolate_hold', 'resequence_downstream', `failed_for_${String(failedFor).toLowerCase()}`);
     }
   } else {
     throw new Error('Invalid event type');
@@ -84,12 +92,25 @@ export function applyEvent(state, lineId, type, locale) {
   annotateReasons(next, moves, type, loc);
   const planVersion = state.planVersion + 1;
 
+  const diff = { moves, reasons };
+  const explanation = buildExplainReplan(loc, type, {
+    focusPo: type === 'rush' ? options.focusPo ?? '1002307551' : options.focusPo ?? '1001884747',
+    failedFor: options.failedFor,
+    priority: options.priority,
+    scheduledFinish: options.scheduledFinish,
+    trigger: options.trigger,
+    moves,
+    queue: next,
+  });
+
   const newState = {
     lineId,
     queue: next,
     planVersion,
     lastEvent: type,
     acceptedPlanVersion: null,
+    pendingExplanation: explanation,
+    pendingDiff: diff,
   };
 
   return {
@@ -99,8 +120,93 @@ export function applyEvent(state, lineId, type, locale) {
       eventType: type,
       queue: cloneQueue(next),
       planVersion,
-      diff: { moves, reasons },
-      explanation: EXPLANATIONS[loc][type],
+      diff,
+      explanation,
+    },
+  };
+}
+
+/** SAP COISPI refresh — new active PO on line (Syngenta “surprise rush batch”). */
+export function applySapQueueRefresh(state, lineId, locale, options = {}) {
+  if (lineId !== PLANT_DEMO_LINE_ID) {
+    throw new Error('Unknown line');
+  }
+  const loc = locale === 'es' ? 'es' : 'en';
+  const po = options.focusPo ?? options.po;
+  if (!po) {
+    throw new Error('po required for sap queue refresh');
+  }
+
+  let next = cloneQueue(state.queue);
+  const moves = [];
+  const reasons = ['sap_coispi_refresh', 'rush_new_po'];
+
+  let idx = next.findIndex((r) => r.po === po);
+  if (idx < 0) {
+    const meta = customerMetaForPo(po);
+    const finish = options.scheduledFinish ?? options.finish ?? '2026-07-07 08:00';
+    next.push({
+      po,
+      species: options.species ?? 'SWCO',
+      kg: options.kg ?? 6200,
+      finish,
+      status: 'PLANNED',
+      atRisk: true,
+      reasonShort:
+        loc === 'es'
+          ? 'Nuevo PO activo — refresh SAP'
+          : 'New active PO — SAP refresh',
+      customerOrderId: meta?.customerOrderId ?? options.customerOrderId,
+    });
+    idx = next.length - 1;
+    reasons.push('new_active_po');
+  }
+
+  appendCustomerReason(reasons, po);
+  if (options.priority === 2 || options.priority === '2') {
+    reasons.push('priority_2');
+  }
+
+  const fromIdx = idx;
+  if (fromIdx > 0) {
+    const [row] = next.splice(fromIdx, 1);
+    row.previousPosition = fromIdx + 1;
+    next.splice(0, 0, row);
+    moves.push({ po, fromPosition: fromIdx + 1, toPosition: 1 });
+    reasons.push('same_species_changeover');
+  }
+
+  annotateReasons(next, moves, 'rush', loc);
+  const planVersion = state.planVersion + 1;
+  const diff = { moves, reasons };
+  const explanation = buildExplainReplan(loc, 'rush', {
+    focusPo: po,
+    priority: options.priority,
+    scheduledFinish: options.scheduledFinish ?? options.finish,
+    trigger: 'sap_queue_refresh',
+    moves,
+    queue: next,
+  });
+
+  const newState = {
+    lineId,
+    queue: next,
+    planVersion,
+    lastEvent: 'rush',
+    acceptedPlanVersion: null,
+    pendingExplanation: explanation,
+    pendingDiff: diff,
+  };
+
+  return {
+    state: newState,
+    response: {
+      lineId,
+      eventType: 'rush',
+      queue: cloneQueue(next),
+      planVersion,
+      diff,
+      explanation,
     },
   };
 }
@@ -112,6 +218,8 @@ export function acceptPlan(state, lineId) {
   const nextState = {
     ...state,
     lastEvent: null,
+    pendingExplanation: null,
+    pendingDiff: null,
     acceptedPlanVersion: state.planVersion,
   };
   return {

@@ -1,6 +1,6 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
-import { explainBatch } from '../../services/plantDemo/logic.js';
+import { postBatchExplain } from '../../services/plantDemo/agentApiClient.js';
 import { loadState } from '../../services/plantDemo/stateRepository.js';
 
 function parseLocale(body) {
@@ -22,7 +22,12 @@ export async function handler(event) {
 
   try {
     const state = await loadState(PLANT_DEMO_LINE_ID);
-    const response = explainBatch(state, body.po, body.question, locale);
+    const response = await postBatchExplain({
+      state,
+      po: body.po,
+      question: body.question,
+      locale,
+    });
     return jsonResponse(200, response);
   } catch (err) {
     if (err.message === 'Unknown batch') {

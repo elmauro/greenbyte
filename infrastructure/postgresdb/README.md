@@ -70,6 +70,23 @@ terraform init -backend-config=../backend.dev.hcl
    terraform output postgres_connection_url_hint
    ```
 
+## Lambda (plant queue)
+
+`GET /demo/plant/lines/{lineId}/queue` reads `gold.v_open_queue` when the queue function has database env vars. The function stays **outside the VPC** and uses the public endpoint. No RDS Proxy.
+
+Before deploy, export the same credentials you use for `psql` (do not commit them):
+
+```powershell
+$env:PGHOST = "<postgres_endpoint>"
+$env:PGPORT = "5432"
+$env:PGDATABASE = "greenbyte"
+$env:PGUSER = "greenbyte_user"
+$env:PGPASSWORD = "<master_password>"
+$env:PGSSL = "require"
+```
+
+The security group must allow the Lambda's outbound IP on port 5432. The hackathon dev setting `allowed_cidr_blocks = ["0.0.0.0/0"]` does that. If that list is locked to an office IP, the Lambda cannot connect until 5432 is opened or the function is placed in the VPC.
+
 ## Connect from your machine
 
 ```powershell

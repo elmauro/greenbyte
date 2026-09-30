@@ -1,8 +1,10 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
+import { dataReplanRequestFromSapIngest } from '../../services/plantDemo/ingestToDataReplan.js';
 import { runPlantEvent } from '../../services/plantDemo/runEvent.js';
+import { loadState } from '../../services/plantDemo/stateRepository.js';
 
-const DEMO_RUSH_PO = '1002307551';
+const DEFAULT_RUSH_PO = '1002307551';
 
 function parseLocale(body) {
   const loc = body?.locale;
@@ -18,16 +20,19 @@ export async function handler(event) {
 
   const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
   const locale = parseLocale(body);
-  const po = body.po ?? DEMO_RUSH_PO;
-
-  if (po !== DEMO_RUSH_PO) {
-    return jsonResponse(400, {
-      message: `Demo ingest supports priority replan for PO ${DEMO_RUSH_PO}. Received: ${po}`,
-    });
-  }
+  const po = body.po ?? DEFAULT_RUSH_PO;
 
   try {
-    const response = await runPlantEvent(lineId, 'rush', locale, 'sap_priority_change');
+    const state = await loadState(lineId);
+    const inQueue = state.queue.some((r) => r.po === po && r.status !== 'COMPLETE');
+    if (!inQueue) {
+      return jsonResponse(400, {
+        message: `PO ${po} is not in the active queue for line ${lineId}`,
+      });
+    }
+
+    const replanRequest = dataReplanRequestFromSapIngest({ ...body, lineId, locale, po });
+    const response = await runPlantEvent(replanRequest, 'sap_priority_change');
     return jsonResponse(200, response);
   } catch (err) {
     if (err.message === 'Unknown line') {

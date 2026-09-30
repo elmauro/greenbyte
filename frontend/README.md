@@ -23,8 +23,8 @@ Local dev uses **MSW** to mock the BFF (`VITE_USE_MSW=true` in `.env.development
 | Path | Description |
 | --- | --- |
 | `/demo/plant` | UC1 interactive demo |
-| `/demo/plant/tour` | Guided 5-step tour |
-| `/demo/plant/flow` | UI ↔ API integration map |
+| `/demo/plant/tour` | Guided 6-step tour (rush + QA previews) |
+| `/demo/plant/flow` | UI ↔ API integration map (incl. `sap-queue-refresh`) |
 | `/demo/architecture` | Team architecture page |
 | `/demo/breeding` | UC4 walkthrough (reference) |
 
