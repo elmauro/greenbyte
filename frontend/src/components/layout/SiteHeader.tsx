@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
 import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
-import { paths } from '../../routes/paths';
+import { demoDefaultAfterSignIn, paths } from '../../routes/paths';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function SiteHeader() {
@@ -40,7 +40,13 @@ export function SiteHeader() {
     }
   }
 
-  const signInHref = `${paths.demoSignIn}?returnTo=${encodeURIComponent(location.pathname === paths.demoSignIn ? paths.demoPlant : location.pathname)}`;
+  const signInReturnTo =
+    location.pathname === paths.demoSignIn
+      ? demoDefaultAfterSignIn
+      : location.pathname === paths.home
+        ? demoDefaultAfterSignIn
+        : location.pathname;
+  const signInHref = `${paths.demoSignIn}?returnTo=${encodeURIComponent(signInReturnTo)}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">

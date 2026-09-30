@@ -2,11 +2,11 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlantDemoLoginGate } from '../../components/plant/PlantDemoLoginGate';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { readPlantUxSession } from '../../demo/plant/plantDemoSessionAuth';
-import { paths } from '../../routes/paths';
+import { demoDefaultAfterSignIn, paths } from '../../routes/paths';
 
 function safeReturnTo(raw: string | null): string {
-  if (!raw || !raw.startsWith('/')) return paths.demoPlant;
-  if (raw.startsWith('//')) return paths.demoPlant;
+  if (!raw || !raw.startsWith('/')) return demoDefaultAfterSignIn;
+  if (raw.startsWith('//')) return demoDefaultAfterSignIn;
   return raw;
 }
 

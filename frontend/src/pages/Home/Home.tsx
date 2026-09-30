@@ -36,7 +36,7 @@ export function Home() {
               {m.hero.ctaDiscover}
             </a>
             <Link
-              to={paths.demoPlant}
+              to={paths.demoPlantUx}
               className="rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
               {m.hero.ctaDemoPlant}

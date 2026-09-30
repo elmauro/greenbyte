@@ -9,3 +9,6 @@ export const paths = {
   demoBreeding: '/demo/breeding',
   demoArchitecture: '/demo/architecture',
 } as const;
+
+/** Post-login landing when sign-in has no valid `returnTo` query. */
+export const demoDefaultAfterSignIn = paths.demoPlantUx;
