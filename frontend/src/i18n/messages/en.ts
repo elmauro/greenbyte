@@ -192,6 +192,9 @@ export const en = {
       layoutHorizontal: 'Horizontal',
       layoutToggleAria: 'Timeline layout',
       holdShort: 'On hold',
+      ganttScrollHint: 'Scroll to see all batches on the timeline.',
+      ganttScrollRegionVertical: 'Program timeline, vertical layout',
+      ganttScrollRegionHorizontal: 'Program timeline, horizontal card strip',
     },
     pagination: {
       rowsPerPage: 'Rows per page',
@@ -270,7 +273,7 @@ export const en = {
       'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
       badge: 'UX preview',
-      title: 'Line 1 — Lovable UX on GreenByte styles',
+      title: 'Line 1 — enhanced UX on GreenByte styles',
       subtitle:
         'Same BFF queue and accept flow as the classic demo. Compare navigation, help, and notifications side-by-side.',
       classicLink: 'Open classic Line 1 demo',

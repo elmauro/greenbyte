@@ -10,7 +10,7 @@
 
 ## SOURCE SCOPE
 
-- Problem: Lovable prototype had stronger scheduler UX; production GreenByte demo must keep existing visual system and BFF contract.
+- Problem: External UX prototype had stronger scheduler flows; production GreenByte demo must keep existing visual system and BFF contract.
 - Current behavior: `/demo/plant` uses `PlantBaselineDashboard` + `usePlantDemoQueue` (BFF/MSW poll, accept).
 - Reference UX: `pixel-perfect-pixel` `Line1Workspace.tsx` (local only — behavior/copy, not styles).
 - Out of scope: Cognito integration; ERP writes; scenario switcher replacing ingest.
@@ -19,7 +19,7 @@
 
 - Frontend:
   - Route `/demo/plant/ux` with demo session gate (`plantDemoSessionAuth.ts`).
-  - `PlantBaselineDashboard` `experience="ux"` for Lovable flows without changing baseline default.
+  - `PlantBaselineDashboard` `experience="ux"` for enhanced flows without changing baseline default.
   - Phase 2: queue filters, approval history (localStorage), “What changed”, mobile nav.
 - Backend: no contract changes.
 

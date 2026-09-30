@@ -1,9 +1,7 @@
 import type { ReactNode } from 'react';
 import type { QueueRow } from '../../demo/plant/plantDemoTypes';
 import { PLANT_SCHEDULE_META } from '../../demo/plant/plantScheduleMeta';
-import type { PlantPageSize } from '../../hooks/useListPagination';
 import { useLocale } from '../../i18n';
-import { PlantListPagination } from './PlantListPagination';
 
 export type ScheduleGanttLayout = 'vertical' | 'horizontal';
 
@@ -13,17 +11,12 @@ type PlantProgramGanttProps = {
   compact?: boolean;
   layout?: ScheduleGanttLayout;
   onLayoutChange?: (layout: ScheduleGanttLayout) => void;
-  page?: number;
-  pageSize?: PlantPageSize;
-  totalRows?: number;
-  totalPages?: number;
-  from?: number;
-  to?: number;
-  onPageChange?: (page: number) => void;
-  onPageSizeChange?: (size: PlantPageSize) => void;
 };
 
 const SLOTS = 28;
+
+/** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
+const GANTT_SCROLL_MAX_CLASS = 'max-h-[min(28rem,58vh)]';
 
 function slotSpan(index: number, species: string, kg: number) {
   const start = 1 + (index % 6) * 2;
@@ -37,20 +30,12 @@ export function PlantProgramGantt({
   compact,
   layout = 'vertical',
   onLayoutChange,
-  page = 1,
-  pageSize = 10,
-  totalRows,
-  totalPages = 1,
-  from = 1,
-  to = rows.length,
-  onPageChange,
-  onPageSizeChange,
 }: PlantProgramGanttProps) {
   const { messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
-  const p = m.plantMvp.pagination;
-  const showPagination = Boolean(onPageChange && onPageSizeChange);
-  const total = totalRows ?? rows.length;
+  const footer = s.footerTotal
+    .replace('{count}', String(rows.length))
+    .replace('{runtime}', s.demoRuntime);
 
   function renderRowMeta(row: QueueRow, isRush: boolean) {
     const meta = PLANT_SCHEDULE_META[row.po] ?? {
@@ -120,9 +105,14 @@ export function PlantProgramGantt({
       </div>
 
       {layout === 'vertical' ? (
-        <div className="overflow-x-auto p-2">
+        <div
+          className={`${GANTT_SCROLL_MAX_CLASS} overflow-auto p-2`}
+          tabIndex={0}
+          role="region"
+          aria-label={s.ganttScrollRegionVertical}
+        >
           <div className="min-w-[640px]">
-            <div className="mb-1 grid grid-cols-[10.5rem_1fr] gap-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            <div className="sticky top-0 z-10 mb-1 grid grid-cols-[10.5rem_1fr] gap-2 bg-white pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
               <span />
               <div className="grid grid-cols-7 gap-1 text-center">
                 {s.dayHeaders.map((d) => (
@@ -164,8 +154,13 @@ export function PlantProgramGantt({
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto p-3">
-          <div className="flex min-w-min gap-3">
+        <div
+          className={`${GANTT_SCROLL_MAX_CLASS} overflow-x-auto overflow-y-auto p-3`}
+          tabIndex={0}
+          role="region"
+          aria-label={s.ganttScrollRegionHorizontal}
+        >
+          <div className="flex min-w-min snap-x snap-mandatory gap-3 pb-1">
             {rows.map((row, index) => {
               const isRush = row.po === rushPo;
               const isHold = row.status === 'HOLD';
@@ -176,7 +171,7 @@ export function PlantProgramGantt({
               return (
                 <article
                   key={row.po}
-                  className={`flex w-40 shrink-0 flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm ${
+                  className={`flex w-40 shrink-0 snap-start flex-col rounded-xl border border-gray-200 bg-white p-3 shadow-sm ${
                     isRush ? 'ring-2 ring-orange-300' : ''
                   }`}
                 >
@@ -194,21 +189,10 @@ export function PlantProgramGantt({
         </div>
       )}
 
-      {showPagination && (
-        <div className="border-t border-gray-100 px-4">
-          <PlantListPagination
-            page={page}
-            pageSize={pageSize}
-            totalPages={totalPages}
-            from={from}
-            to={to}
-            total={total}
-            onPageChange={onPageChange!}
-            onPageSizeChange={onPageSizeChange!}
-            labels={p}
-          />
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500">
+        <span>{footer}</span>
+        {rows.length > 8 && <span className="text-gray-400">{s.ganttScrollHint}</span>}
+      </div>
     </div>
   );
 }

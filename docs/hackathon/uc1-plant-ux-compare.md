@@ -1,6 +1,6 @@
 # UC1 — Plant UX compare route
 
-Side-by-side evaluation of **classic** vs **Lovable-inspired UX** on the same GreenByte styles and BFF contract.
+Side-by-side evaluation of **classic** vs **enhanced UX** on the same GreenByte styles and BFF contract.
 
 | Route | Purpose |
 | --- | --- |

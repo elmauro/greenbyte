@@ -5,7 +5,7 @@
 
 ## Story
 
-As a product/demo owner, I want a **second Line 1 route** (`/demo/plant/ux`) that keeps **GreenByte visual styles** while porting **Lovable UX** (help, status pills, richer notifications, calm banner) so we can compare side-by-side with `/demo/plant`.
+As a product/demo owner, I want a **second Line 1 route** (`/demo/plant/ux`) that keeps **GreenByte visual styles** while porting **enhanced scheduler UX** (help, status pills, richer notifications, calm banner) so we can compare side-by-side with `/demo/plant`.
 
 ## Acceptance
 

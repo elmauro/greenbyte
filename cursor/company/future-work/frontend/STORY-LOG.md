@@ -13,7 +13,7 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 - Change type: `feat` · Branch: local · PR: pending
 - Status: shipped · Shipped: 2026-09-30 · Package: [`frontend/uc1-plant-ux-compare/`](../../../analysis/features/frontend/uc1-plant-ux-compare/)
 
-Route `/demo/plant/ux`: Lovable-inspired scheduler UX on existing GreenByte styles + BFF poll; classic `/demo/plant` unchanged.
+Route `/demo/plant/ux`: enhanced scheduler UX on existing GreenByte styles + BFF poll; classic `/demo/plant` unchanged.
 
 ### GREENBYTE-002 — UC1 frontend MSW and BFF connection modes
 

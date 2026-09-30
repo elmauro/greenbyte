@@ -13,7 +13,7 @@
 
 ## Goal
 
-- Compare Lovable scheduler UX on GreenByte styles at `/demo/plant/ux` without changing classic `/demo/plant`.
+- Compare enhanced scheduler UX on GreenByte styles at `/demo/plant/ux` without changing classic `/demo/plant`.
 
 ## Status
 

@@ -365,6 +365,9 @@ export const es: Messages = {
       layoutHorizontal: 'Horizontal',
       layoutToggleAria: 'Disposición de la línea de tiempo',
       holdShort: 'En retención',
+      ganttScrollHint: 'Desplázate para ver todos los lotes en la línea de tiempo.',
+      ganttScrollRegionVertical: 'Línea de tiempo del programa, vista vertical',
+      ganttScrollRegionHorizontal: 'Línea de tiempo del programa, tira horizontal de tarjetas',
     },
     pagination: {
       rowsPerPage: 'Filas por página',
@@ -443,7 +446,7 @@ export const es: Messages = {
       'BFF en vivo (VITE_API_BASE_APP). Camilo Data + David Agent detrás del core-api — sin cambiar el frontend.',
     uxCompare: {
       badge: 'Vista previa UX',
-      title: 'Línea 1 — UX Lovable con estilos GreenByte',
+      title: 'Línea 1 — UX mejorada con estilos GreenByte',
       subtitle:
         'Mismo flujo BFF de cola y aceptación que el demo clásico. Compare navegación, ayuda y notificaciones.',
       classicLink: 'Abrir demo clásico Línea 1',
