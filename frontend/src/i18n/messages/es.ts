@@ -5,6 +5,9 @@ export const es: Messages = {
     tagline: 'Innovación AgTech · En colaboración con Syngenta',
     domain: 'greenbyte-ag.com',
     brandSubtitle: 'Agricultura inteligente',
+    demoSignIn: 'Iniciar sesión demo',
+    demoSignOut: 'Cerrar sesión',
+    demoSignedInAs: '{user}',
   },
   nav: {
     innovation: 'Innovación',

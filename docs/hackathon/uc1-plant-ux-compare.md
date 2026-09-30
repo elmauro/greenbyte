@@ -14,7 +14,7 @@ Configure optional overrides in `frontend/.env.local`:
 - `VITE_DEMO_PLANT_USERNAME` (default `greenbyte_user`)
 - `VITE_DEMO_PLANT_PASSWORD` (default documented in `.env.example`)
 
-Session is stored in `sessionStorage` for the browser tab.
+Session is stored in `sessionStorage` for the browser tab. The same session unlocks **header links** (UC1 Pasco, UX, UI↔API, Architecture) and all UC1 demo routes via `/demo/sign-in`.
 
 ## Deep links
 

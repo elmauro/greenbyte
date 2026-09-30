@@ -3,6 +3,9 @@ export const en = {
     tagline: 'AgTech innovation · Partnering with Syngenta',
     domain: 'greenbyte-ag.com',
     brandSubtitle: 'Intelligent agriculture',
+    demoSignIn: 'Demo sign in',
+    demoSignOut: 'Sign out',
+    demoSignedInAs: '{user}',
   },
   nav: {
     innovation: 'Innovation',

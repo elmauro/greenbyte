@@ -1,16 +1,16 @@
 import { useCallback, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   appendPlantUxApprovalHistory,
   readPlantUxApprovalHistory,
 } from '../../demo/plant/plantUxApprovalHistory';
-import { readPlantUxSession, signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
+import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
+import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
 import { usePlantDemoQueue } from '../../hooks/usePlantDemoQueue';
 import { paths } from '../../routes/paths';
 import type { PlantNavSection } from './PlantBaselineDashboard';
 import { PlantBaselineDashboard } from './PlantBaselineDashboard';
-import { PlantDemoLoginGate } from './PlantDemoLoginGate';
 
 const SECTIONS: PlantNavSection[] = ['dashboard', 'queue', 'scheduling', 'copilot'];
 
@@ -23,9 +23,8 @@ export function PlantLineUx() {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp;
   const uxPage = copy.uxCompare;
-  const [sessionTick, setSessionTick] = useState(0);
-  void sessionTick;
-  const session = readPlantUxSession();
+  const navigate = useNavigate();
+  const session = useDemoSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const section = parseSection(searchParams.get('section'));
   const [approvalHistory, setApprovalHistory] = useState(() => readPlantUxApprovalHistory());
@@ -57,7 +56,7 @@ export function PlantLineUx() {
   }, [acceptPlan, eventType]);
 
   if (!session) {
-    return <PlantDemoLoginGate onSignedIn={() => setSessionTick((n) => n + 1)} />;
+    return null;
   }
 
   return (
@@ -81,7 +80,7 @@ export function PlantLineUx() {
                   className="text-gray-600 hover:text-gray-900"
                   onClick={() => {
                     signOutPlantUx();
-                    setSessionTick((n) => n + 1);
+                    navigate(paths.home);
                   }}
                 >
                   {uxPage.signOut}

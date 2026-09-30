@@ -1,6 +1,12 @@
-/** Hackathon demo gate for /demo/plant/ux — not production Cognito. */
+/** Hackathon demo session — not production Cognito. Gates UC1 demo routes + header nav. */
+
+export const DEMO_SESSION_EVENT = 'greenbyte-demo-session';
 
 const SESSION_KEY = 'greenbyte-plant-ux-session-v1';
+
+function notifySessionChange() {
+  window.dispatchEvent(new Event(DEMO_SESSION_EVENT));
+}
 
 export type PlantUxSession = {
   username: string;
@@ -36,9 +42,11 @@ export function signInPlantUx(username: string, password: string): boolean {
     signedInAt: new Date().toISOString(),
   };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  notifySessionChange();
   return true;
 }
 
 export function signOutPlantUx(): void {
   sessionStorage.removeItem(SESSION_KEY);
+  notifySessionChange();
 }

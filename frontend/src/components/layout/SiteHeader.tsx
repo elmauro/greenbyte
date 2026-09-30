@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
+import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -8,6 +10,8 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const { messages: m } = useLocale();
   const location = useLocation();
+  const navigate = useNavigate();
+  const session = useDemoSession();
   const onHome = location.pathname === paths.home;
 
   const navItems = onHome
@@ -19,12 +23,24 @@ export function SiteHeader() {
       ]
     : [];
 
-  const demoItems = [
-    { label: m.nav.demoPlant, to: paths.demoPlant },
-    { label: m.nav.demoPlantUx, to: paths.demoPlantUx },
-    { label: m.nav.demoPlantFlow, to: paths.demoPlantFlow },
-    { label: m.nav.demoArchitecture, to: paths.demoArchitecture },
-  ];
+  const demoItems = session
+    ? [
+        { label: m.nav.demoPlant, to: paths.demoPlant },
+        { label: m.nav.demoPlantUx, to: paths.demoPlantUx },
+        { label: m.nav.demoPlantFlow, to: paths.demoPlantFlow },
+        { label: m.nav.demoArchitecture, to: paths.demoArchitecture },
+      ]
+    : [];
+
+  function handleSignOut() {
+    signOutPlantUx();
+    setOpen(false);
+    if (location.pathname.startsWith('/demo/') && location.pathname !== paths.demoSignIn) {
+      navigate(paths.home);
+    }
+  }
+
+  const signInHref = `${paths.demoSignIn}?returnTo=${encodeURIComponent(location.pathname === paths.demoSignIn ? paths.demoPlant : location.pathname)}`;
 
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
@@ -64,6 +80,25 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {session ? (
+            <div className="hidden items-center gap-2 text-xs text-gray-600 sm:flex">
+              <span title={session.username}>{m.header.demoSignedInAs.replace('{user}', session.username)}</span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="font-semibold text-brand-blue hover:text-brand-green"
+              >
+                {m.header.demoSignOut}
+              </button>
+            </div>
+          ) : (
+            <Link
+              to={signInHref}
+              className="hidden rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark sm:inline-flex"
+            >
+              {m.header.demoSignIn}
+            </Link>
+          )}
           <LanguageSwitcher />
           <button
             type="button"
@@ -108,6 +143,25 @@ export function SiteHeader() {
                 </Link>
               </li>
             ))}
+            <li>
+              {session ? (
+                <button
+                  type="button"
+                  className="block text-sm font-medium text-brand-blue"
+                  onClick={handleSignOut}
+                >
+                  {m.header.demoSignOut}
+                </button>
+              ) : (
+                <Link
+                  to={signInHref}
+                  className="block text-sm font-semibold text-brand-green"
+                  onClick={() => setOpen(false)}
+                >
+                  {m.header.demoSignIn}
+                </Link>
+              )}
+            </li>
           </ul>
         </nav>
       )}

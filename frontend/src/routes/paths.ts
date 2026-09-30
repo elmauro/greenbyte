@@ -1,6 +1,7 @@
 export const paths = {
   home: '/',
   dashboard: '/dashboard',
+  demoSignIn: '/demo/sign-in',
   demoPlant: '/demo/plant',
   demoPlantUx: '/demo/plant/ux',
   demoPlantTour: '/demo/plant/tour',
