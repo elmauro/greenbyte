@@ -11,7 +11,7 @@ describe('plant demo logic', () => {
     const res = getQueueResponse(state, 'line-1');
     expect(res.planVersion).toBe(1);
     expect(res.lastEvent).toBeNull();
-    expect(res.queue).toHaveLength(6);
+    expect(res.queue.length).toBeGreaterThanOrEqual(30);
     expect(res.queue[2].po).toBe('1002307551');
   });
 

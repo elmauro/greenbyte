@@ -7,35 +7,13 @@ import type {
   QueueMove,
   QueueRow,
 } from './plantDemoTypes';
+import { PASCO_LINE1_BASELINE } from './pascoLine1Baseline';
 
 export const PLANT_DEMO_LINE_ID = 'line-1';
 
 type Locale = 'en' | 'es';
 
-const BASE_QUEUE: QueueRow[] = [
-  { po: '1001759341', species: 'SWCO', kg: 4200, finish: '2026-07-04 11:30', status: 'PLANNED' },
-  {
-    po: '1001884747',
-    species: 'SWCO',
-    kg: 9800,
-    finish: '2026-07-05 16:00',
-    status: 'PLANNED',
-    atRisk: true,
-    reasonShort: 'SAP due date — monitor slot',
-  },
-  {
-    po: '1002307551',
-    species: 'SWCO',
-    kg: 2800,
-    finish: '2026-07-06 09:00',
-    status: 'PLANNED',
-    atRisk: true,
-    reasonShort: 'Priority 2 — customer window',
-  },
-  { po: '1001984402', species: 'CORN', kg: 5100, finish: '2026-07-07 14:00', status: 'PLANNED' },
-  { po: '1002011199', species: 'SWCO', kg: 3600, finish: '2026-07-08 10:00', status: 'PLANNED' },
-  { po: '1001887703', species: 'SWCO', kg: 2900, finish: '2026-06-30 08:00', status: 'COMPLETE' },
-];
+const BASE_QUEUE: QueueRow[] = PASCO_LINE1_BASELINE;
 
 const explanations: Record<Locale, Record<PlantEventType, PlantExplanation>> = {
   en: {

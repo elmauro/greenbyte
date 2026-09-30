@@ -12,7 +12,16 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
-import { PlantProgramGantt } from './PlantProgramGantt';
+import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
+import { PlantListPagination } from './PlantListPagination';
+import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
+import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
+import { PlantHelpDrawer } from './ux/PlantHelpDrawer';
+import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
+import { PlantUxHistoryDrawer } from './ux/PlantUxHistoryDrawer';
+
+export type PlantDashboardExperience = 'baseline' | 'ux';
+export type PlantQueueFilter = 'all' | 'risk' | 'hold' | 'SWCO' | 'CORN';
 
 type PlantBaselineDashboardProps = {
   queue: QueueRow[];
@@ -33,7 +42,29 @@ type PlantBaselineDashboardProps = {
   staticPreview?: boolean;
   /** Scheduling section layout when a replan is pending review. */
   schedulingLayout?: 'full' | 'timeline-only';
+  /** Lovable UX port — same GreenByte styles, richer flows. */
+  experience?: PlantDashboardExperience;
+  /** Controlled nav (UX route + URL section). */
+  section?: PlantNavSection;
+  onSectionChange?: (section: PlantNavSection) => void;
+  /** UX route: approval history entries (local demo session). */
+  uxApprovalHistory?: PlantUxHistoryEntry[];
 };
+
+function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
+  switch (filter) {
+    case 'risk':
+      return rows.filter((r) => r.atRisk);
+    case 'hold':
+      return rows.filter((r) => r.status === 'HOLD');
+    case 'SWCO':
+      return rows.filter((r) => r.species === 'SWCO');
+    case 'CORN':
+      return rows.filter((r) => r.species === 'CORN');
+    default:
+      return rows;
+  }
+}
 
 function formatFinish(finish: string, locale: Locale, pattern: string) {
   const [datePart, timePart] = finish.split(' ');
@@ -76,11 +107,19 @@ export function PlantBaselineDashboard({
   defaultSection = 'dashboard',
   staticPreview = false,
   schedulingLayout = 'full',
+  experience = 'baseline',
+  section: controlledSection,
+  onSectionChange,
+  uxApprovalHistory = [],
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const b = m.plantMvp.baselineDashboard;
+  const ux = m.plantMvp.ux;
   const copy = m.plantMvp;
+  const paginationCopy = m.plantMvp.pagination;
+  const isUx = experience === 'ux';
   const schedule = m.plantMvp.scheduleShell;
+  const enablePagination = !staticPreview && !compact;
   const hi = new Set(highlightColumns);
   const active = queue.filter((r) => r.status !== 'COMPLETE');
   const totalKg = active.reduce((s, r) => s + r.kg, 0);
@@ -95,13 +134,76 @@ export function PlantBaselineDashboard({
     (item) => showProgramTimeline || item.id === 'dashboard' || item.id === 'queue',
   );
 
-  const [activeSection, setActiveSection] = useState<PlantNavSection>(() => {
+  const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
     return defaultSection;
   });
+  const sectionControlled = controlledSection !== undefined && onSectionChange !== undefined;
+  const activeSection = sectionControlled ? controlledSection : internalSection;
+  function setActiveSection(next: PlantNavSection) {
+    if (sectionControlled) onSectionChange(next);
+    else setInternalSection(next);
+  }
 
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<PlantQueueFilter>('all');
+  const [selectedPo, setSelectedPo] = useState<string[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [notificationDismissed, setNotificationDismissed] = useState(false);
+  const displayQueue = isUx ? filterQueueRows(queue, queueFilter) : queue;
+  const shownPo = displayQueue.map((r) => r.po);
+  const allShownSelected =
+    shownPo.length > 0 && shownPo.every((po) => selectedPo.includes(po));
+
+  function togglePo(po: string) {
+    setSelectedPo((prev) => (prev.includes(po) ? prev.filter((p) => p !== po) : [...prev, po]));
+  }
+
+  function toggleSelectAllShown() {
+    if (allShownSelected) {
+      setSelectedPo((prev) => prev.filter((p) => !shownPo.includes(p)));
+    } else {
+      setSelectedPo((prev) => Array.from(new Set([...prev, ...shownPo])));
+    }
+  }
+
+  const [queuePage, setQueuePage] = useState(1);
+  const [queuePageSize, setQueuePageSize] = useState<PlantPageSize>(10);
+  const [schedulePage, setSchedulePage] = useState(1);
+  const [schedulePageSize, setSchedulePageSize] = useState<PlantPageSize>(10);
+  const [ganttLayout, setGanttLayout] = useState<ScheduleGanttLayout>('vertical');
+
+  const queuePageSizeEff: PlantPageSize = enablePagination
+    ? queuePageSize
+    : (Math.max(displayQueue.length, 1) as PlantPageSize);
+  const queuePag = useListPagination(displayQueue, queuePage, queuePageSizeEff);
+  const paginatedQueueRows = queuePag.pageItems;
+
+  const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
+  const schedulePageSizeEff: PlantPageSize = enablePagination
+    ? schedulePageSize
+    : (Math.max(scheduleActive.length, 1) as PlantPageSize);
+  const schedulePag = useListPagination(scheduleActive, schedulePage, schedulePageSizeEff);
+
+  useEffect(() => {
+    setQueuePage(1);
+  }, [queueFilter, queue.length, queuePageSize]);
+
+  useEffect(() => {
+    setSchedulePage(1);
+  }, [queue.length, schedulePageSize]);
+
+  useEffect(() => {
+    if (queuePag.safePage !== queuePage) setQueuePage(queuePag.safePage);
+  }, [queuePag.safePage, queuePage]);
+
+  useEffect(() => {
+    if (schedulePag.safePage !== schedulePage) setSchedulePage(schedulePag.safePage);
+  }, [schedulePag.safePage, schedulePage]);
+
   const bellWrapRef = useRef<HTMLDivElement>(null);
   const bellMenuId = useId();
 
@@ -110,6 +212,10 @@ export function PlantBaselineDashboard({
     if (accepted || planAcknowledged) setQueueUpdateUnread(true);
     else setQueueUpdateUnread(false);
   }, [accepted, planAcknowledged, staticPreview]);
+
+  useEffect(() => {
+    if (eventPendingReview) setNotificationDismissed(false);
+  }, [eventType, explanation?.alertBanner, eventPendingReview]);
 
   useEffect(() => {
     if (activeSection === 'queue') setQueueUpdateUnread(false);
@@ -126,14 +232,43 @@ export function PlantBaselineDashboard({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [bellOpen]);
 
+  const showSchedulingNotification =
+    schedulingActionPending && !(isUx && notificationDismissed);
   const notificationCount =
-    (schedulingActionPending ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
+    (showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
+
+  function statusPill(): { label: string; sub: string; className: string; dot: string } {
+    if (eventPendingReview) {
+      return {
+        label: ux.pillAction,
+        sub: ux.pillActionSub,
+        className: 'border-amber-200 bg-amber-50 text-amber-950',
+        dot: 'bg-amber-500',
+      };
+    }
+    if (isUx && (accepted || planAcknowledged) && queueUpdateUnread) {
+      return {
+        label: ux.pillApproved,
+        sub: ux.pillApprovedSub,
+        className: 'border-brand-blue/30 bg-brand-blue/5 text-brand-blue',
+        dot: 'bg-brand-blue',
+      };
+    }
+    return {
+      label: ux.pillSmooth,
+      sub: ux.pillSmoothSub,
+      className: 'border-brand-green/25 bg-brand-green/5 text-brand-green-dark',
+      dot: 'bg-brand-green',
+    };
+  }
+  const pill = isUx ? statusPill() : null;
 
   useEffect(() => {
     if (!showProgramTimeline && (activeSection === 'scheduling' || activeSection === 'copilot')) {
-      setActiveSection('queue');
+      if (sectionControlled) onSectionChange!('queue');
+      else setInternalSection('queue');
     }
-  }, [activeSection, showProgramTimeline]);
+  }, [activeSection, onSectionChange, sectionControlled, showProgramTimeline]);
 
   function sectionTitle(): string {
     switch (activeSection) {
@@ -200,16 +335,53 @@ export function PlantBaselineDashboard({
   }
 
   const eventBanner = eventPendingReview && explanation && (
-    <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950">
+    <div className="mb-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 sm:flex-row sm:items-start">
       <span className="text-amber-600">⚠</span>
-      <div>
-        <p>{explanation.alertBanner}</p>
-        {activeSection === 'dashboard' && (
+      <div className="min-w-0 flex-1">
+        {isUx && (
+          <p className="font-semibold">{ux.amberTitle}</p>
+        )}
+        <p className={isUx ? 'mt-1' : ''}>{explanation.alertBanner}</p>
+        {isUx && (
+          <p className="mt-1 text-xs font-normal text-amber-900/80">{ux.amberBody}</p>
+        )}
+        {activeSection === 'dashboard' && !isUx && (
           <p className="mt-1 text-xs font-normal text-amber-900/80">{b.eventBannerHint}</p>
         )}
       </div>
+      {isUx && (
+        <button
+          type="button"
+          onClick={() => setActiveSection('scheduling')}
+          className="shrink-0 rounded-lg bg-brand-green px-4 py-2 text-xs font-semibold text-white hover:bg-brand-green-dark"
+        >
+          {ux.goSchedule}
+        </button>
+      )}
     </div>
   );
+
+  const calmBanner = isUx && !eventPendingReview && activeSection === 'dashboard' && (
+    <div className="mb-4 flex items-start gap-3 rounded-lg border border-brand-green/25 bg-brand-green/5 px-4 py-3 text-brand-green-dark">
+      <span className="text-brand-green">✓</span>
+      <div>
+        <p className="font-semibold">{ux.calmTitle}</p>
+        <p className="text-sm">{ux.calmBody}</p>
+        <p className="text-sm opacity-80">{ux.calmMeta}</p>
+      </div>
+    </div>
+  );
+
+  const approvedStrip =
+    isUx &&
+    (accepted || planAcknowledged) &&
+    !eventPendingReview &&
+    (activeSection === 'dashboard' || activeSection === 'scheduling') && (
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-brand-green/25 bg-brand-green/5 px-4 py-3 text-sm text-brand-green-dark">
+        <span>✓</span>
+        {ux.approvedStrip}
+      </div>
+    );
 
   const metricsGrid = (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -250,6 +422,17 @@ export function PlantBaselineDashboard({
       <table className="min-w-full text-left text-sm">
         <thead className="bg-gray-50/90 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
           <tr>
+            {isUx && (
+              <th className="w-10 px-3 py-3">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 accent-brand-green"
+                  aria-label={ux.selectAll}
+                  checked={allShownSelected}
+                  onChange={toggleSelectAllShown}
+                />
+              </th>
+            )}
             <th className="px-4 py-3">{copy.table.position}</th>
             <th className="px-4 py-3">{b.colPo}</th>
             <th className="px-4 py-3">{b.colSpecies}</th>
@@ -264,18 +447,49 @@ export function PlantBaselineDashboard({
             >
               {copy.table.status}
             </th>
-            <th className="w-10 px-2 py-3" aria-label={b.actionsAria} />
+            {isUx && (
+              <th
+                className={`px-4 py-3 ${hi.has('reason') ? 'bg-brand-green/10 ring-1 ring-inset ring-brand-green/30' : ''}`}
+              >
+                {copy.table.reason}
+              </th>
+            )}
+            {!isUx && <th className="w-10 px-2 py-3" aria-label={b.actionsAria} />}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {queue.map((row, index) => {
+          {displayQueue.length === 0 && isUx && (
+            <tr>
+              <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                {ux.noRows}
+              </td>
+            </tr>
+          )}
+          {paginatedQueueRows.map((row) => {
             const sp = speciesDisplay(row.species, locale);
             const isComplete = row.status === 'COMPLETE';
+            const isHold = row.status === 'HOLD';
+            const linePosition = queue.findIndex((r) => r.po === row.po) + 1;
+            const isSelected = selectedPo.includes(row.po);
             return (
-              <tr key={row.po} className="hover:bg-gray-50/80">
+              <tr
+                key={row.po}
+                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${row.previousPosition && isUx ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
+              >
+                {isUx && (
+                  <td className="px-3 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 accent-brand-green"
+                      aria-label={ux.selectRow.replace('{po}', row.po)}
+                      checked={isSelected}
+                      onChange={() => togglePo(row.po)}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-green text-sm font-bold text-white">
-                    {index + 1}
+                    {linePosition}
                   </span>
                 </td>
                 <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">{formatPo(row.po)}</td>
@@ -294,26 +508,43 @@ export function PlantBaselineDashboard({
                 <td className={`px-4 py-3 ${hi.has('status') ? 'bg-brand-green/5' : ''}`}>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      isComplete
-                        ? 'bg-brand-green/10 text-brand-green-dark'
-                        : row.atRisk
-                          ? 'bg-amber-50 text-amber-900'
-                          : 'bg-brand-green/10 text-brand-green-dark'
+                      isHold
+                        ? 'bg-red-50 text-red-900'
+                        : isComplete
+                          ? 'bg-brand-green/10 text-brand-green-dark'
+                          : row.atRisk
+                            ? 'bg-amber-50 text-amber-900'
+                            : 'bg-brand-green/10 text-brand-green-dark'
                     }`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isComplete ? 'bg-brand-green/60' : row.atRisk ? 'bg-amber-500' : 'bg-brand-green'
+                        isHold
+                          ? 'bg-red-500'
+                          : isComplete
+                            ? 'bg-brand-green/60'
+                            : row.atRisk
+                              ? 'bg-amber-500'
+                              : 'bg-brand-green'
                       }`}
                     />
-                    {isComplete
-                      ? copy.statusLabels.complete
-                      : row.atRisk
-                        ? copy.statusLabels.atRisk
-                        : copy.statusLabels.planned}
+                    {isHold
+                      ? copy.statusLabels.hold
+                      : isComplete
+                        ? copy.statusLabels.complete
+                        : row.atRisk
+                          ? copy.statusLabels.atRisk
+                          : copy.statusLabels.planned}
                   </span>
                 </td>
-                <td className="px-2 py-3 text-center text-gray-400">⋯</td>
+                {isUx && (
+                  <td
+                    className={`max-w-[12rem] px-4 py-3 text-xs leading-snug text-gray-600 ${hi.has('reason') ? 'bg-brand-green/5' : ''}`}
+                  >
+                    {row.reasonShort ?? '—'}
+                  </td>
+                )}
+                {!isUx && <td className="px-2 py-3 text-center text-gray-400">⋯</td>}
               </tr>
             );
           })}
@@ -353,11 +584,19 @@ export function PlantBaselineDashboard({
       case 'dashboard':
         return (
           <>
+            {calmBanner}
             {eventBanner}
+            {approvedStrip}
             {metricsGrid}
             {!eventPendingReview && (
               <p className="mt-4 text-sm text-gray-600">
-                {copy.copilotIdle} {showProgramTimeline && `(${b.nav.queue} → ${b.nav.scheduling})`}
+                {isUx ? ux.whereNext : copy.copilotIdle}{' '}
+                {showProgramTimeline && !isUx && `(${b.nav.queue} → ${b.nav.scheduling})`}
+              </p>
+            )}
+            {isUx && !eventPendingReview && (
+              <p className="mt-2 text-sm text-gray-500">
+                {accepted || planAcknowledged ? ux.nextApproved : ux.nextCalm}
               </p>
             )}
           </>
@@ -366,18 +605,89 @@ export function PlantBaselineDashboard({
         return (
           <>
             {eventBanner}
+            {approvedStrip}
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-gray-500">
-                {eventPendingReview ? b.queueSubtitleEvent : b.queueSubtitle}
+                {eventPendingReview
+                  ? b.queueSubtitleEvent
+                  : isUx && (accepted || planAcknowledged)
+                    ? ux.queueSubAfter
+                    : b.queueSubtitle}
               </p>
-              <button
-                type="button"
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-              >
-                {b.sortFilter}
-              </button>
+              {isUx ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="sr-only" htmlFor="queue-filter">
+                    {ux.filterLabel}
+                  </label>
+                  <select
+                    id="queue-filter"
+                    value={queueFilter}
+                    onChange={(e) => setQueueFilter(e.target.value as PlantQueueFilter)}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
+                  >
+                    <option value="all">{ux.fAll}</option>
+                    <option value="risk">{ux.fRisk}</option>
+                    <option value="hold">{ux.fHold}</option>
+                    <option value="SWCO">{ux.fSwco}</option>
+                    <option value="CORN">{ux.fCorn}</option>
+                  </select>
+                  {queueFilter !== 'all' && (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-brand-green hover:text-brand-green-dark"
+                      onClick={() => setQueueFilter('all')}
+                    >
+                      {ux.clearFilter}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {b.sortFilter}
+                </button>
+              )}
             </div>
+            {isUx && selectedPo.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-brand-green/20 bg-brand-green/5 px-4 py-2.5 text-sm">
+                <span className="font-medium text-brand-green-dark">
+                  {ux.nSelected.replace('{n}', String(selectedPo.length))}
+                </span>
+                <button
+                  type="button"
+                  className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                  onClick={() => setCompareOpen(true)}
+                >
+                  {ux.compare}
+                </button>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                  onClick={() => setSelectedPo([])}
+                >
+                  {ux.clearSel}
+                </button>
+              </div>
+            )}
             {queueTable}
+            {enablePagination && (
+              <PlantListPagination
+                page={queuePag.safePage}
+                pageSize={queuePageSize}
+                totalPages={queuePag.totalPages}
+                from={queuePag.from}
+                to={queuePag.to}
+                total={queuePag.total}
+                onPageChange={setQueuePage}
+                onPageSizeChange={(size) => {
+                  setQueuePageSize(size);
+                  setQueuePage(1);
+                }}
+                labels={paginationCopy}
+              />
+            )}
           </>
         );
       case 'scheduling':
@@ -387,13 +697,57 @@ export function PlantBaselineDashboard({
             <div className="overflow-hidden rounded-xl border border-gray-200">
               {eventPendingReview && schedulingLayout === 'full' ? (
                 <div className="flex flex-col lg:flex-row">
-                  <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} />
+                  <PlantProgramGantt
+                    rows={schedulePag.pageItems}
+                    rushPo={rushPo}
+                    compact={compact}
+                    layout={ganttLayout}
+                    onLayoutChange={setGanttLayout}
+                    page={schedulePag.safePage}
+                    pageSize={schedulePageSizeEff}
+                    totalRows={schedulePag.total}
+                    totalPages={schedulePag.totalPages}
+                    from={schedulePag.from}
+                    to={schedulePag.to}
+                    onPageChange={setSchedulePage}
+                    onPageSizeChange={(size) => {
+                      setSchedulePageSize(size);
+                      setSchedulePage(1);
+                    }}
+                  />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
               ) : (
-                <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} />
+                <PlantProgramGantt
+                  rows={schedulePag.pageItems}
+                  rushPo={rushPo}
+                  compact={compact}
+                  layout={ganttLayout}
+                  onLayoutChange={setGanttLayout}
+                  page={schedulePag.safePage}
+                  pageSize={schedulePageSizeEff}
+                  totalRows={schedulePag.total}
+                  totalPages={schedulePag.totalPages}
+                  from={schedulePag.from}
+                  to={schedulePag.to}
+                  onPageChange={setSchedulePage}
+                  onPageSizeChange={(size) => {
+                    setSchedulePageSize(size);
+                    setSchedulePage(1);
+                  }}
+                />
               )}
             </div>
+            {isUx && eventPendingReview && explanation && (
+              <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+                <h4 className="text-sm font-semibold text-gray-900">{ux.whatChanged}</h4>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
+                  {explanation.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {acceptFooter}
           </>
         );
@@ -417,6 +771,30 @@ export function PlantBaselineDashboard({
               </div>
             </div>
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
+            {isUx && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setHelpOpen(true)}
+                  className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  <span aria-hidden>?</span>
+                  {ux.navHelp}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  <span>{ux.menuHistory}</span>
+                  {uxApprovalHistory.length > 0 && (
+                    <span className="rounded-full bg-brand-blue/10 px-1.5 text-[11px] font-semibold text-brand-blue">
+                      {uxApprovalHistory.length}
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
             <p className="mt-8 px-2 text-[10px] text-gray-500">
               <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
               {b.systemsOk}
@@ -464,9 +842,45 @@ export function PlantBaselineDashboard({
                     <ul
                       id={bellMenuId}
                       role="menu"
-                      className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-left text-sm shadow-lg"
+                      className="absolute right-0 z-20 mt-2 w-72 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-left text-sm shadow-lg"
                     >
-                      {schedulingActionPending && (
+                      {isUx && (
+                        <li className="border-b px-3 py-2 text-xs font-semibold text-gray-700">
+                          {ux.notifTitle} ({notificationCount})
+                        </li>
+                      )}
+                      {showSchedulingNotification && (
+                        <li role="none" className="border-b px-3 py-3 last:border-0">
+                          <div className="flex gap-2">
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
+                              <p className="mt-0.5 text-xs text-gray-600">
+                                {eventType === 'qa_fail' ? ux.qBell : ux.pBell}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                                  onClick={() => goToSection('scheduling')}
+                                >
+                                  {ux.openSchedule}
+                                </button>
+                                {isUx && (
+                                  <button
+                                    type="button"
+                                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                                    onClick={() => setNotificationDismissed(true)}
+                                  >
+                                    {ux.dismiss}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+                      {!isUx && schedulingActionPending && (
                         <li role="none">
                           <button
                             type="button"
@@ -482,7 +896,25 @@ export function PlantBaselineDashboard({
                           </button>
                         </li>
                       )}
-                      {queueUpdateUnread && (
+                      {queueUpdateUnread && isUx && (
+                        <li role="none" className="px-3 py-3">
+                          <div className="flex gap-2">
+                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-2 border-brand-blue bg-transparent" aria-hidden />
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900">{ux.confirmTitle}</p>
+                              <p className="mt-0.5 text-xs text-gray-600">{ux.confirmBody}</p>
+                              <button
+                                type="button"
+                                className="mt-2 rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                                onClick={() => goToSection('queue')}
+                              >
+                                {ux.openQueue}
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+                      {queueUpdateUnread && !isUx && (
                         <li role="none">
                           <button
                             type="button"
@@ -501,12 +933,13 @@ export function PlantBaselineDashboard({
                     </ul>
                   )}
                   {bellOpen && notificationCount === 0 && (
-                    <p
+                    <div
                       id={bellMenuId}
-                      className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 shadow-lg"
+                      className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-600 shadow-lg"
                     >
-                      {b.notificationsEmpty}
-                    </p>
+                      <p className="font-medium text-gray-900">{b.notificationsEmpty}</p>
+                      {isUx && <p className="mt-1 text-xs text-gray-500">{ux.notifEmptySub}</p>}
+                    </div>
                   )}
                 </div>
               )}
@@ -523,11 +956,139 @@ export function PlantBaselineDashboard({
           )}
 
           <section className="mt-5">
-            <h3 className="text-lg font-semibold text-gray-900">{sectionTitle()}</h3>
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-lg font-semibold text-gray-900">{sectionTitle()}</h3>
+              {pill && (
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${pill.className}`}
+                  title={pill.sub}
+                >
+                  <span className={`h-2 w-2 rounded-full ${pill.dot}`} />
+                  {pill.label}
+                </span>
+              )}
+            </div>
             <div className="mt-4">{renderMainSection()}</div>
           </section>
         </div>
       </div>
+
+      {isUx && !compact && (
+        <nav
+          aria-label="Line 1 mobile"
+          className="fixed inset-x-0 bottom-0 z-40 grid h-14 grid-cols-4 border-t border-gray-200 bg-white lg:hidden"
+        >
+          {visibleNav.map((item) => {
+            const badge = navBadgeKind(item.id);
+            const selected = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActiveSection(item.id)}
+                className={`relative flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium ${
+                  selected ? 'text-brand-green-dark' : 'text-gray-500'
+                }`}
+              >
+                {b.nav[item.labelKey]}
+                {badge && (
+                  <span
+                    className={`absolute right-[22%] top-2 h-2 w-2 rounded-full ${
+                      badge === 'action' ? 'bg-amber-500' : 'bg-brand-blue'
+                    }`}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
+      {isUx && eventPendingReview && onAccept && (
+        <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur lg:bottom-0 lg:static lg:mt-0 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 sm:max-w-none sm:justify-end">
+            <p className="hidden flex-1 text-sm text-gray-600 sm:block">{ux.footerAction}</p>
+            <button
+              type="button"
+              onClick={() => setActiveSection('copilot')}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              {ux.askBtn}
+            </button>
+            <button
+              type="button"
+              disabled={acceptDisabled || accepted}
+              onClick={onAccept}
+              className="rounded-lg bg-brand-green px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-green-dark disabled:opacity-40"
+            >
+              ✓ {accepted ? copy.actions.accepted : copy.actions.accept}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isUx && (
+        <>
+          <PlantHelpDrawer
+            open={helpOpen}
+            onClose={() => setHelpOpen(false)}
+            locale={locale}
+            copy={{
+              title: ux.helpTitle,
+              close: ux.helpClose,
+              glossaryTitle: ux.glossaryTitle,
+              journeysTitle: ux.journeysTitle,
+              presenterTitle: ux.presenterTitle,
+              glossary: ux.glossary,
+              journeys: ux.journeys,
+              talkTrack: ux.talkTrack,
+            }}
+          />
+          <PlantUxHistoryDrawer
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            locale={locale}
+            entries={uxApprovalHistory}
+            copy={{
+              title: ux.historyTitle,
+              subtitle: ux.historySub,
+              empty: ux.historyEmpty,
+              close: ux.helpClose,
+              priority: ux.histPriority,
+              quality: ux.histQuality,
+              byLine: ux.histBy,
+            }}
+          />
+          <PlantUxCompareDrawer
+            open={compareOpen}
+            onClose={() => setCompareOpen(false)}
+            locale={locale}
+            queue={queue}
+            selectedPo={selectedPo}
+            formatFinish={(finish) => formatFinish(finish, locale, b.finishFormat)}
+            copy={{
+              title: ux.cmpTitle,
+              subtitle: ux.cmpSub,
+              close: ux.helpClose,
+              totalWeight: ux.cmpTotal,
+              crops: ux.cmpCrops,
+              firstFinish: ux.cmpFirst,
+              lastFinish: ux.cmpLast,
+              holds: ux.cmpHolds,
+              colPosition: ux.cmpPosition,
+              colOrder: ux.colOrder,
+              colWeight: ux.colWeight,
+              colFinish: ux.colFinish,
+              colStatus: ux.colStatus,
+              paused: ux.paused,
+              statusPlanned: copy.statusLabels.planned,
+              statusAtRisk: copy.statusLabels.atRisk,
+              statusComplete: copy.statusLabels.complete,
+              statusHold: copy.statusLabels.hold,
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
