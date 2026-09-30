@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-005 — UC1 data model medallion (raw silver gold)
+
+- FW: `n/a` · Slug: `uc1-data-model-medallion` · Stack: backend
+- Change type: `feat` · Branch: `feature/greenbyte-005` · PR: `GREENBYTE-005: UC1 data model medallion (raw silver gold)`
+- Status: shipped (2026-09-30) · Package: [`backend/uc1-data-model-medallion/`](../../../analysis/features/backend/uc1-data-model-medallion/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: uc1-data-model-medallion
+Feature name: UC1 data model medallion (raw silver gold)
+Ticket/story: GREENBYTE-005
+Backlog ID: n/a
+Change type: feat
+Stack scope: backend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-003 — UC1 BFF demo plant Dynamo stub
 
 - FW: `n/a` · Slug: `uc1-bff-demo-plant-dynamo-stub` · Stack: full-stack
