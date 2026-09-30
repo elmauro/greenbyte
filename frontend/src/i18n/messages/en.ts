@@ -192,6 +192,9 @@ export const en = {
       layoutHorizontal: 'Horizontal',
       layoutToggleAria: 'Timeline layout',
       holdShort: 'On hold',
+      ganttScrollHint: 'Scroll to see all batches on the timeline.',
+      ganttScrollRegionVertical: 'Program timeline, vertical layout',
+      ganttScrollRegionHorizontal: 'Program timeline, horizontal card strip',
     },
     pagination: {
       rowsPerPage: 'Rows per page',

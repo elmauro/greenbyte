@@ -365,6 +365,9 @@ export const es: Messages = {
       layoutHorizontal: 'Horizontal',
       layoutToggleAria: 'Disposición de la línea de tiempo',
       holdShort: 'En retención',
+      ganttScrollHint: 'Desplázate para ver todos los lotes en la línea de tiempo.',
+      ganttScrollRegionVertical: 'Línea de tiempo del programa, vista vertical',
+      ganttScrollRegionHorizontal: 'Línea de tiempo del programa, tira horizontal de tarjetas',
     },
     pagination: {
       rowsPerPage: 'Filas por página',

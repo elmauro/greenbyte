@@ -172,8 +172,6 @@ export function PlantBaselineDashboard({
 
   const [queuePage, setQueuePage] = useState(1);
   const [queuePageSize, setQueuePageSize] = useState<PlantPageSize>(10);
-  const [schedulePage, setSchedulePage] = useState(1);
-  const [schedulePageSize, setSchedulePageSize] = useState<PlantPageSize>(10);
   const [ganttLayout, setGanttLayout] = useState<ScheduleGanttLayout>('vertical');
 
   const queuePageSizeEff: PlantPageSize = enablePagination
@@ -183,26 +181,14 @@ export function PlantBaselineDashboard({
   const paginatedQueueRows = queuePag.pageItems;
 
   const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
-  const schedulePageSizeEff: PlantPageSize = enablePagination
-    ? schedulePageSize
-    : (Math.max(scheduleActive.length, 1) as PlantPageSize);
-  const schedulePag = useListPagination(scheduleActive, schedulePage, schedulePageSizeEff);
 
   useEffect(() => {
     setQueuePage(1);
   }, [queueFilter, queue.length, queuePageSize]);
 
   useEffect(() => {
-    setSchedulePage(1);
-  }, [queue.length, schedulePageSize]);
-
-  useEffect(() => {
     if (queuePag.safePage !== queuePage) setQueuePage(queuePag.safePage);
   }, [queuePag.safePage, queuePage]);
-
-  useEffect(() => {
-    if (schedulePag.safePage !== schedulePage) setSchedulePage(schedulePag.safePage);
-  }, [schedulePag.safePage, schedulePage]);
 
   const bellWrapRef = useRef<HTMLDivElement>(null);
   const bellMenuId = useId();
@@ -698,43 +684,21 @@ export function PlantBaselineDashboard({
               {eventPendingReview && schedulingLayout === 'full' ? (
                 <div className="flex flex-col lg:flex-row">
                   <PlantProgramGantt
-                    rows={schedulePag.pageItems}
+                    rows={scheduleActive}
                     rushPo={rushPo}
                     compact={compact}
                     layout={ganttLayout}
                     onLayoutChange={setGanttLayout}
-                    page={schedulePag.safePage}
-                    pageSize={schedulePageSizeEff}
-                    totalRows={schedulePag.total}
-                    totalPages={schedulePag.totalPages}
-                    from={schedulePag.from}
-                    to={schedulePag.to}
-                    onPageChange={setSchedulePage}
-                    onPageSizeChange={(size) => {
-                      setSchedulePageSize(size);
-                      setSchedulePage(1);
-                    }}
                   />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
               ) : (
                 <PlantProgramGantt
-                  rows={schedulePag.pageItems}
+                  rows={scheduleActive}
                   rushPo={rushPo}
                   compact={compact}
                   layout={ganttLayout}
                   onLayoutChange={setGanttLayout}
-                  page={schedulePag.safePage}
-                  pageSize={schedulePageSizeEff}
-                  totalRows={schedulePag.total}
-                  totalPages={schedulePag.totalPages}
-                  from={schedulePag.from}
-                  to={schedulePag.to}
-                  onPageChange={setSchedulePage}
-                  onPageSizeChange={(size) => {
-                    setSchedulePageSize(size);
-                    setSchedulePage(1);
-                  }}
                 />
               )}
             </div>

@@ -14,14 +14,16 @@ export function SiteHeader() {
   const session = useDemoSession();
   const onHome = location.pathname === paths.home;
 
-  const navItems = onHome
-    ? [
-        { label: m.nav.innovation, href: '#discover', router: false },
-        { label: m.nav.precision, href: '#precision', router: false },
-        { label: m.nav.sustainability, href: '#sustainability', router: false },
-        { label: m.nav.news, href: '#news', router: false },
-      ]
-    : [];
+  /** Landing anchors — public home only; hidden once demo session is active. */
+  const navItems =
+    onHome && !session
+      ? [
+          { label: m.nav.innovation, href: '#discover', router: false },
+          { label: m.nav.precision, href: '#precision', router: false },
+          { label: m.nav.sustainability, href: '#sustainability', router: false },
+          { label: m.nav.news, href: '#news', router: false },
+        ]
+      : [];
 
   const demoItems = session
     ? [
