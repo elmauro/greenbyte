@@ -21,6 +21,7 @@ export function SiteHeader() {
 
   const demoItems = [
     { label: m.nav.demoPlant, to: paths.demoPlant },
+    { label: m.nav.demoPlantUx, to: paths.demoPlantUx },
     { label: m.nav.demoPlantFlow, to: paths.demoPlantFlow },
     { label: m.nav.demoArchitecture, to: paths.demoArchitecture },
   ];
