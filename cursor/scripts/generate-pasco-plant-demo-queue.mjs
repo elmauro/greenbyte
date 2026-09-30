@@ -5,6 +5,9 @@
  *   frontend/src/demo/plant/pascoLine1Baseline.ts
  *
  * Source CSVs (read-only): Hackathon 2026 - Use Cases/.../data_sources/
+ *
+ * Scope limits (full Pasco vs mock): docs/hackathon/uc1-plant-demo-mock-data.md
+ * Syngenta B+ alignment: docs/hackathon/uc1-syngenta-assumptions.md §3.1
  */
 import fs from 'node:fs';
 import path from 'node:path';

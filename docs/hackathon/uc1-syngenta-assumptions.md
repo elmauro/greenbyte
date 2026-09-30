@@ -63,8 +63,31 @@ In the historical extract, PO **`1001858227`** appears as **`Pass`** in `LSV Pas
 | **Trigger** | **Ingest:** `POST /demo/plant/ingest/sap-priority-change` · `POST /demo/plant/ingest/pass-fail-log` (operator / Data API); UI polls queue — **no** rush/QA buttons on `/demo/plant` | Aligns with **data lands → replan**; legacy `POST /events` for tests only. |
 | **Rush** | Reorder existing PO **`1002307551`** (priority 2, finish 2026-07-06 story) | **Partial:** matches re-prioritization; brief also allows **surprise rush batch** (new PO on refresh). |
 | **QA fail** | PO **`1001884747`** → `HOLD`, resequence (anchored to **Fail / Dent** on Line 1 in Pasco pass/fail log) | **Better anchor** than a PO that only **Pass**es in the extract; still **button-triggered** in demo. |
-| **Queue** | Six **synthetic** rows (Pasco-style PO numbers, simplified dates) | OK for hackathon; Camilo target = ETL from Excel/PG. |
+| **Queue** | **~36 rows** from Pasco CSV subset (`pascoLine1Baseline`; see [uc1-plant-demo-mock-data.md](./uc1-plant-demo-mock-data.md)) — not full Line 1 Schedule | **Partial:** real POs/kg; **not** COISPI-active-only slice until Data API |
 | **Customer orders** | Not yet a first-class ranking input | **Gap** vs brief success criteria. |
+| **Multi-line plant** | UI + mock = **Line 1 only** (`line-1`) | **Aligned** with B+ persona (one scheduler); **data** in xlsx includes L2/SSV/Gravity — **tier C** for UI |
+
+---
+
+## 3.1 Scope alignment verdict (Syngenta UC1 brief ↔ GreenByte B+)
+
+Use this table for demo-day and judge conversations. **Tier B+** is defined in [uc1-mvp-scope.md](./uc1-mvp-scope.md).
+
+| Syngenta / brief expectation | GreenByte B+ delivery | Verdict |
+| --- | --- | --- |
+| Ranked queue with **reason per position** | Queue + `reasonShort`, replan diff, copilot copy | **Met** (mock/BFF; ETL replaces mock) |
+| **Inject rush** live; plan re-sequences | Operator ingest → poll → Scheduling + explain | **Met** (mechanism) |
+| Rush = surprise batch **or** urgency | Stub: **re-priority** of fixed PO **1002307551** only | **Partial** — second scenario (new PO on SAP refresh) backlog |
+| **Inject failed QA** live | Ingest pass/fail → HOLD + resequence | **Met** (mechanism) |
+| QA grounded in **pass/fail log** | Anchor **1001884747** (Fail / Dent, Line 1) | **Met** (narrative); log not auto-polled |
+| Plain-language **explanation** + human **accept** | `explanation` + Accept schedule | **Met** (template; Agent replaces) |
+| **No live ERP** write | Accept = demo audit only | **Met** |
+| Transparent rules, not opaque solver | `diff.moves` + `diff.reasons` | **Met** |
+| Inputs: batch list, **capacity**, **customer orders**, changeover | Batch list partial-real; capacity = heuristic KPI; customer orders absent | **Partial** |
+| **New batch arrives** (queue refresh) | Static baseline until SAP/ETL refresh story | **Partial** — documented in §5 |
+| Full Pasco multi-tab / multi-line data in UI | Single line demo; other tabs in ETL scope | **Deferred** (tier C / Camilo Phase 2) |
+
+**Bottom line:** GreenByte B+ **matches what Syngenta asks to prove in the room** (rush + QA inject, replan, explain, accept, no ERP). It **does not** yet deliver the **full** Pasco data surface (all lines, all active POs, customer-order-driven ranking, or both rush shapes). That split is **intentional** for hackathon week; gaps are backlog, not silent scope creep.
 
 ---
 
@@ -135,6 +158,8 @@ Browser continues to call **BFF only**; events should eventually carry `source` 
 
 ## 7. Changelog (assumption fixes in repo)
 
+- **§3.1** scope alignment verdict; queue row updated for Pasco baseline mock; multi-line deferred vs xlsx.
+- [uc1-plant-demo-mock-data.md](./uc1-plant-demo-mock-data.md): full Pasco vs mock subset + target ETL slice.
 - Documented this gap analysis (this file).
 - QA demo PO aligned to **1001884747** (Pasco **Fail / Dent**, Line 1) with UI copy stating inject simulates log/SAP-style events.
 - Rush copy clarifies: **re-priority of existing PO** in stub; brief also allows **new batch arrival** on refresh.

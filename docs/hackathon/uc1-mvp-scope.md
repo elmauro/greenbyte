@@ -39,6 +39,18 @@ We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferre
 
 - Ranked queue with reasons; inject **rush** or **failed QA** live; replan + plain-language explanation; human accepts; no live ERP; recommendation not opaque solver output.
 
+### 3.1 What we commit to vs what we defer
+
+| In scope for **demo day (B+)** | Explicitly **out** or **later** |
+| --- | --- |
+| **One** conditioning line (Pasco **LSV Line 1**, `line-1`) | Multi-line Gantt (L2, Gravity, SSV) — tier **C** |
+| Two live **ingest** triggers (SAP priority / pass-fail **Fail**) + queue poll | Scheduler UI buttons for rush/QA |
+| Replan diff + copilot explanation + **Accept** | Write-back to SAP/ERP |
+| Mock queue from Pasco CSV subset (~36 rows; [uc1-plant-demo-mock-data.md](./uc1-plant-demo-mock-data.md)) | Full **476**-row Line 1 Schedule or **202**-PO SAP sheet in UI |
+| ETL target: Camilo **GET queue** + **POST replan** from PostgreSQL | Auto-ingest from live COISPI |
+
+**Syngenta alignment detail:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md) §3.1 (met / partial / deferred per brief item).
+
 ---
 
 ## 4. Layer 1 — Demo day (required)
@@ -82,7 +94,7 @@ When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **
 
 - Batch detail drawer: `GET /demo/plant/batches/{po}/summary`
 - Side-by-side before/after queue
-- Real rows from Pasco Excel seed (replace hardcoded PO list)
+- ~~Real rows from Pasco Excel seed~~ **Partial:** `pascoLine1Baseline` generator — align to **active Line 1** slice (see mock-data doc)
 - “Adjust manually” disabled with tooltip
 
 **Out:** UC4 product, multi-line, ERP write, plant IoT.
