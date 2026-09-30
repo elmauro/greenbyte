@@ -58,6 +58,20 @@ functions:
           method: POST
           path: /demo/plant/events
 
+  plantDemoIngestPassFail:
+    handler: functions/plant-demo-ingest-pass-fail/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/ingest/pass-fail-log
+
+  plantDemoIngestSap:
+    handler: functions/plant-demo-ingest-sap/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/ingest/sap-priority-change
+
   plantDemoReset:
     handler: functions/plant-demo-reset/handler.handler
     events:

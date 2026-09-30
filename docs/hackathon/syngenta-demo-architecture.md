@@ -202,7 +202,9 @@ UI ── inject event ──► BFF ──► Data API (replan) ──► Agent
 | Method | Path | Syngenta trigger / moment |
 | --- | --- | --- |
 | GET | `/demo/plant/lines/{lineId}/queue` | Page load — calm queue |
-| POST | `/demo/plant/events` | **Rush** (`type: rush`) or **QA fail** (`type: qa_fail`) |
+| POST | `/demo/plant/ingest/sap-priority-change` | **Rush** signal (SAP priority — operator / Data API) |
+| POST | `/demo/plant/ingest/pass-fail-log` | **QA fail** (LSV pass/fail Fail row) |
+| POST | `/demo/plant/events` | Legacy rush / QA inject (tests; not in scheduler UI) |
 | POST | `/demo/plant/schedule/accept` | Human sign-off after replan |
 | POST | `/demo/plant/batches/explain` | **Explain my batch** (read-only Q&A) |
 | POST | `/demo/plant/reset` | Demo repeat — restore baseline queue |

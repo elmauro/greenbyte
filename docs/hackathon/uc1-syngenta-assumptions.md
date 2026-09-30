@@ -60,7 +60,7 @@ In the historical extract, PO **`1001858227`** appears as **`Pass`** in `LSV Pas
 
 | Aspect | Demo behavior | Syngenta-aligned? |
 | --- | --- | --- |
-| **Trigger** | `POST /demo/plant/events` (`rush` \| `qa_fail`) or UI buttons | OK for **demo-ready inject**; production should map to SAP refresh / pass-fail row. |
+| **Trigger** | **Ingest:** `POST /demo/plant/ingest/sap-priority-change` · `POST /demo/plant/ingest/pass-fail-log` (operator / Data API); UI polls queue — **no** rush/QA buttons on `/demo/plant` | Aligns with **data lands → replan**; legacy `POST /events` for tests only. |
 | **Rush** | Reorder existing PO **`1002307551`** (priority 2, finish 2026-07-06 story) | **Partial:** matches re-prioritization; brief also allows **surprise rush batch** (new PO on refresh). |
 | **QA fail** | PO **`1001884747`** → `HOLD`, resequence (anchored to **Fail / Dent** on Line 1 in Pasco pass/fail log) | **Better anchor** than a PO that only **Pass**es in the extract; still **button-triggered** in demo. |
 | **Queue** | Six **synthetic** rows (Pasco-style PO numbers, simplified dates) | OK for hackathon; Camilo target = ETL from Excel/PG. |

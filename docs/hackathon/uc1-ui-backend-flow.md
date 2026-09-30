@@ -52,8 +52,8 @@ flowchart LR
 | # | User action (UX) | When (moment) | Frontend calls BFF | BFF orchestration (target) | Backend response → UI binding |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Open `/demo/plant` | Page load | `GET /demo/plant/lines/line-1/queue` | Proxy Data `GET /lines/line-1/queue` | **`queue[]`**, `planVersion` → table rows, status badges, “calm” state |
-| 2 | Click **Simulate rush batch** | Live demo inject | `POST /demo/plant/events` `{ type: "rush", lineId, locale }` | Data `POST /schedule/replan` → Agent `POST /explain-replan` with diff | **`PlantEventResponse`**: new `queue[]`, `diff.moves[]` (highlight rows), `explanation.*` → banner + copilot, timeline + wow image |
-| 3 | Click **Simulate QA failure** | Live demo inject | Same with `type: "qa_fail"` | Same pipeline; replan rules differ (hold + resequence) | Same shape; HOLD status, copilot QA copy |
+| 2 | Operator posts **SAP priority** ingest (not a UI button) | Live demo | `POST /demo/plant/ingest/sap-priority-change` | Data replan → Agent explain (target) | UI **polls** GET queue → **`PlantEventResponse`** shape via pending `lastEvent` / local apply on ingest response |
+| 3 | Operator posts **pass/fail Fail** ingest | Live demo | `POST /demo/plant/ingest/pass-fail-log` | Hold + resequence rules | Same; HOLD status, copilot QA copy |
 | 4 | Click **Accept schedule** | After event | `POST /demo/plant/schedule/accept` `{ lineId }` | Log acceptance (BFF or Data audit table) | **`acceptedAt`**, `planVersion` → disabled accept button + confirmation note |
 | 5 | Click **Reset queue** | Repeat demo | `POST /demo/plant/reset` `{ lineId }` | Reset demo state / reload baseline seed | Fresh **`queue[]`**, clear copilot & timeline |
 | 6 | Sales: pick PO + **Ask** | Anytime (nice-to-have) | `POST /demo/plant/batches/explain` `{ po, question, locale }` | Agent (+ Data tools for batch/queue context) | **`answer`**, **`citations[]`** → chat panel (no queue change) |

@@ -22,11 +22,13 @@ Production demo: `https://greenbyte-ag.com/demo/plant` (after deploy + `VITE_API
 
 These are the **only** business events the hackathon demo script requires beyond loading the queue.
 
-| # | Trigger (ES/EN UI) | User action | BFF route | Changes queue? |
+| # | Trigger | Who acts | BFF route (demo) | Changes queue? |
 | --- | --- | --- | --- | --- |
-| **A** | **Rush batch** / Lote rush | **Simulate rush batch** | `POST /demo/plant/events` | **Yes** — replan |
-| **B** | **QA failure** / Fallo QA | **Simulate QA failure** | `POST /demo/plant/events` | **Yes** — HOLD + resequence |
-| **C** | **Explain my batch** (sales nice-to-have) | PO + question / quick prompts | `POST /demo/plant/batches/explain` | **No** — read-only Q&A |
+| **A** | **Rush batch** / Lote rush | Operator / Data API posts SAP priority signal | `POST /demo/plant/ingest/sap-priority-change` | **Yes** — replan |
+| **B** | **QA failure** / Fallo QA | Operator / Data API posts pass/fail **Fail** row | `POST /demo/plant/ingest/pass-fail-log` | **Yes** — HOLD + resequence |
+| **C** | **Explain my batch** (sales nice-to-have) | Scheduler PO + question | `POST /demo/plant/batches/explain` | **No** — read-only Q&A |
+
+Scheduler UI **polls** `GET .../queue` — no rush/QA buttons on `/demo/plant`. Legacy: `POST /demo/plant/events`. Operator curl: [uc1-demo-operator-ingest.md](../../../docs/hackathon/uc1-demo-operator-ingest.md).
 
 Supporting (not Syngenta “inject” but required for demo):
 
@@ -40,24 +42,27 @@ Supporting (not Syngenta “inject” but required for demo):
 
 ## 2. Trigger A — Rush batch
 
-### UX (already built)
+### UX (scheduler)
 
-- Button: **Simulate rush batch** on `/demo/plant`
-- After response: `PlantScheduleWorkspace` (Gantt + copilot + alert)
+- No inject button — operator posts ingest; UI poll shows **Scheduling** badge + Gantt/copilot
 - Flow map: `/demo/plant/flow?step=03`
 
-### BFF
+### BFF (primary)
 
 ```http
-POST /demo/plant/events
+POST /demo/plant/ingest/sap-priority-change
 Content-Type: application/json
 
 {
-  "type": "rush",
   "lineId": "line-1",
-  "locale": "en" | "es"
+  "locale": "en",
+  "po": "1002307551",
+  "priority": 2,
+  "scheduledFinish": "2026-07-06 09:00"
 }
 ```
+
+Response includes `source: "sap_priority_change"`.
 
 ### BFF orchestration (target)
 
@@ -85,18 +90,25 @@ Content-Type: application/json
 
 ## 3. Trigger B — QA failure
 
-### UX
+### UX (scheduler)
 
-- Button: **Simulate QA failure**
-- UI: **`HOLD`** on failed batch; line re-sequences without that slot
+- Poll + notifications; **`HOLD`** on failed batch after ingest
 - Flow map: `/demo/plant/flow?step=03b`
 
-### BFF
+### BFF (primary)
 
-Same route as rush, different body:
+```http
+POST /demo/plant/ingest/pass-fail-log
+Content-Type: application/json
 
-```json
-{ "type": "qa_fail", "lineId": "line-1", "locale": "en" | "es" }
+{
+  "lineId": "line-1",
+  "locale": "en",
+  "po": "1001884747",
+  "passFail": "Fail",
+  "failedFor": "Dent",
+  "equipmentId": "Line 1"
+}
 ```
 
 ### Demo behavior (mock — Camilo should match)

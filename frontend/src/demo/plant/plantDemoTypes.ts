@@ -41,6 +41,8 @@ export type PlantEventResponse = {
   planVersion: number;
   diff: { moves: QueueMove[]; reasons: string[] };
   explanation: PlantExplanation;
+  /** Where the replan was triggered (ingest routes set this). */
+  source?: string;
 };
 
 export type PlantAcceptResponse = {

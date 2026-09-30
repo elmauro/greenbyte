@@ -292,8 +292,8 @@ export const es: Messages = {
     triggers: {
       s01: 'Usuario abre /demo/plant — useEffect llama plantDemoApi.getQueue().',
       s02: 'Misma respuesta GET — la UI usa finish, atRisk, reasonShort (sin segunda petición).',
-      s03: 'Clic en Simulate rush batch — POST /demo/plant/events.',
-      s03b: 'Clic en Simulate QA failure — POST /demo/plant/events con qa_fail.',
+      s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
+      s03b: 'Operador publica fila Fail en pass/fail — POST /demo/plant/ingest/pass-fail-log.',
       s04: 'Copiloto desde explanation en la respuesta POST (BFF → Agent explain-replan).',
       s05: 'Timeline desde queue[] del evento — no hay GET /timeline.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
@@ -314,7 +314,7 @@ export const es: Messages = {
     eyebrow: 'Syngenta UC1 · Objetivo demo hackathon',
     title: 'Pasco acondicionamiento — Línea 1',
     subtitle:
-      'Demo interactiva: cola rankeada, rush/QA en vivo, timeline + copiloto, aceptación humana — mismo contrato BFF que producción (MSW o core-api).',
+      'Espacio del programador: la cola se actualiza cuando llegan datos upstream (prioridad SAP / log pass-fail). Revisa Programación y acepta — sin escritura ERP.',
     demoTargetBadge: 'Demo target B+ · Alineado al brief Syngenta + mockups wow GreenByte.',
     links: {
       tour: 'Historia guiada (5 pasos)',
@@ -324,7 +324,7 @@ export const es: Messages = {
       backMvp: 'Volver al demo Línea 1',
     },
     lineTitle: 'Cola Línea 1',
-    lineSubtitle: 'Estado estable — inyecta un evento para replanificar (flujo demo-ready Syngenta).',
+    lineSubtitle: 'Estado estable — los replanes aparecen cuando ingest/BFF recibe filas nuevas (poll ~5 s).',
     loading: 'Cargando cola…',
     status: { calm: 'Tranquilo y estable', eventActive: 'Evento activo — revisa plan propuesto' },
     statusLabels: { planned: 'PLANIFICADO', atRisk: 'EN RIESGO', complete: 'COMPLETO', hold: 'RETENIDO QA' },
@@ -405,33 +405,19 @@ export const es: Messages = {
       notificationQueueTitle: 'Cola actualizada',
       notificationQueueBody: 'Plan aceptado — revisa orden y fechas',
     },
+    dataFeed: {
+      title: 'Los eventos vienen de los datos — no de esta pantalla',
+      body: 'UC1 Syngenta: rush y QA se disparan cuando actualizan SAP o el log LSV pass/fail. Operadores o Data API hacen POST a ingest del BFF; esta UI hace poll de la cola y muestra notificaciones cuando hay replan pendiente.',
+      sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
+      operatorDoc: 'Ejemplos curl: docs/hackathon/uc1-demo-operator-ingest.md',
+    },
     actions: {
-      rush: 'Simular lote rush',
-      rushTooltip:
-        'Simula llegada de rush: repriorizar PO 1002307551 existente (el brief también contempla PO nuevo vía refresh SAP).',
-      qaFail: 'Simular fallo QA',
-      qaFailTooltip:
-        'Simula fila Fail en log pass/fail: HOLD PO 1001884747 (Pasco Fail — Dent, Línea 1).',
-      injectSimNote:
-        'Los botones simulan eventos demo Syngenta (rush / test fallido). En planta real reaccionarían al refresh SAP y filas LSV pass/fail — ver docs/hackathon/uc1-syngenta-assumptions.md.',
-      reset: 'Restablecer cola',
-      resetTooltip: 'Vuelve a la cola base tranquila, antes de cualquier evento inyectado.',
       accept: 'Aceptar programa',
       accepted: 'Aceptado',
     },
-    eventHelp: {
-      title: 'Qué simula cada botón (demo-ready Syngenta)',
-      rushLabel: 'Rush',
-      rushBody:
-        'En este stub: el PO 1002307551 existente sube (prioridad 2, fin 2026-07-06). En operación, un rush también puede ser un PO activo nuevo desde COISPI/SAP.',
-      qaLabel: 'Fallo QA',
-      qaBody:
-        'Simula fila Fail en log pass/fail LSV (demo PO 1001884747, Dent). El lote queda en HOLD y se reordena la línea.',
-      resetLabel: 'Restablecer',
-      resetBody: 'Quita el evento inyectado para repetir la demo en vivo desde cola estable.',
-    },
     copilotTitle: 'Copiloto IA — Qué cambió',
-    copilotIdle: 'Inyecta rush o fallo QA para ver el orden propuesto y la explicación.',
+    copilotIdle: 'Cuando llegue un replan desde datos upstream, abre Programación para revisar orden y explicación.',
     footerStats: '{count} lotes activos en cola (POs estilo Pasco).',
     acceptedNote: 'Aceptación humana registrada (demo). Sin actualización ERP en vivo.',
     apiNoteMsw:

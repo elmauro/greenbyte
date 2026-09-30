@@ -4,7 +4,7 @@
 **Audience:** Product, backend, data, and AI engineers.  
 **Status:** Hackathon **B+** demo; production paths marked **target**.
 
-**Related:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) · [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
+**Related:** [uc1-blueprint-narrative.md](./uc1-blueprint-narrative.md) (plain-language story) · [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) · [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
 
 ---
 
@@ -12,12 +12,19 @@
 
 | Layer | **Today (repo / deployed dev)** | **Target (Syngenta-aligned product)** |
 | --- | --- | --- |
-| **UI** | React `/demo/plant` — Dashboard, Queue, Scheduling (Gantt + “What changed”), Copilot, bell notifications | Same UX; optional manual drag on Gantt (**target**) |
+| **UI** | React `/demo/plant` — **no rush/QA buttons**; polls queue; notifications when replan pending | Same UX; optional manual drag on Gantt (**target**) |
 | **BFF** | `core-api` Lambda — `/demo/plant/*`; queue state in **DynamoDB** (`demo-plant-state`) | Orchestrates Data + Agent; audit accept / overrides |
 | **Data API** | Stubbed inside BFF logic / MSW; no live PG yet | ETL from Pasco Excel → **PostgreSQL**; replan rules; event detection from extracts |
 | **Agent API** | Template `explanation` in BFF/MSW | **RAG** on structured diff + queue facts only (`explain-replan`, batch Q&A) |
-| **Sources** | Synthetic queue + **inject buttons** simulating rush / QA | **SAP COISPI refresh**, **LSV Pass_Fail Log**, SAP priority/dates, customer orders (**gap**) |
+| **Sources** | **BFF ingest** (`/ingest/sap-priority-change`, `/ingest/pass-fail-log`) simulating upstream rows; operator Postman/curl | **Data API** after ETL from **SAP COISPI refresh**, **LSV Pass_Fail Log**, customer orders (**gap**) |
 | **ERP write** | None | None (human accepts; no auto SAP post) |
+
+### 1.1 Demo UX principle (Syngenta-aligned)
+
+- **Scheduler UI** behaves like production: it **reacts** to queue changes; it does **not** fabricate rush/QA with on-page buttons.
+- **Operators / Data API** land new facts via **ingest** (see [uc1-demo-operator-ingest.md](./uc1-demo-operator-ingest.md)).
+- **`POST /demo/plant/events`** remains a **legacy** shortcut for tests; not shown in the web app.
+- **Hackathon “inject live”** for judges = operator posts ingest **while** the scheduler screen is open → UI poll → Scheduling badge → accept.
 
 ---
 
@@ -82,7 +89,8 @@ Pasco operational pattern is documented in [uc1-syngenta-assumptions.md](./uc1-s
 | **SAP COISPI / Excel SAP data** | **Priority** or **scheduled finish** change on existing PO | `priority_change` → often **`rush_repriority`** | No — same PO, new urgency |
 | **LSV Pass_Fail Log** | Row with **`Pass/Fail = Fail`**, PO on active line | **`qa_fail`** (with `failed_for` code) | No — test result on batch already on schedule |
 | **Open customer orders** (brief input) | Demand pull on finish dates | **`demand_pressure`** (feeds ranking reasons) | **Gap** in demo |
-| **Demo inject (hackathon)** | UI button / `POST /demo/plant/events` | `rush` \| `qa_fail` | Simulates landing of rush or fail — not production trigger |
+| **Demo ingest (hackathon)** | `POST .../ingest/sap-priority-change` or `.../pass-fail-log` (operator / script) | `rush` \| `qa_fail` internally | Simulates upstream row landing; UI polls GET queue |
+| **Legacy** | `POST /demo/plant/events` | `rush` \| `qa_fail` | Tests only — not used in scheduler UI |
 
 ### 3.1 Event → processing pipeline (target)
 
@@ -432,16 +440,17 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  BTN[Inject Rush/QA button]
+  OP[Operator Postman / Data API]
+  ING[BFF ingest routes]
   BFF[core-api]
   DDB[(DynamoDB)]
-  UI[React + badges]
+  UI[React poll + badges]
 
-  BTN --> BFF
+  OP --> ING
+  ING --> BFF
   BFF --> DDB
-  BFF --> UI
+  UI -->|GET queue ~5s| BFF
   UI -->|Accept| BFF
-  UI -->|Poll GET queue| BFF
 ```
 
 ---
@@ -469,3 +478,4 @@ UC4 (breeding) shares the **same container** (React → BFF → Data + Agent →
 | Date | Change |
 | --- | --- |
 | 2026-09-30 | Initial blueprint: architecture, sources → events, decisions, notifications, manual adjust target, AI data model |
+| 2026-09-30 | Demo UX: no scheduler inject buttons; BFF ingest routes; operator guide |

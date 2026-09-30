@@ -28,7 +28,7 @@ export const BASE_QUEUE = [
 export const EXPLANATIONS = {
   en: {
     rush: {
-      alertBanner: 'Event injected: Rush batch — customer window at risk.',
+      alertBanner: 'SAP priority update — customer window at risk; line replanned.',
       summary: 'Moved PO 1002307551 ahead to protect the 2026-07-06 customer window.',
       bullets: [
         'Moved PO 1002307551 ahead of PO 1001759341.',
@@ -38,7 +38,7 @@ export const EXPLANATIONS = {
       impact: 'Impact: Customer window protected · Net changeover: −1.5h (Pasco heuristic).',
     },
     qa_fail: {
-      alertBanner: 'Event injected: Failed QA test — batch moved to hold and queue re-sequenced.',
+      alertBanner: 'LSV pass/fail log — Fail recorded; batch on hold and queue re-sequenced.',
       summary: 'PO 1001884747 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
       bullets: [
         'PO 1001884747 set to HOLD from LSV pass/fail log — Fail (Dent), Line 1 (Pasco extract).',
@@ -50,7 +50,7 @@ export const EXPLANATIONS = {
   },
   es: {
     rush: {
-      alertBanner: 'Evento inyectado: Lote rush — ventana de cliente en riesgo.',
+      alertBanner: 'Actualización de prioridad SAP — ventana de cliente en riesgo; línea reprogramada.',
       summary: 'Se adelantó PO 1002307551 para proteger la ventana del 2026-07-06.',
       bullets: [
         'PO 1002307551 pasó por delante de PO 1001759341.',
@@ -60,7 +60,7 @@ export const EXPLANATIONS = {
       impact: 'Impacto: ventana de cliente protegida · Changeover neto: −1,5 h (heurística Pasco).',
     },
     qa_fail: {
-      alertBanner: 'Evento inyectado: Test QA fallido — lote en hold y cola reordenada.',
+      alertBanner: 'Log pass/fail LSV — Fail registrado; lote en hold y cola reordenada.',
       summary: 'PO 1001884747 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
       bullets: [
         'PO 1001884747 en HOLD según log pass/fail LSV — Fail (Dent), Línea 1 (extracto Pasco).',

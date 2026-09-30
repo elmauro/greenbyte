@@ -119,8 +119,8 @@ export const en = {
     triggers: {
       s01: 'User opens /demo/plant — useEffect calls plantDemoApi.getQueue().',
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
-      s03: 'User clicks Simulate rush batch — POST /demo/plant/events.',
-      s03b: 'User clicks Simulate QA failure — POST /demo/plant/events with qa_fail.',
+      s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
+      s03b: 'Operator posts pass/fail Fail row — POST /demo/plant/ingest/pass-fail-log.',
       s04: 'Copilot fills from POST response explanation (BFF calls Agent explain-replan).',
       s05: 'Timeline derives from event response queue[] — no GET /timeline.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
@@ -141,7 +141,7 @@ export const en = {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
     title: 'Pasco conditioning — Line 1',
     subtitle:
-      'Interactive scheduling demo: ranked queue, live rush/QA inject, timeline + copilot explanation, human accept — same BFF contract as production (MSW or core-api).',
+      'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
     links: {
       tour: 'Guided story (5 steps)',
@@ -151,7 +151,7 @@ export const en = {
       backMvp: 'Back to Line 1 demo',
     },
     lineTitle: 'Line 1 queue',
-    lineSubtitle: 'Calm baseline — inject an event to replan (Syngenta demo-ready flow).',
+    lineSubtitle: 'Calm baseline — replans appear when Data API or BFF ingest receives new source rows (poll every ~5s).',
     loading: 'Loading queue…',
     status: { calm: 'Calm & stable', eventActive: 'Event active — review proposed plan' },
     statusLabels: { planned: 'PLANNED', atRisk: 'AT RISK', complete: 'COMPLETE', hold: 'QA HOLD' },
@@ -232,33 +232,19 @@ export const en = {
       notificationQueueTitle: 'Queue updated',
       notificationQueueBody: 'Accepted plan — check new order and dates',
     },
+    dataFeed: {
+      title: 'Events come from data — not from this screen',
+      body: 'Syngenta UC1: rush and QA replans trigger when SAP schedule data or LSV pass/fail rows update. Operators or Data API POST to BFF ingest; this UI polls the queue and shows notifications when a replan is pending.',
+      sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
+      operatorDoc: 'Operator curl examples: docs/hackathon/uc1-demo-operator-ingest.md',
+    },
     actions: {
-      rush: 'Simulate rush batch',
-      rushTooltip:
-        'Simulates a rush landing: re-prioritize existing PO 1002307551 (Syngenta brief also allows new SAP PO on refresh).',
-      qaFail: 'Simulate QA failure',
-      qaFailTooltip:
-        'Simulates pass/fail log landing: HOLD PO 1001884747 (Pasco Fail — Dent, Line 1).',
-      injectSimNote:
-        'Inject buttons simulate Syngenta demo events (rush lands / test fails). Production would react to SAP schedule refresh and LSV pass/fail rows — see docs/hackathon/uc1-syngenta-assumptions.md.',
-      reset: 'Reset queue',
-      resetTooltip: 'Return to the calm baseline queue before any injected event.',
       accept: 'Accept schedule',
       accepted: 'Accepted',
     },
-    eventHelp: {
-      title: 'What each inject button simulates (Syngenta demo-ready)',
-      rushLabel: 'Rush',
-      rushBody:
-        'In this stub: existing PO 1002307551 moves up (priority 2, finish 2026-07-06). In plant operations, a rush can also be a new active PO from SAP COISPI refresh.',
-      qaLabel: 'QA failure',
-      qaBody:
-        'Simulates a Fail row on the LSV pass/fail log (demo PO 1001884747, Dent). Batch goes on HOLD and the line re-sequences.',
-      resetLabel: 'Reset',
-      resetBody: 'Clears the injected event so you can run the live demo again from a stable queue.',
-    },
     copilotTitle: 'AI Copilot — What changed',
-    copilotIdle: 'Inject a rush batch or QA failure to see the proposed order and explanation.',
+    copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance logged (demo). No live ERP update.',
     apiNoteMsw:
