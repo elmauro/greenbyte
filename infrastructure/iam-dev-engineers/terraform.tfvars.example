@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (gitignored). Do not commit.
+
+aws_region = "us-east-1"
+
+dev_engineer_emails = [
+  "camilo.restrepo@hatchworks.com",
+  "david.berrio@hatchworks.com",
+]
+
+# Console login: users must change password on first sign-in.
+create_console_login = true

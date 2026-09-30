@@ -43,6 +43,7 @@ export function getQueueResponse(state, lineId) {
     queue: cloneQueue(state.queue),
     planVersion: state.planVersion,
     lastEvent: pendingEvent ? state.lastEvent : null,
+    acceptedPlanVersion,
   };
 }
 

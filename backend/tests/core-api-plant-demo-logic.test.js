@@ -42,7 +42,9 @@ describe('plant demo logic', () => {
     const { state: afterAccept, response } = acceptPlan(afterRush, 'line-1');
     expect(afterAccept.lastEvent).toBeNull();
     expect(afterAccept.acceptedPlanVersion).toBe(2);
-    expect(getQueueResponse(afterAccept, 'line-1').lastEvent).toBeNull();
+    const queueRes = getQueueResponse(afterAccept, 'line-1');
+    expect(queueRes.lastEvent).toBeNull();
+    expect(queueRes.acceptedPlanVersion).toBe(2);
     expect(response.planVersion).toBe(2);
   });
 

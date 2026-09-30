@@ -30,6 +30,8 @@ export type PlantQueueResponse = {
   planVersion: number;
   /** Set when plan was changed by rush/QA (BFF reads from Dynamo). */
   lastEvent?: PlantEventType | null;
+  /** Plan version the planner accepted (BFF); pending events are hidden when planVersion matches. */
+  acceptedPlanVersion?: number | null;
 };
 
 export type PlantEventResponse = {

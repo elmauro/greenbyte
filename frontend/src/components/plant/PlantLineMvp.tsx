@@ -6,7 +6,13 @@ import type {
   PlantQueueResponse,
   QueueRow,
 } from '../../demo/plant/plantDemoTypes';
-import { getPlantEventExplanation } from '../../demo/plant/plantDemoServer';
+import {
+  isPlanAcknowledged,
+  mergeAckPlanVersion,
+  readAckPlanVersion,
+  writeAckPlanVersion,
+} from '../../demo/plant/plantDemoAckStorage';
+import { getPlantEventExplanation, PLANT_DEMO_LINE_ID } from '../../demo/plant/plantDemoServer';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 import { getApiConnectionMode } from '../../services/apiConfig';
@@ -21,40 +27,56 @@ export function PlantLineMvp() {
   const [, setMoves] = useState<{ po: string; fromPosition: number; toPosition: number }[]>([]);
   const [explanation, setExplanation] = useState<PlantExplanation | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [planVersion, setPlanVersion] = useState(1);
+  const [ackPlanVersion, setAckPlanVersion] = useState<number | null>(() => readAckPlanVersion());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   /** Plan version user accepted — ignore stale `lastEvent` from BFF poll for this version. */
-  const acceptedPlanVersionRef = useRef<number | null>(null);
+  const acceptedPlanVersionRef = useRef<number | null>(readAckPlanVersion());
   /** Bumps on accept so in-flight GET queue responses cannot reopen a closed event. */
   const acceptEpochRef = useRef(0);
 
-  const applyQueueSnapshot = useCallback((res: PlantQueueResponse) => {
-    setQueue(res.queue);
+  const syncAckPlanVersion = useCallback((version: number | null) => {
+    acceptedPlanVersionRef.current = version;
+    setAckPlanVersion(version);
+    writeAckPlanVersion(PLANT_DEMO_LINE_ID, version);
+  }, []);
 
-    if (res.planVersion <= 1 && !res.lastEvent) {
-      acceptedPlanVersionRef.current = null;
-      setEventType(null);
-      setExplanation(null);
-      setMoves([]);
-      setAccepted(false);
-      return;
-    }
+  const applyQueueSnapshot = useCallback(
+    (res: PlantQueueResponse) => {
+      setQueue(res.queue);
+      setPlanVersion(res.planVersion);
 
-    const acceptedVersion = acceptedPlanVersionRef.current;
-    if (acceptedVersion != null && res.planVersion <= acceptedVersion) {
-      setEventType(null);
-      setExplanation(null);
-      setAccepted(true);
-      return;
-    }
+      const mergedAck = mergeAckPlanVersion(acceptedPlanVersionRef.current, res.acceptedPlanVersion);
+      if (mergedAck !== acceptedPlanVersionRef.current) {
+        syncAckPlanVersion(mergedAck);
+      }
 
-    if (res.lastEvent) {
-      acceptedPlanVersionRef.current = null;
-      setEventType(res.lastEvent);
-      setExplanation(getPlantEventExplanation(res.lastEvent, locale));
-      setAccepted(false);
-    }
-  }, [locale]);
+      if (res.planVersion <= 1 && !res.lastEvent) {
+        syncAckPlanVersion(null);
+        setEventType(null);
+        setExplanation(null);
+        setMoves([]);
+        setAccepted(false);
+        return;
+      }
+
+      if (isPlanAcknowledged(res.planVersion, mergedAck)) {
+        setEventType(null);
+        setExplanation(null);
+        setAccepted(true);
+        return;
+      }
+
+      if (res.lastEvent) {
+        syncAckPlanVersion(null);
+        setEventType(res.lastEvent);
+        setExplanation(getPlantEventExplanation(res.lastEvent, locale));
+        setAccepted(false);
+      }
+    },
+    [locale, syncAckPlanVersion],
+  );
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -101,7 +123,7 @@ export function PlantLineMvp() {
       const res = await plantDemoApi.postEvent(type, locale);
       setQueue(res.queue);
       setMoves(res.diff.moves);
-      acceptedPlanVersionRef.current = null;
+      syncAckPlanVersion(null);
       setEventType(type);
       setExplanation(res.explanation);
       setAccepted(false);
@@ -118,7 +140,7 @@ export function PlantLineMvp() {
       setEventType(null);
       setMoves([]);
       setExplanation(null);
-      acceptedPlanVersionRef.current = null;
+      syncAckPlanVersion(null);
       setAccepted(false);
     } finally {
       setBusy(false);
@@ -130,7 +152,7 @@ export function PlantLineMvp() {
     try {
       const res = await plantDemoApi.postAccept();
       acceptEpochRef.current += 1;
-      acceptedPlanVersionRef.current = res.planVersion;
+      syncAckPlanVersion(res.planVersion);
       setAccepted(true);
       setEventType(null);
       setExplanation(null);
@@ -239,6 +261,7 @@ export function PlantLineMvp() {
               eventType={eventType}
               explanation={explanation}
               accepted={accepted}
+              planAcknowledged={isPlanAcknowledged(planVersion, ackPlanVersion)}
               acceptDisabled={busy}
               onAccept={() => void acceptPlan()}
             />

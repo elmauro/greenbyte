@@ -126,6 +126,7 @@ class PlantDemoServer {
       queue: cloneQueue(this.queue),
       planVersion: this.planVersion,
       lastEvent: pendingEvent ? this.lastEvent : null,
+      acceptedPlanVersion: this.acceptedPlanVersion,
     };
   }
 
