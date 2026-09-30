@@ -7,7 +7,7 @@ GreenByte follows the same idea as **loyalty-app-vite**: services always call **
 | Mode | When | How UC1 `/demo/plant` works |
 | --- | --- | --- |
 | **MSW** (default dev) | `VITE_USE_MSW=true` | Browser → axios → **MSW** → `plantDemoHandlers` → `plantDemoServer` |
-| **In-process** | `VITE_USE_MSW=false` and empty `VITE_API_BASE_APP` | `plantDemoApi` → `plantDemoServer` (no HTTP). Used for static S3 deploy. |
+| **In-process** | `VITE_USE_MSW=false` and empty `VITE_API_BASE_APP` | `plantDemoApi` → `plantDemoServer` (no HTTP). Fallback when the API URL is unset. |
 | **Live BFF** | `VITE_USE_MSW=false` and `VITE_API_BASE_APP` set | axios → **core-api** on API Gateway; UC1 stub uses **DynamoDB** for shared demo state |
 
 Camilo and David are **never called from the browser**; the stub BFF implements Pasco rules in Lambda until Data/Agent URLs are wired.
@@ -34,6 +34,8 @@ VITE_API_BASE_APP=https://wg7eopv9wl.execute-api.us-east-1.amazonaws.com
 ```
 
 Restart `npm run dev`. UI code unchanged — only env vars.
+
+The public site uses the same URL from `frontend/.env.production` (`npm run build` and the Deploy Web workflow).
 
 **Backend prerequisite (GREENBYTE-003):**
 

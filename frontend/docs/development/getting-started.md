@@ -102,16 +102,13 @@ Contract references:
 
 ## Production / static deploy
 
-Build without MSW and without `VITE_API_BASE_APP` → **in-process** mock (works on S3/CloudFront):
+`npm run build` loads `frontend/.env.production`, which sets `VITE_USE_MSW=false` and `VITE_API_BASE_APP` to the deployed core-api. The CloudFront site then calls the same BFF as a local session with `.env.local`.
 
-```powershell
-cd frontend
-npm run build
-```
+An empty `VITE_API_BASE_APP` still falls back to the **in-process** mock (no HTTP).
 
 Deploy flow: [docs/infrastructure/web-deployment.md](../../../docs/infrastructure/web-deployment.md).
 
-Public demo site: **https://greenbyte-ag.com** (after CI deploy + optional `VITE_API_BASE_APP` at build time for live BFF).
+Public demo site: **https://greenbyte-ag.com**.
 
 ---
 

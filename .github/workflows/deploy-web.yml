@@ -48,6 +48,9 @@ jobs:
 
       - name: Build
         working-directory: frontend
+        env:
+          VITE_USE_MSW: 'false'
+          VITE_API_BASE_APP: https://wg7eopv9wl.execute-api.us-east-1.amazonaws.com
         run: npm run build
 
       - name: Validate build output
