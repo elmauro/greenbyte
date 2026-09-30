@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PlantEventType, PlantExplanation, QueueRow } from '../../demo/plant/plantDemoTypes';
+import type {
+  PlantEventType,
+  PlantExplanation,
+  PlantQueueResponse,
+  QueueRow,
+} from '../../demo/plant/plantDemoTypes';
+import { getPlantEventExplanation } from '../../demo/plant/plantDemoServer';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
+import { getApiConnectionMode } from '../../services/apiConfig';
 import { plantDemoApi } from '../../services/plantDemoApi';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantBaselineDashboard } from './PlantBaselineDashboard';
@@ -18,20 +25,56 @@ export function PlantLineMvp() {
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const applyQueueSnapshot = useCallback((res: PlantQueueResponse) => {
+    setQueue(res.queue);
+    if (res.lastEvent) {
+      setEventType(res.lastEvent);
+      setExplanation(getPlantEventExplanation(res.lastEvent, locale));
+      setAccepted(false);
+    } else if (res.planVersion <= 1) {
+      setEventType(null);
+      setExplanation(null);
+      setMoves([]);
+      setAccepted(false);
+    }
+  }, [locale]);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
     try {
       const res = await plantDemoApi.getQueue();
-      setQueue(res.queue);
+      applyQueueSnapshot(res);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyQueueSnapshot]);
+
+  const pollQueueFromBff = useCallback(async () => {
+    if (getApiConnectionMode() !== 'bff' || busy) return;
+    try {
+      const res = await plantDemoApi.getQueue();
+      applyQueueSnapshot(res);
+    } catch {
+      /* ignore transient poll errors */
+    }
+  }, [applyQueueSnapshot, busy]);
 
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
+
+  useEffect(() => {
+    if (getApiConnectionMode() !== 'bff') return;
+    const id = window.setInterval(() => void pollQueueFromBff(), 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void pollQueueFromBff();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [pollQueueFromBff]);
 
   async function inject(type: PlantEventType) {
     setBusy(true);

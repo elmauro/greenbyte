@@ -198,7 +198,7 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 ## 8. Implementation checklist (backend)
 
 - [ ] OpenAPI for `/demo/plant/*` under `backend/docs/api/` (align with §2–6)
-- [ ] Lambda BFF handlers match MSW + `plantDemoHandlers.ts` status codes
+- [x] Lambda BFF handlers match MSW + `plantDemoHandlers.ts` status codes (stub + Dynamo — `core-api`, GREENBYTE-003)
 - [ ] Camilo: replan rules for `rush` and `qa_fail` produce **`moves`** + **`reasons`**
 - [ ] David: `explain-replan` input = Data output only; batch explain = tools, no DB direct
 - [ ] Env: Data + Agent base URLs (SSM / env vars) for BFF orchestration

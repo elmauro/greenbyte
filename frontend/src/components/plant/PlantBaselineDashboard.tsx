@@ -45,16 +45,13 @@ export function PlantBaselineDashboard({
   const nextRow = active[0];
   const utilization = Math.min(95, 58 + active.length * 2);
 
+  /** UC1 scope: demo-relevant areas only (nav is visual roadmap; routes TBD). */
   const navItems = [
-    b.nav.panel,
-    b.nav.scheduling,
-    b.nav.queue,
-    b.nav.lineStatus,
-    b.nav.inventory,
-    b.nav.reports,
-    b.nav.copilot,
-    b.nav.settings,
-  ];
+    { id: 'dashboard', label: b.nav.panel },
+    { id: 'queue', label: b.nav.queue },
+    { id: 'scheduling', label: b.nav.scheduling },
+    { id: 'copilot', label: b.nav.copilot },
+  ] as const;
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-[#f8faf8] shadow-lg">
@@ -72,14 +69,15 @@ export function PlantBaselineDashboard({
             </div>
           </div>
           <nav className="space-y-0.5 text-sm">
-            {navItems.map((label, i) => (
+            {navItems.map((item, i) => (
               <div
-                key={label}
+                key={item.id}
                 className={`rounded-lg px-3 py-2 ${
                   i === 0 ? 'bg-brand-green/10 font-semibold text-brand-green-dark' : 'text-gray-600'
                 }`}
+                aria-current={i === 0 ? 'page' : undefined}
               >
-                {label}
+                {item.label}
               </div>
             ))}
           </nav>

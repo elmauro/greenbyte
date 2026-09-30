@@ -116,7 +116,12 @@ class PlantDemoServer {
 
   getQueue(lineId: string): PlantQueueResponse {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
-    return { lineId, queue: cloneQueue(this.queue), planVersion: this.planVersion };
+    return {
+      lineId,
+      queue: cloneQueue(this.queue),
+      planVersion: this.planVersion,
+      lastEvent: this.lastEvent,
+    };
   }
 
   applyEvent(lineId: string, type: PlantEventType, locale: Locale): PlantEventResponse {
@@ -255,6 +260,10 @@ class PlantDemoServer {
 }
 
 export const plantDemoServer = new PlantDemoServer();
+
+export function getPlantEventExplanation(type: PlantEventType, locale: Locale): PlantExplanation {
+  return explanations[locale === 'es' ? 'es' : 'en'][type];
+}
 
 export function movedPoSet(moves: QueueMove[]): Set<string> {
   return new Set(moves.map((m) => m.po));

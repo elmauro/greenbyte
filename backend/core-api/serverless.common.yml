@@ -9,6 +9,32 @@ provider:
   stage: ${opt:stage, 'dev'}
   environment:
     PROJECT_SLUG: greenbyte
+    DEMO_PLANT_TABLE_NAME: greenbyte-${sls:stage}-demo-plant-state
+  httpApi:
+    cors:
+      allowedOrigins:
+        - https://greenbyte-ag.com
+        - https://www.greenbyte-ag.com
+        - http://localhost:5173
+        - http://localhost:51730
+        - http://localhost:51731
+      allowedHeaders:
+        - Content-Type
+        - x-program-id
+      allowedMethods:
+        - GET
+        - POST
+        - OPTIONS
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+          Resource:
+            - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/greenbyte-${sls:stage}-demo-plant-state
 
 functions:
   health:
@@ -17,3 +43,38 @@ functions:
       - httpApi:
           method: GET
           path: /api/core/health
+
+  plantDemoQueue:
+    handler: functions/plant-demo-queue/handler.handler
+    events:
+      - httpApi:
+          method: GET
+          path: /demo/plant/lines/{lineId}/queue
+
+  plantDemoEvents:
+    handler: functions/plant-demo-events/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/events
+
+  plantDemoReset:
+    handler: functions/plant-demo-reset/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/reset
+
+  plantDemoAccept:
+    handler: functions/plant-demo-accept/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/schedule/accept
+
+  plantDemoExplain:
+    handler: functions/plant-demo-explain/handler.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /demo/plant/batches/explain
