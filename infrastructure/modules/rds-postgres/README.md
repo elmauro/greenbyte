@@ -1,15 +1,22 @@
 # rds-postgres
 
-Contract for managed PostgreSQL on AWS.
+Reusable **Amazon RDS PostgreSQL** module for GreenByte capabilities.
 
-## Expected inputs
+## Inputs
 
-- `project`
-- `environment`
-- `vpc_id`
-- `subnet_ids`
-- `instance_class`
+| Variable | Purpose |
+| --- | --- |
+| `project`, `environment`, `aws_region` | Naming and tags |
+| `vpc_id` | Empty → account **default VPC** |
+| `database_name`, `master_username`, `master_password` | Instance login |
+| `publicly_accessible` | `true` for connections from outside AWS (with SG CIDR rules) |
+| `allowed_cidr_blocks` | Who may reach port **5432** |
+| `instance_class` | Default `db.t4g.micro` (dev / hackathon) |
 
-## Pending
+## Outputs
 
-Define networking, backups, credential rotation, RDS Proxy and migration strategy.
+`endpoint`, `port`, `database_name`, `master_username`, `connection_url_hint`
+
+## Usage
+
+Consumed by `infrastructure/postgresdb/` (separate Terraform state per capability).

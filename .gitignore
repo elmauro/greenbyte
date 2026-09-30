@@ -24,6 +24,8 @@ frontend/cypress/videos/
 **/terraform.tfstate
 **/terraform.tfstate.*
 **/terraform.tfvars
+**/*.secrets.tfvars
+**/dev.secrets.tfvars
 **/crash.log
 **/override.tf
 **/override.tf.json

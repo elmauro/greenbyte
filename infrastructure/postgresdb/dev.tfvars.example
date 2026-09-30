@@ -1,0 +1,18 @@
+# Copy to dev.tfvars (non-secret) and dev.secrets.tfvars (password only), then apply.
+# dev.secrets.tfvars is gitignored — see infrastructure/postgresdb/README.md
+
+project     = "greenbyte"
+environment = "dev"
+aws_region  = "us-east-1"
+
+database_name   = "greenbyte"
+master_username = "greenbyte_user"
+
+# Hackathon dev: public RDS. Restrict allowed_cidr_blocks to your public IP/32.
+publicly_accessible = true
+allowed_cidr_blocks   = ["0.0.0.0/0"]
+
+instance_class = "db.t4g.micro"
+
+# Secrets file (dev.secrets.tfvars):
+# master_password = "REPLACE_ME"
