@@ -25,6 +25,7 @@ export function createBaselineState() {
     queue: cloneQueue(BASE_QUEUE),
     planVersion: 1,
     lastEvent: null,
+    acceptedPlanVersion: null,
   };
 }
 
@@ -32,11 +33,16 @@ export function getQueueResponse(state, lineId) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
+  const acceptedPlanVersion = state.acceptedPlanVersion ?? null;
+  const pendingEvent =
+    state.lastEvent != null &&
+    !(acceptedPlanVersion != null && state.planVersion === acceptedPlanVersion);
+
   return {
     lineId,
     queue: cloneQueue(state.queue),
     planVersion: state.planVersion,
-    lastEvent: state.lastEvent ?? null,
+    lastEvent: pendingEvent ? state.lastEvent : null,
   };
 }
 
@@ -82,6 +88,7 @@ export function applyEvent(state, lineId, type, locale) {
     queue: next,
     planVersion,
     lastEvent: type,
+    acceptedPlanVersion: null,
   };
 
   return {
@@ -101,7 +108,11 @@ export function acceptPlan(state, lineId) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
-  const nextState = { ...state, lastEvent: null };
+  const nextState = {
+    ...state,
+    lastEvent: null,
+    acceptedPlanVersion: state.planVersion,
+  };
   return {
     state: nextState,
     response: {

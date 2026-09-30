@@ -107,20 +107,25 @@ class PlantDemoServer {
   private queue = cloneQueue(BASE_QUEUE);
   private planVersion = 1;
   private lastEvent: PlantEventType | null = null;
+  private acceptedPlanVersion: number | null = null;
 
   reset() {
     this.queue = cloneQueue(BASE_QUEUE);
     this.planVersion = 1;
     this.lastEvent = null;
+    this.acceptedPlanVersion = null;
   }
 
   getQueue(lineId: string): PlantQueueResponse {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
+    const pendingEvent =
+      this.lastEvent != null &&
+      !(this.acceptedPlanVersion != null && this.planVersion === this.acceptedPlanVersion);
     return {
       lineId,
       queue: cloneQueue(this.queue),
       planVersion: this.planVersion,
-      lastEvent: this.lastEvent,
+      lastEvent: pendingEvent ? this.lastEvent : null,
     };
   }
 
@@ -157,6 +162,7 @@ class PlantDemoServer {
     this.queue = next;
     this.planVersion += 1;
     this.lastEvent = type;
+    this.acceptedPlanVersion = null;
 
     return {
       lineId,
@@ -171,6 +177,7 @@ class PlantDemoServer {
   accept(lineId: string): { acceptedAt: string; lineId: string; planVersion: number } {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
     this.lastEvent = null;
+    this.acceptedPlanVersion = this.planVersion;
     return {
       acceptedAt: new Date().toISOString(),
       lineId,

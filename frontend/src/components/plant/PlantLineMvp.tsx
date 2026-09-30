@@ -25,6 +25,8 @@ export function PlantLineMvp() {
   const [busy, setBusy] = useState(false);
   /** Plan version user accepted — ignore stale `lastEvent` from BFF poll for this version. */
   const acceptedPlanVersionRef = useRef<number | null>(null);
+  /** Bumps on accept so in-flight GET queue responses cannot reopen a closed event. */
+  const acceptEpochRef = useRef(0);
 
   const applyQueueSnapshot = useCallback((res: PlantQueueResponse) => {
     setQueue(res.queue);
@@ -38,10 +40,8 @@ export function PlantLineMvp() {
       return;
     }
 
-    if (
-      acceptedPlanVersionRef.current != null &&
-      res.planVersion === acceptedPlanVersionRef.current
-    ) {
+    const acceptedVersion = acceptedPlanVersionRef.current;
+    if (acceptedVersion != null && res.planVersion <= acceptedVersion) {
       setEventType(null);
       setExplanation(null);
       setAccepted(true);
@@ -68,8 +68,10 @@ export function PlantLineMvp() {
 
   const pollQueueFromBff = useCallback(async () => {
     if (getApiConnectionMode() !== 'bff' || busy) return;
+    const epochAtStart = acceptEpochRef.current;
     try {
       const res = await plantDemoApi.getQueue();
+      if (epochAtStart !== acceptEpochRef.current) return;
       applyQueueSnapshot(res);
     } catch {
       /* ignore transient poll errors */
@@ -127,6 +129,7 @@ export function PlantLineMvp() {
     setBusy(true);
     try {
       const res = await plantDemoApi.postAccept();
+      acceptEpochRef.current += 1;
       acceptedPlanVersionRef.current = res.planVersion;
       setAccepted(true);
       setEventType(null);

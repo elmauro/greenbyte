@@ -36,6 +36,7 @@ export async function loadState(lineId) {
     queue: item.queue,
     planVersion: item.planVersion,
     lastEvent: item.lastEvent ?? null,
+    acceptedPlanVersion: item.acceptedPlanVersion ?? null,
   };
 }
 
@@ -50,6 +51,7 @@ export async function saveState(lineId, state) {
         queue: state.queue,
         planVersion: state.planVersion,
         lastEvent: state.lastEvent ?? null,
+        acceptedPlanVersion: state.acceptedPlanVersion ?? null,
         updatedAt: now,
       }),
     }),

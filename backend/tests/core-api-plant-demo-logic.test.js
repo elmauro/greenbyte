@@ -41,8 +41,17 @@ describe('plant demo logic', () => {
     expect(afterRush.lastEvent).toBe('rush');
     const { state: afterAccept, response } = acceptPlan(afterRush, 'line-1');
     expect(afterAccept.lastEvent).toBeNull();
+    expect(afterAccept.acceptedPlanVersion).toBe(2);
     expect(getQueueResponse(afterAccept, 'line-1').lastEvent).toBeNull();
     expect(response.planVersion).toBe(2);
+  });
+
+  it('GET queue hides lastEvent when plan was accepted even if lastEvent field stale', () => {
+    const state = createBaselineState();
+    const { state: afterQa } = applyEvent(state, 'line-1', 'qa_fail', 'en');
+    const { state: afterAccept } = acceptPlan(afterQa, 'line-1');
+    const stale = { ...afterAccept, lastEvent: 'qa_fail' };
+    expect(getQueueResponse(stale, 'line-1').lastEvent).toBeNull();
   });
 
   it('rejects unknown line', () => {
