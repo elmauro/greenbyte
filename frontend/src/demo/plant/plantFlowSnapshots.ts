@@ -32,7 +32,7 @@ export function buildPlantFlowSnapshots(locale: Locale): PlantFlowSnapshots {
 
   plantDemoServer.reset();
   plantDemoServer.applyEvent(PLANT_DEMO_LINE_ID, 'rush', locale);
-  const explain = plantDemoServer.explainBatch('1001858227', 'When does it ship?', locale);
+  const explain = plantDemoServer.explainBatch('1002307551', 'When does it ship?', locale);
 
   plantDemoServer.reset();
   return { load, rush, qa, accept, explain };

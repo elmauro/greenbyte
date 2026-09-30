@@ -179,7 +179,7 @@ The **React app must not call Data or Agent APIs directly** in the demo environm
 ### 7.1 Business flow
 
 1. Scheduler views **line queue** (batches, priority, due dates).
-2. **Event** injected: rush batch or failed QA.
+2. **Upstream data** lands (SAP signal or pass/fail row) → replan.
 3. **Replan** updates order (heuristics in Data API or BFF).
 4. **Agent** explains what changed in plain language.
 5. Human **accepts** the recommendation (no auto-write to ERP).
@@ -194,7 +194,7 @@ React Plant Demo ──► BFF (core-api)
                          └──► Agent API ──► Data API (context)
                                               └──► explain / optional suggest (validated)
 
-UI ── inject event ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI
+Operator/Data ── ingest ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI polls queue
 ```
 
 ### 7.3 BFF endpoints (frontend contract — implemented in MSW + `plantDemoApi`)
@@ -202,14 +202,17 @@ UI ── inject event ──► BFF ──► Data API (replan) ──► Agent
 | Method | Path | Syngenta trigger / moment |
 | --- | --- | --- |
 | GET | `/demo/plant/lines/{lineId}/queue` | Page load — calm queue |
-| POST | `/demo/plant/events` | **Rush** (`type: rush`) or **QA fail** (`type: qa_fail`) |
+| POST | `/demo/plant/ingest/sap-priority-change` | **Rush** signal (SAP priority — operator / Data API) |
+| POST | `/demo/plant/ingest/pass-fail-log` | **QA fail** (LSV pass/fail Fail row) |
+| POST | `/demo/plant/events` | Legacy rush / QA inject (tests; not in scheduler UI) |
 | POST | `/demo/plant/schedule/accept` | Human sign-off after replan |
 | POST | `/demo/plant/batches/explain` | **Explain my batch** (read-only Q&A) |
 | POST | `/demo/plant/reset` | Demo repeat — restore baseline queue |
 
 **Deferred (not in current UI contract):** `GET /demo/plant/batches/{po}/summary` — batch drawer; use queue row + explain until added.
 
-**UX timing, sequences, JSON examples:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · **Interactive:** `/demo/plant/flow`.
+**UX timing, sequences, JSON examples:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · **Interactive:** `/demo/plant/flow`.  
+**Events, decisions, notifications, AI data model (deep dive):** [uc1-system-blueprint.md](./uc1-system-blueprint.md).
 
 **Data API (Camilo)**
 

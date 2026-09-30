@@ -10,7 +10,7 @@
 
 | URL | Purpose |
 | --- | --- |
-| `/demo/plant` | Interactive demo — inject rush / QA, accept, sales explain |
+| `/demo/plant` | Interactive demo — poll queue, accept replan, sales explain (rush/QA via **ingest**, not UI buttons) |
 | `/demo/plant/tour` | 5-step story with **same React components** (read-only) |
 | `/demo/plant/flow?step=01`…`07` | UI ↔ BFF map + JSON + **backend owner** per step |
 
@@ -22,11 +22,13 @@ Production demo: `https://greenbyte-ag.com/demo/plant` (after deploy + `VITE_API
 
 These are the **only** business events the hackathon demo script requires beyond loading the queue.
 
-| # | Trigger (ES/EN UI) | User action | BFF route | Changes queue? |
+| # | Trigger | Who acts | BFF route (demo) | Changes queue? |
 | --- | --- | --- | --- | --- |
-| **A** | **Rush batch** / Lote rush | **Simulate rush batch** | `POST /demo/plant/events` | **Yes** — replan |
-| **B** | **QA failure** / Fallo QA | **Simulate QA failure** | `POST /demo/plant/events` | **Yes** — HOLD + resequence |
-| **C** | **Explain my batch** (sales nice-to-have) | PO + question / quick prompts | `POST /demo/plant/batches/explain` | **No** — read-only Q&A |
+| **A** | **Rush batch** / Lote rush | Operator / Data API posts SAP priority signal | `POST /demo/plant/ingest/sap-priority-change` | **Yes** — replan |
+| **B** | **QA failure** / Fallo QA | Operator / Data API posts pass/fail **Fail** row | `POST /demo/plant/ingest/pass-fail-log` | **Yes** — HOLD + resequence |
+| **C** | **Explain my batch** (sales nice-to-have) | Scheduler PO + question | `POST /demo/plant/batches/explain` | **No** — read-only Q&A |
+
+Scheduler UI **polls** `GET .../queue` — no rush/QA buttons on `/demo/plant`. Legacy: `POST /demo/plant/events`. Operator curl: [uc1-demo-operator-ingest.md](../../../docs/hackathon/uc1-demo-operator-ingest.md).
 
 Supporting (not Syngenta “inject” but required for demo):
 
@@ -40,24 +42,27 @@ Supporting (not Syngenta “inject” but required for demo):
 
 ## 2. Trigger A — Rush batch
 
-### UX (already built)
+### UX (scheduler)
 
-- Button: **Simulate rush batch** on `/demo/plant`
-- After response: `PlantScheduleWorkspace` (Gantt + copilot + alert)
+- No inject button — operator posts ingest; UI poll shows **Scheduling** badge + Gantt/copilot
 - Flow map: `/demo/plant/flow?step=03`
 
-### BFF
+### BFF (primary)
 
 ```http
-POST /demo/plant/events
+POST /demo/plant/ingest/sap-priority-change
 Content-Type: application/json
 
 {
-  "type": "rush",
   "lineId": "line-1",
-  "locale": "en" | "es"
+  "locale": "en",
+  "po": "1002307551",
+  "priority": 2,
+  "scheduledFinish": "2026-07-06 09:00"
 }
 ```
+
+Response includes `source: "sap_priority_change"`.
 
 ### BFF orchestration (target)
 
@@ -79,32 +84,39 @@ Content-Type: application/json
 
 `PlantEventResponse` — see `plantDemoTypes.ts` (`eventType`, `queue`, `planVersion`, `diff`, `explanation`).
 
-**Example (200, rush, `locale: en`):** full request/response in [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST /demo/plant/events.response200Rush`. The UI also shows this JSON on `/demo/plant/flow?step=03`.
+**Example (200, rush):** [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST /demo/plant/ingest/sap-priority-change`. Flow map: `/demo/plant/flow?step=03`.
 
 ---
 
 ## 3. Trigger B — QA failure
 
-### UX
+### UX (scheduler)
 
-- Button: **Simulate QA failure**
-- UI: **`HOLD`** on failed batch; line re-sequences without that slot
+- Poll + notifications; **`HOLD`** on failed batch after ingest
 - Flow map: `/demo/plant/flow?step=03b`
 
-### BFF
+### BFF (primary)
 
-Same route as rush, different body:
+```http
+POST /demo/plant/ingest/pass-fail-log
+Content-Type: application/json
 
-```json
-{ "type": "qa_fail", "lineId": "line-1", "locale": "en" | "es" }
+{
+  "lineId": "line-1",
+  "locale": "en",
+  "po": "1001884747",
+  "passFail": "Fail",
+  "failedFor": "Dent",
+  "equipmentId": "Line 1"
+}
 ```
 
 ### Demo behavior (mock — Camilo should match)
 
 | Field | Demo rule |
 | --- | --- |
-| Failed PO | **`1001858227`** |
-| Status | **`HOLD`** (pass/fail log — Pasco seed narrative) |
+| Failed PO | **`1001884747`** (Pasco `LSV Pass_Fail Log`: **Fail**, **Dent**, Line 1) |
+| Status | **`HOLD`** (simulates pass/fail log landing — demo inject) |
 | Replan | Remove hold batch from active slot; shift downstream |
 | `diff.reasons[]` | `qa_fail_pass_fail_log`, `isolate_hold`, `resequence_downstream` |
 | `explanation` | QA-specific copy (EN/ES) |
@@ -129,7 +141,7 @@ Same **`PlantEventResponse`** shape as rush.
 POST /demo/plant/batches/explain
 
 {
-  "po": "1001858227",
+  "po": "1002307551",
   "question": "When does it ship?",
   "locale": "en" | "es"
 }
@@ -186,7 +198,7 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 
 | Capability | Mauricio · BFF `core-api` | Camilo · Data API | David · Agent API |
 | --- | --- | --- | --- |
-| Rush / QA inject | `POST /demo/plant/events` orchestrates | `POST /schedule/replan` → `queue`, `diff.moves`, `diff.reasons` | `POST /explain-replan` ← structured diff |
+| Rush / QA ingest | `POST /demo/plant/ingest/*` orchestrates | `POST /schedule/replan` → `queue`, `diff.moves`, `diff.reasons` | `POST /explain-replan` ← structured diff |
 | Explain batch | `POST /demo/plant/batches/explain` proxy | Tools: queue + batch read | NL answer + `citations[]` |
 | Queue load | `GET /demo/plant/.../queue` proxy | Pasco ETL → PG | — |
 | Accept / reset | Implement demo routes | Optional persist accept | — |
@@ -210,6 +222,7 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 
 | Doc | Path |
 | --- | --- |
+| Syngenta brief vs demo assumptions | `docs/hackathon/uc1-syngenta-assumptions.md` |
 | MVP scope & week plan | `docs/hackathon/uc1-mvp-scope.md` |
 | Sequences + narrative | `docs/hackathon/uc1-ui-backend-flow.md` |
 | **BFF request/response JSON (all routes)** | [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) |

@@ -21,6 +21,8 @@ type PlantBaselineDashboardProps = {
   eventType?: PlantEventType | null;
   explanation?: PlantExplanation | null;
   accepted?: boolean;
+  /** True when this plan version was accepted — blocks stale BFF `lastEvent` from re-opening alerts. */
+  planAcknowledged?: boolean;
   onAccept?: () => void;
   acceptDisabled?: boolean;
   /** Tour / flow: hide scheduling & copilot sections entirely. */
@@ -67,6 +69,7 @@ export function PlantBaselineDashboard({
   eventType = null,
   explanation = null,
   accepted = false,
+  planAcknowledged = false,
   onAccept,
   acceptDisabled = false,
   showProgramTimeline = true,
@@ -85,7 +88,7 @@ export function PlantBaselineDashboard({
   const utilization = Math.min(95, 58 + active.length * 2);
   const eventActive = Boolean(eventType && explanation);
   /** Rush/QA still awaiting human accept — hide event chrome once accepted. */
-  const eventPendingReview = eventActive && !accepted;
+  const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
   const rushPo = eventType === 'rush' ? '1002307551' : undefined;
   const visibleNav = NAV_ITEMS.filter(
@@ -104,9 +107,9 @@ export function PlantBaselineDashboard({
 
   useEffect(() => {
     if (staticPreview) return;
-    if (accepted) setQueueUpdateUnread(true);
+    if (accepted || planAcknowledged) setQueueUpdateUnread(true);
     else setQueueUpdateUnread(false);
-  }, [accepted, staticPreview]);
+  }, [accepted, planAcknowledged, staticPreview]);
 
   useEffect(() => {
     if (activeSection === 'queue') setQueueUpdateUnread(false);

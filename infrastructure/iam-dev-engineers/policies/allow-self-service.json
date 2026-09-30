@@ -1,0 +1,29 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ManageOwnCredentialsAndMfa",
+      "Effect": "Allow",
+      "Action": [
+        "iam:ChangePassword",
+        "iam:CreateAccessKey",
+        "iam:DeleteAccessKey",
+        "iam:GetAccessKeyLastUsed",
+        "iam:GetLoginProfile",
+        "iam:GetUser",
+        "iam:ListAccessKeys",
+        "iam:UpdateAccessKey",
+        "iam:CreateVirtualMFADevice",
+        "iam:DeleteVirtualMFADevice",
+        "iam:EnableMFADevice",
+        "iam:ListMFADevices",
+        "iam:DeactivateMFADevice",
+        "iam:ResyncMFADevice"
+      ],
+      "Resource": [
+        "arn:aws:iam::*:user/${aws:username}",
+        "arn:aws:iam::*:mfa/${aws:username}"
+      ]
+    }
+  ]
+}

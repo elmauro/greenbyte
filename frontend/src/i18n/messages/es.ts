@@ -131,7 +131,7 @@ export const es: Messages = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../events (rush | qa_fail) · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
         purpose: 'Tres triggers Syngenta: rush, QA, explicar lote + accept + reset demo',
       },
       {
@@ -280,9 +280,9 @@ export const es: Messages = {
       s01: 'Mauricio · BFF (core-api) → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (seed Pasco).',
       s02: 'Igual que paso 01 — sin servicio extra; Camilo · Data API (campos de cola).',
       s03:
-        'Mauricio · BFF POST /demo/plant/events → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
       s03b:
-        'Mauricio · BFF POST /demo/plant/events (qa_fail) → Camilo · replan + reglas hold → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + reglas hold → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF integra explanation en la respuesta del evento.',
       s05: 'Camilo · Data API (queue[] en replan). Mauricio · BFF — sin endpoint de timeline aparte.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept (auditoría demo; opcional persist Camilo).',
@@ -292,8 +292,8 @@ export const es: Messages = {
     triggers: {
       s01: 'Usuario abre /demo/plant — useEffect llama plantDemoApi.getQueue().',
       s02: 'Misma respuesta GET — la UI usa finish, atRisk, reasonShort (sin segunda petición).',
-      s03: 'Clic en Simulate rush batch — POST /demo/plant/events.',
-      s03b: 'Clic en Simulate QA failure — POST /demo/plant/events con qa_fail.',
+      s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
+      s03b: 'Operador publica fila Fail en pass/fail — POST /demo/plant/ingest/pass-fail-log.',
       s04: 'Copiloto desde explanation en la respuesta POST (BFF → Agent explain-replan).',
       s05: 'Timeline desde queue[] del evento — no hay GET /timeline.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
@@ -302,8 +302,8 @@ export const es: Messages = {
     slideTitles: {
       s01: 'Tabla de cola — carga inicial',
       s02: 'Fecha programada y filas en riesgo',
-      s03: 'Simular lote rush',
-      s03b: 'Simular fallo QA',
+      s03: 'Ingest prioridad SAP',
+      s03b: 'Ingest log pass/fail',
       s04: 'Copiloto IA — qué cambió',
       s05: 'Timeline / Gantt de programación',
       s06: 'Aceptar programación',
@@ -314,7 +314,7 @@ export const es: Messages = {
     eyebrow: 'Syngenta UC1 · Objetivo demo hackathon',
     title: 'Pasco acondicionamiento — Línea 1',
     subtitle:
-      'Demo interactiva: cola rankeada, rush/QA en vivo, timeline + copiloto, aceptación humana — mismo contrato BFF que producción (MSW o core-api).',
+      'Espacio del programador: la cola se actualiza cuando llegan datos upstream (prioridad SAP / log pass-fail). Revisa Programación y acepta — sin escritura ERP.',
     demoTargetBadge: 'Demo target B+ · Alineado al brief Syngenta + mockups wow GreenByte.',
     links: {
       tour: 'Historia guiada (5 pasos)',
@@ -324,7 +324,7 @@ export const es: Messages = {
       backMvp: 'Volver al demo Línea 1',
     },
     lineTitle: 'Cola Línea 1',
-    lineSubtitle: 'Estado estable — inyecta un evento para replanificar (flujo demo-ready Syngenta).',
+    lineSubtitle: 'Estado estable — los replanes aparecen cuando ingest/BFF recibe filas nuevas (poll ~5 s).',
     loading: 'Cargando cola…',
     status: { calm: 'Tranquilo y estable', eventActive: 'Evento activo — revisa plan propuesto' },
     statusLabels: { planned: 'PLANIFICADO', atRisk: 'EN RIESGO', complete: 'COMPLETO', hold: 'RETENIDO QA' },
@@ -405,31 +405,19 @@ export const es: Messages = {
       notificationQueueTitle: 'Cola actualizada',
       notificationQueueBody: 'Plan aceptado — revisa orden y fechas',
     },
+    dataFeed: {
+      title: 'Los eventos vienen de los datos — no de esta pantalla',
+      body: 'UC1 Syngenta: rush y QA se disparan cuando actualizan SAP o el log LSV pass/fail. Operadores o Data API hacen POST a ingest del BFF; esta UI hace poll de la cola y muestra notificaciones cuando hay replan pendiente.',
+      sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
+      operatorDoc: 'Ejemplos curl: docs/hackathon/uc1-demo-operator-ingest.md',
+    },
     actions: {
-      rush: 'Simular lote rush',
-      rushTooltip:
-        'Ventana de cliente urgente: un PO de alta prioridad sube en la cola (demo: PO 1002307551).',
-      qaFail: 'Simular fallo QA',
-      qaFailTooltip:
-        'Test pass/fail fallido: el lote pasa a hold QA y sale del slot activo (demo: PO 1001858227).',
-      reset: 'Restablecer cola',
-      resetTooltip: 'Vuelve a la cola base tranquila, antes de cualquier evento inyectado.',
       accept: 'Aceptar programa',
       accepted: 'Aceptado',
     },
-    eventHelp: {
-      title: 'Qué simula cada botón (demo-ready Syngenta)',
-      rushLabel: 'Rush',
-      rushBody:
-        'Lote urgente sorpresa (fecha SAP / cliente apretada). El sistema propone subirlo y explica el impacto en changeover. El programador acepta; sin escribir en ERP.',
-      qaLabel: 'Fallo QA',
-      qaBody:
-        'Un lote no pasa calidad (log pass/fail). Queda en retención y se reordena la línea para que el resto siga corriendo.',
-      resetLabel: 'Restablecer',
-      resetBody: 'Quita el evento inyectado para repetir la demo en vivo desde cola estable.',
-    },
     copilotTitle: 'Copiloto IA — Qué cambió',
-    copilotIdle: 'Inyecta rush o fallo QA para ver el orden propuesto y la explicación.',
+    copilotIdle: 'Cuando llegue un replan desde datos upstream, abre Programación para revisar orden y explicación.',
     footerStats: '{count} lotes activos en cola (POs estilo Pasco).',
     acceptedNote: 'Aceptación humana registrada (demo). Sin actualización ERP en vivo.',
     apiNoteMsw:

@@ -12,7 +12,7 @@ GreenByte follows the same idea as **loyalty-app-vite**: services always call **
 
 Camilo and David are **never called from the browser**; the stub BFF implements Pasco rules in Lambda until Data/Agent URLs are wired.
 
-On **live BFF**, `/demo/plant` polls `GET .../queue` every 10s so Postman injects show up without a full page reload.
+On **live BFF or MSW**, `/demo/plant` polls `GET .../queue` every ~5s so operator **ingest** posts show up without a full page reload. Primary routes: `POST .../ingest/sap-priority-change`, `POST .../ingest/pass-fail-log` ([uc1-demo-operator-ingest.md](../../../docs/hackathon/uc1-demo-operator-ingest.md)).
 
 ## Local development (recommended)
 

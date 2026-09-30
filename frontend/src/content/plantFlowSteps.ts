@@ -72,8 +72,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's03',
     preview: 'rush',
     method: 'POST',
-    path: '/demo/plant/events',
-    request: { type: 'rush', lineId: 'line-1', locale: 'en|es' },
+    path: '/demo/plant/ingest/sap-priority-change',
+    request: { po: '1002307551', priority: 2, lineId: 'line-1', locale: 'en|es' },
     responseKey: 'rush',
     mapping: [
       { jsonPath: 'queue[]', ui: 'Table reorder' },
@@ -87,8 +87,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's03b',
     preview: 'qa',
     method: 'POST',
-    path: '/demo/plant/events',
-    request: { type: 'qa_fail', lineId: 'line-1', locale: 'en|es' },
+    path: '/demo/plant/ingest/pass-fail-log',
+    request: { po: '1001884747', passFail: 'Fail', failedFor: 'Dent', lineId: 'line-1', locale: 'en|es' },
     responseKey: 'qa',
     mapping: [
       { jsonPath: 'queue[].status=HOLD', ui: 'QA HOLD badge' },
@@ -143,7 +143,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'explain',
     method: 'POST',
     path: '/demo/plant/batches/explain',
-    request: { po: '1001858227', question: 'When does it ship?', locale: 'en|es' },
+    request: { po: '1002307551', question: 'When does it ship?', locale: 'en|es' },
     responseKey: 'explain',
     mapping: [
       { jsonPath: 'answer', ui: 'Chat answer' },

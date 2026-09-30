@@ -25,6 +25,7 @@ export function createBaselineState() {
     queue: cloneQueue(BASE_QUEUE),
     planVersion: 1,
     lastEvent: null,
+    acceptedPlanVersion: null,
   };
 }
 
@@ -32,11 +33,17 @@ export function getQueueResponse(state, lineId) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
+  const acceptedPlanVersion = state.acceptedPlanVersion ?? null;
+  const pendingEvent =
+    state.lastEvent != null &&
+    !(acceptedPlanVersion != null && state.planVersion === acceptedPlanVersion);
+
   return {
     lineId,
     queue: cloneQueue(state.queue),
     planVersion: state.planVersion,
-    lastEvent: state.lastEvent ?? null,
+    lastEvent: pendingEvent ? state.lastEvent : null,
+    acceptedPlanVersion,
   };
 }
 
@@ -61,7 +68,7 @@ export function applyEvent(state, lineId, type, locale) {
       reasons.push('priority_2', 'sap_finish_2026-07-06', 'same_species_changeover');
     }
   } else if (type === 'qa_fail') {
-    const failPo = '1001858227';
+    const failPo = '1001884747';
     const failIdx = next.findIndex((r) => r.po === failPo);
     if (failIdx >= 0) {
       next[failIdx] = { ...next[failIdx], status: 'HOLD', previousPosition: failIdx + 1 };
@@ -82,6 +89,7 @@ export function applyEvent(state, lineId, type, locale) {
     queue: next,
     planVersion,
     lastEvent: type,
+    acceptedPlanVersion: null,
   };
 
   return {
@@ -101,7 +109,11 @@ export function acceptPlan(state, lineId) {
   if (lineId !== PLANT_DEMO_LINE_ID) {
     throw new Error('Unknown line');
   }
-  const nextState = { ...state, lastEvent: null };
+  const nextState = {
+    ...state,
+    lastEvent: null,
+    acceptedPlanVersion: state.planVersion,
+  };
   return {
     state: nextState,
     response: {

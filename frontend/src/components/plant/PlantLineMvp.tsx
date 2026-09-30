@@ -6,7 +6,13 @@ import type {
   PlantQueueResponse,
   QueueRow,
 } from '../../demo/plant/plantDemoTypes';
-import { getPlantEventExplanation } from '../../demo/plant/plantDemoServer';
+import {
+  isPlanAcknowledged,
+  mergeAckPlanVersion,
+  readAckPlanVersion,
+  writeAckPlanVersion,
+} from '../../demo/plant/plantDemoAckStorage';
+import { getPlantEventExplanation, PLANT_DEMO_LINE_ID } from '../../demo/plant/plantDemoServer';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
 import { getApiConnectionMode } from '../../services/apiConfig';
@@ -21,40 +27,56 @@ export function PlantLineMvp() {
   const [, setMoves] = useState<{ po: string; fromPosition: number; toPosition: number }[]>([]);
   const [explanation, setExplanation] = useState<PlantExplanation | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [planVersion, setPlanVersion] = useState(1);
+  const [ackPlanVersion, setAckPlanVersion] = useState<number | null>(() => readAckPlanVersion());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  /** Plan version user accepted — ignore stale `lastEvent` from BFF poll for this version. */
-  const acceptedPlanVersionRef = useRef<number | null>(null);
+  const acceptedPlanVersionRef = useRef<number | null>(readAckPlanVersion());
+  const acceptEpochRef = useRef(0);
+  const connectionMode = getApiConnectionMode();
+  const pollsRemoteQueue = connectionMode === 'bff' || connectionMode === 'msw';
 
-  const applyQueueSnapshot = useCallback((res: PlantQueueResponse) => {
-    setQueue(res.queue);
+  const syncAckPlanVersion = useCallback((version: number | null) => {
+    acceptedPlanVersionRef.current = version;
+    setAckPlanVersion(version);
+    writeAckPlanVersion(PLANT_DEMO_LINE_ID, version);
+  }, []);
 
-    if (res.planVersion <= 1 && !res.lastEvent) {
-      acceptedPlanVersionRef.current = null;
-      setEventType(null);
-      setExplanation(null);
-      setMoves([]);
-      setAccepted(false);
-      return;
-    }
+  const applyQueueSnapshot = useCallback(
+    (res: PlantQueueResponse) => {
+      setQueue(res.queue);
+      setPlanVersion(res.planVersion);
 
-    if (
-      acceptedPlanVersionRef.current != null &&
-      res.planVersion === acceptedPlanVersionRef.current
-    ) {
-      setEventType(null);
-      setExplanation(null);
-      setAccepted(true);
-      return;
-    }
+      const mergedAck = mergeAckPlanVersion(acceptedPlanVersionRef.current, res.acceptedPlanVersion);
+      if (mergedAck !== acceptedPlanVersionRef.current) {
+        syncAckPlanVersion(mergedAck);
+      }
 
-    if (res.lastEvent) {
-      acceptedPlanVersionRef.current = null;
-      setEventType(res.lastEvent);
-      setExplanation(getPlantEventExplanation(res.lastEvent, locale));
-      setAccepted(false);
-    }
-  }, [locale]);
+      if (res.planVersion <= 1 && !res.lastEvent) {
+        syncAckPlanVersion(null);
+        setEventType(null);
+        setExplanation(null);
+        setMoves([]);
+        setAccepted(false);
+        return;
+      }
+
+      if (isPlanAcknowledged(res.planVersion, mergedAck)) {
+        setEventType(null);
+        setExplanation(null);
+        setAccepted(true);
+        return;
+      }
+
+      if (res.lastEvent) {
+        syncAckPlanVersion(null);
+        setEventType(res.lastEvent);
+        setExplanation(getPlantEventExplanation(res.lastEvent, locale));
+        setAccepted(false);
+      }
+    },
+    [locale, syncAckPlanVersion],
+  );
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -66,68 +88,41 @@ export function PlantLineMvp() {
     }
   }, [applyQueueSnapshot]);
 
-  const pollQueueFromBff = useCallback(async () => {
-    if (getApiConnectionMode() !== 'bff' || busy) return;
+  const pollQueue = useCallback(async () => {
+    if (!pollsRemoteQueue || busy) return;
+    const epochAtStart = acceptEpochRef.current;
     try {
       const res = await plantDemoApi.getQueue();
+      if (epochAtStart !== acceptEpochRef.current) return;
       applyQueueSnapshot(res);
     } catch {
       /* ignore transient poll errors */
     }
-  }, [applyQueueSnapshot, busy]);
+  }, [applyQueueSnapshot, busy, pollsRemoteQueue]);
 
   useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
 
   useEffect(() => {
-    if (getApiConnectionMode() !== 'bff') return;
-    const id = window.setInterval(() => void pollQueueFromBff(), 5_000);
+    if (!pollsRemoteQueue) return;
+    const id = window.setInterval(() => void pollQueue(), 5_000);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void pollQueueFromBff();
+      if (document.visibilityState === 'visible') void pollQueue();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [pollQueueFromBff]);
-
-  async function inject(type: PlantEventType) {
-    setBusy(true);
-    try {
-      const res = await plantDemoApi.postEvent(type, locale);
-      setQueue(res.queue);
-      setMoves(res.diff.moves);
-      acceptedPlanVersionRef.current = null;
-      setEventType(type);
-      setExplanation(res.explanation);
-      setAccepted(false);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function reset() {
-    setBusy(true);
-    try {
-      const res = await plantDemoApi.resetDemo();
-      setQueue(res.queue);
-      setEventType(null);
-      setMoves([]);
-      setExplanation(null);
-      acceptedPlanVersionRef.current = null;
-      setAccepted(false);
-    } finally {
-      setBusy(false);
-    }
-  }
+  }, [pollQueue, pollsRemoteQueue]);
 
   async function acceptPlan() {
     setBusy(true);
     try {
       const res = await plantDemoApi.postAccept();
-      acceptedPlanVersionRef.current = res.planVersion;
+      acceptEpochRef.current += 1;
+      syncAckPlanVersion(res.planVersion);
       setAccepted(true);
       setEventType(null);
       setExplanation(null);
@@ -177,53 +172,14 @@ export function PlantLineMvp() {
           </span>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={busy || loading}
-              title={copy.actions.rushTooltip}
-              onClick={() => void inject('rush')}
-              className="rounded-lg bg-brand-green px-4 py-2 text-sm font-semibold text-white hover:bg-brand-green-dark disabled:opacity-50"
-            >
-              {copy.actions.rush}
-            </button>
-            <button
-              type="button"
-              disabled={busy || loading}
-              title={copy.actions.qaFailTooltip}
-              onClick={() => void inject('qa_fail')}
-              className="rounded-lg border border-brand-blue/30 px-4 py-2 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5 disabled:opacity-50"
-            >
-              {copy.actions.qaFail}
-            </button>
-            <button
-              type="button"
-              disabled={busy || loading}
-              title={copy.actions.resetTooltip}
-              onClick={() => void reset()}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-            >
-              {copy.actions.reset}
-            </button>
-          </div>
-          <details className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
-            <summary className="cursor-pointer font-semibold text-gray-900">{copy.eventHelp.title}</summary>
-            <ul className="mt-2 space-y-2">
-              <li>
-                <span className="font-medium text-brand-green-dark">{copy.eventHelp.rushLabel} —</span>{' '}
-                {copy.eventHelp.rushBody}
-              </li>
-              <li>
-                <span className="font-medium text-brand-blue">{copy.eventHelp.qaLabel} —</span>{' '}
-                {copy.eventHelp.qaBody}
-              </li>
-              <li>
-                <span className="font-medium text-gray-800">{copy.eventHelp.resetLabel} —</span>{' '}
-                {copy.eventHelp.resetBody}
-              </li>
-            </ul>
-          </details>
+        <div className="rounded-lg border border-brand-blue/15 bg-brand-blue/[0.03] px-4 py-3 text-sm text-gray-700">
+          <p className="font-semibold text-brand-blue">{copy.dataFeed.title}</p>
+          <p className="mt-1 leading-relaxed">{copy.dataFeed.body}</p>
+          <ul className="mt-2 list-inside list-disc space-y-1 font-mono text-xs text-gray-800">
+            <li>{copy.dataFeed.sapPath}</li>
+            <li>{copy.dataFeed.passFailPath}</li>
+          </ul>
+          <p className="mt-2 text-xs text-gray-600">{copy.dataFeed.operatorDoc}</p>
         </div>
 
         {loading ? (
@@ -235,6 +191,7 @@ export function PlantLineMvp() {
               eventType={eventType}
               explanation={explanation}
               accepted={accepted}
+              planAcknowledged={isPlanAcknowledged(planVersion, ackPlanVersion)}
               acceptDisabled={busy}
               onAccept={() => void acceptPlan()}
             />

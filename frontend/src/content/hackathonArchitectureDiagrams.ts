@@ -35,7 +35,7 @@ React Plant Demo ──► BFF (core-api)
                          └──► Agent API ──► Data API (context)
                                               └──► explain / optional suggest (validated)
 
-UI ── inject event ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI`,
+Operator ── ingest ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI polls queue`,
 
   uc4Flow: `5 CSVs UC4 ──► ETL seed ──► PostgreSQL demo
 

@@ -20,6 +20,37 @@ export const plantDemoHandlers = [
     }
   }),
 
+  http.post('*/demo/plant/ingest/pass-fail-log', async ({ request }) => {
+    const body = (await request.json()) as { lineId?: string; locale?: Locale; passFail?: string };
+    const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
+    const locale = parseLocale(body);
+    if (body.passFail !== 'Fail') {
+      return HttpResponse.json({ message: 'Only passFail Fail triggers replan' }, { status: 400 });
+    }
+    try {
+      return HttpResponse.json({
+        ...plantDemoServer.applyEvent(lineId, 'qa_fail', locale),
+        source: 'pass_fail_log',
+      });
+    } catch {
+      return HttpResponse.json({ message: 'Unknown line' }, { status: 404 });
+    }
+  }),
+
+  http.post('*/demo/plant/ingest/sap-priority-change', async ({ request }) => {
+    const body = (await request.json()) as { lineId?: string; locale?: Locale };
+    const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
+    const locale = parseLocale(body);
+    try {
+      return HttpResponse.json({
+        ...plantDemoServer.applyEvent(lineId, 'rush', locale),
+        source: 'sap_priority_change',
+      });
+    } catch {
+      return HttpResponse.json({ message: 'Unknown line' }, { status: 404 });
+    }
+  }),
+
   http.post('*/demo/plant/events', async ({ request }) => {
     const body = (await request.json()) as { type?: string; lineId?: string; locale?: Locale };
     const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;

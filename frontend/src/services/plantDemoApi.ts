@@ -4,6 +4,8 @@ import type {
   PlantBatchExplainResponse,
   PlantEventResponse,
   PlantEventType,
+  PlantIngestPassFailRequest,
+  PlantIngestSapPriorityRequest,
   PlantQueueResponse,
 } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n';
@@ -51,6 +53,46 @@ async function resetDemo(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueu
   return data;
 }
 
+async function postIngestPassFailLog(
+  locale: Locale,
+  lineId: string = PLANT_DEMO_LINE_ID,
+): Promise<PlantEventResponse> {
+  const body: PlantIngestPassFailRequest = {
+    lineId,
+    locale,
+    po: '1001884747',
+    passFail: 'Fail',
+    failedFor: 'Dent',
+    equipmentId: 'Line 1',
+  };
+  if (!useHttp) {
+    return { ...plantDemoServer.applyEvent(lineId, 'qa_fail', locale), source: 'pass_fail_log' };
+  }
+  const { data } = await axiosApp.post<PlantEventResponse>(`/demo/plant/ingest/pass-fail-log`, body);
+  return data;
+}
+
+async function postIngestSapPriorityChange(
+  locale: Locale,
+  lineId: string = PLANT_DEMO_LINE_ID,
+): Promise<PlantEventResponse> {
+  const body: PlantIngestSapPriorityRequest = {
+    lineId,
+    locale,
+    po: '1002307551',
+    priority: 2,
+    scheduledFinish: '2026-07-06 09:00',
+  };
+  if (!useHttp) {
+    return { ...plantDemoServer.applyEvent(lineId, 'rush', locale), source: 'sap_priority_change' };
+  }
+  const { data } = await axiosApp.post<PlantEventResponse>(
+    `/demo/plant/ingest/sap-priority-change`,
+    body,
+  );
+  return data;
+}
+
 async function postBatchExplain(
   po: string,
   question: string,
@@ -67,7 +109,10 @@ async function postBatchExplain(
 
 export const plantDemoApi = {
   getQueue,
+  /** Legacy demo inject — prefer ingest routes; not exposed in scheduler UI. */
   postEvent,
+  postIngestPassFailLog,
+  postIngestSapPriorityChange,
   postAccept,
   resetDemo,
   postBatchExplain,

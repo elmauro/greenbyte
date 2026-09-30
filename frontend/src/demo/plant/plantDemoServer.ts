@@ -15,9 +15,9 @@ type Locale = 'en' | 'es';
 const BASE_QUEUE: QueueRow[] = [
   { po: '1001759341', species: 'SWCO', kg: 4200, finish: '2026-07-04 11:30', status: 'PLANNED' },
   {
-    po: '1001858227',
+    po: '1001884747',
     species: 'SWCO',
-    kg: 3100,
+    kg: 9800,
     finish: '2026-07-05 16:00',
     status: 'PLANNED',
     atRisk: true,
@@ -40,7 +40,7 @@ const BASE_QUEUE: QueueRow[] = [
 const explanations: Record<Locale, Record<PlantEventType, PlantExplanation>> = {
   en: {
     rush: {
-      alertBanner: 'Event injected: Rush batch — customer window at risk.',
+      alertBanner: 'SAP priority update — customer window at risk; line replanned.',
       summary: 'Moved PO 1002307551 ahead to protect the 2026-07-06 customer window.',
       bullets: [
         'Moved PO 1002307551 ahead of PO 1001759341.',
@@ -50,10 +50,10 @@ const explanations: Record<Locale, Record<PlantEventType, PlantExplanation>> = {
       impact: 'Impact: Customer window protected · Net changeover: −1.5h (Pasco heuristic).',
     },
     qa_fail: {
-      alertBanner: 'Event injected: Failed QA test — batch moved to hold and queue re-sequenced.',
-      summary: 'PO 1001858227 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
+      alertBanner: 'LSV pass/fail log — Fail recorded; batch on hold and queue re-sequenced.',
+      summary: 'PO 1001884747 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
       bullets: [
-        'PO 1001858227 set to HOLD from LSV pass/fail log (Pasco seed data).',
+        'PO 1001884747 set to HOLD from LSV pass/fail log — Fail (Dent), Line 1 (Pasco extract).',
         'Downstream positions shifted; no ERP write — planner validates.',
         'Next runnable SWCO batches grouped to limit changeover.',
       ],
@@ -62,7 +62,7 @@ const explanations: Record<Locale, Record<PlantEventType, PlantExplanation>> = {
   },
   es: {
     rush: {
-      alertBanner: 'Evento inyectado: Lote rush — ventana de cliente en riesgo.',
+      alertBanner: 'Actualización de prioridad SAP — ventana de cliente en riesgo; línea reprogramada.',
       summary: 'Se adelantó PO 1002307551 para proteger la ventana del 2026-07-06.',
       bullets: [
         'PO 1002307551 pasó por delante de PO 1001759341.',
@@ -72,10 +72,10 @@ const explanations: Record<Locale, Record<PlantEventType, PlantExplanation>> = {
       impact: 'Impacto: ventana de cliente protegida · Changeover neto: −1,5 h (heurística Pasco).',
     },
     qa_fail: {
-      alertBanner: 'Evento inyectado: Test QA fallido — lote en hold y cola reordenada.',
-      summary: 'PO 1001858227 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
+      alertBanner: 'Log pass/fail LSV — Fail registrado; lote en hold y cola reordenada.',
+      summary: 'PO 1001884747 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
       bullets: [
-        'PO 1001858227 en HOLD según log pass/fail LSV (datos Pasco).',
+        'PO 1001884747 en HOLD según log pass/fail LSV — Fail (Dent), Línea 1 (extracto Pasco).',
         'Posiciones siguientes ajustadas; sin escritura en ERP — valida el programador.',
         'Bloques SWCO siguientes agrupados para limitar changeover.',
       ],
@@ -107,20 +107,26 @@ class PlantDemoServer {
   private queue = cloneQueue(BASE_QUEUE);
   private planVersion = 1;
   private lastEvent: PlantEventType | null = null;
+  private acceptedPlanVersion: number | null = null;
 
   reset() {
     this.queue = cloneQueue(BASE_QUEUE);
     this.planVersion = 1;
     this.lastEvent = null;
+    this.acceptedPlanVersion = null;
   }
 
   getQueue(lineId: string): PlantQueueResponse {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
+    const pendingEvent =
+      this.lastEvent != null &&
+      !(this.acceptedPlanVersion != null && this.planVersion === this.acceptedPlanVersion);
     return {
       lineId,
       queue: cloneQueue(this.queue),
       planVersion: this.planVersion,
-      lastEvent: this.lastEvent,
+      lastEvent: pendingEvent ? this.lastEvent : null,
+      acceptedPlanVersion: this.acceptedPlanVersion,
     };
   }
 
@@ -142,7 +148,7 @@ class PlantDemoServer {
         reasons.push('priority_2', 'sap_finish_2026-07-06', 'same_species_changeover');
       }
     } else {
-      const failPo = '1001858227';
+      const failPo = '1001884747';
       const failIdx = next.findIndex((r) => r.po === failPo);
       if (failIdx >= 0) {
         next[failIdx] = { ...next[failIdx], status: 'HOLD', previousPosition: failIdx + 1 };
@@ -157,6 +163,7 @@ class PlantDemoServer {
     this.queue = next;
     this.planVersion += 1;
     this.lastEvent = type;
+    this.acceptedPlanVersion = null;
 
     return {
       lineId,
@@ -171,6 +178,7 @@ class PlantDemoServer {
   accept(lineId: string): { acceptedAt: string; lineId: string; planVersion: number } {
     if (lineId !== PLANT_DEMO_LINE_ID) throw new Error('Unknown line');
     this.lastEvent = null;
+    this.acceptedPlanVersion = this.planVersion;
     return {
       acceptedAt: new Date().toISOString(),
       lineId,

@@ -16,12 +16,18 @@ The **browser calls only the BFF**. The BFF calls **Data API (Camilo)** and **Ag
 flowchart LR
   subgraph UX["React UX /demo/plant"]
     Q[Queue table]
-    E[Inject Rush / QA]
+    P2[Poll GET queue]
     C[Copilot panel]
     T[Timeline + mockup]
     S[Sales explain batch]
     A[Accept schedule]
   end
+
+  subgraph OP["Operator / Data API"]
+    ING[POST ingest]
+  end
+
+  OP -->|rush / QA signal| P
 
   subgraph BFF["BFF core-api"]
     P["/demo/plant/*"]
@@ -52,11 +58,12 @@ flowchart LR
 | # | User action (UX) | When (moment) | Frontend calls BFF | BFF orchestration (target) | Backend response → UI binding |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Open `/demo/plant` | Page load | `GET /demo/plant/lines/line-1/queue` | Proxy Data `GET /lines/line-1/queue` | **`queue[]`**, `planVersion` → table rows, status badges, “calm” state |
-| 2 | Click **Simulate rush batch** | Live demo inject | `POST /demo/plant/events` `{ type: "rush", lineId, locale }` | Data `POST /schedule/replan` → Agent `POST /explain-replan` with diff | **`PlantEventResponse`**: new `queue[]`, `diff.moves[]` (highlight rows), `explanation.*` → banner + copilot, timeline + wow image |
-| 3 | Click **Simulate QA failure** | Live demo inject | Same with `type: "qa_fail"` | Same pipeline; replan rules differ (hold + resequence) | Same shape; HOLD status, copilot QA copy |
+| 2 | Operator posts **SAP priority** ingest (not a UI button) | Live demo | `POST /demo/plant/ingest/sap-priority-change` | Data replan → Agent explain (target) | UI **polls** GET queue → **`PlantEventResponse`** shape via pending `lastEvent` / local apply on ingest response |
+| 3 | Operator posts **pass/fail Fail** ingest | Live demo | `POST /demo/plant/ingest/pass-fail-log` | Hold + resequence rules | Same; HOLD status, copilot QA copy |
 | 4 | Click **Accept schedule** | After event | `POST /demo/plant/schedule/accept` `{ lineId }` | Log acceptance (BFF or Data audit table) | **`acceptedAt`**, `planVersion` → disabled accept button + confirmation note |
-| 5 | Click **Reset queue** | Repeat demo | `POST /demo/plant/reset` `{ lineId }` | Reset demo state / reload baseline seed | Fresh **`queue[]`**, clear copilot & timeline |
+| 5 | **Reset queue** (operator) | Repeat demo | `POST /demo/plant/reset` `{ lineId }` | Reset demo state / reload baseline seed | Fresh **`queue[]`**, clear copilot & timeline |
 | 6 | Sales: pick PO + **Ask** | Anytime (nice-to-have) | `POST /demo/plant/batches/explain` `{ po, question, locale }` | Agent (+ Data tools for batch/queue context) | **`answer`**, **`citations[]`** → chat panel (no queue change) |
+| — | UI **poll** (BFF or MSW) | Every ~5s while `/demo/plant` open | `GET /demo/plant/lines/line-1/queue` | Read shared state | `lastEvent`, `queue[]`, `acceptedPlanVersion` → badges & replan UI |
 
 **Tour (`/demo/plant/tour`):** read-only **same React components**; no live HTTP (uses `plantFlowSnapshots`).  
 **Backend owners per step:** see `/demo/plant/flow` → **Likely backend owners** (Mauricio · BFF, Camilo · Data API, David · Agent API).
@@ -82,27 +89,35 @@ sequenceDiagram
 
 ---
 
-## 4. Sequence — inject rush or QA (main demo)
+## 4. Sequence — upstream data → replan (main demo)
 
 ```mermaid
 sequenceDiagram
-  actor User
+  actor Operator
+  actor Scheduler
   participant UI as React PlantLineMvp
   participant BFF as core-api BFF
   participant Data as Data API
   participant Agent as Agent API
 
-  User->>UI: Clicks Rush or QA fail
-  UI->>BFF: POST /demo/plant/events { type, lineId, locale }
-  BFF->>Data: POST /schedule/replan { type, lineId, ... }
+  Operator->>BFF: POST /ingest/sap-priority-change OR /ingest/pass-fail-log
+  BFF->>Data: POST /schedule/replan (target)
   Data-->>BFF: new queue[], moves[], reasons[]
-  BFF->>Agent: POST /explain-replan { diff, queue snapshot, locale }
+  BFF->>Agent: POST /explain-replan (target)
   Agent-->>BFF: summary, bullets[], impact?
-  BFF-->>UI: PlantEventResponse (queue + diff + explanation)
-  UI-->>User: Alert banner, updated table, copilot, timeline, wow PNG
+  BFF-->>BFF: Persist queue, lastEvent, planVersion
+
+  loop Poll ~5s
+    Scheduler->>UI: Views /demo/plant
+    UI->>BFF: GET /lines/line-1/queue
+    BFF-->>UI: PlantQueueResponse (lastEvent set when pending)
+    UI-->>Scheduler: Scheduling badge, Gantt, copilot copy
+  end
 ```
 
-**Important:** The Agent must not invent POs or dates; it paraphrases **`moves`** and **`reasons`** from Data (and optional tool JSON).
+**Important:** The scheduler UI **never** calls ingest or legacy `POST /events`. The Agent must not invent POs or dates; it paraphrases **`moves`** and **`reasons`** from Data (and optional tool JSON).
+
+**Legacy (tests only):** `POST /demo/plant/events` `{ type: rush | qa_fail }` — same **`PlantEventResponse`** shape.
 
 ---
 
@@ -155,27 +170,28 @@ Types: `frontend/src/demo/plant/plantDemoTypes.ts` · mock: `plantDemoServer.ts`
 
 ### `GET /demo/plant/lines/line-1/queue` → `PlantQueueResponse`
 
-Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`. Full array in JSON file → `GET .../queue.response200`.
+Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`, optional `lastEvent`, `acceptedPlanVersion` after accept. Full array in JSON file → `GET .../queue.response200`.
 
-### `POST /demo/plant/events` → `PlantEventResponse`
+### `POST /demo/plant/ingest/sap-priority-change` → `PlantEventResponse`
 
-**Request (rush):**
+**Request (demo):** see `PlantIngestSapPriorityRequest` in `plantDemoTypes.ts`. Full example in JSON file → `response200Rush` (+ `source: "sap_priority_change"`).
 
-```json
-{ "type": "rush", "lineId": "line-1", "locale": "en" }
-```
+**Response (200, rush)** — PO `1002307551` moves 3→1; same body as legacy rush event.
 
-**Response (200, rush)** — PO `1002307551` moves 3→1; `previousPosition` on moved row; full `queue[]` + `explanation` in JSON file → `response200Rush`.
+### `POST /demo/plant/ingest/pass-fail-log` → `PlantEventResponse`
 
-**Request (QA):**
+**Request (demo):** see `PlantIngestPassFailRequest`. Full example in JSON file → `requestPassFailIngest` / `response200QaFail` (+ `source: "pass_fail_log"`).
 
-```json
-{ "type": "qa_fail", "lineId": "line-1", "locale": "en" }
-```
+**Response (200, qa_fail)** — PO `1001884747` → `status: "HOLD"`, moved to end of list.
 
-**Response (200, qa_fail)** — PO `1001858227` → `status: "HOLD"`, moved to end of list; see `response200QaFail`.
+**Errors (ingest):** `400` wrong PO or `passFail` not `Fail` · `404` `{ "message": "Unknown line" }`.
 
-**Errors:** `400` `{ "message": "Invalid event type" }` · `404` `{ "message": "Unknown line" }`.
+### `POST /demo/plant/events` → `PlantEventResponse` (legacy)
+
+**Request (rush):** `{ "type": "rush", "lineId": "line-1", "locale": "en" }`  
+**Request (QA):** `{ "type": "qa_fail", "lineId": "line-1", "locale": "en" }`
+
+Prefer **ingest** routes for live demo. **Errors:** `400` `{ "message": "Invalid event type" }`.
 
 ### `POST /demo/plant/batches/explain` → `PlantBatchExplainResponse`
 
@@ -183,7 +199,7 @@ Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`. Full array in JSO
 
 ```json
 {
-  "po": "1001858227",
+  "po": "1002307551",
   "question": "When does it ship?",
   "locale": "en"
 }

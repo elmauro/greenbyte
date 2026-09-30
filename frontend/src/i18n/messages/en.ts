@@ -107,9 +107,9 @@ export const en = {
       s01: 'Mauricio · BFF (core-api) proxies → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (Pasco seed).',
       s02: 'Same as step 01 — no extra service; Camilo · Data API (queue fields).',
       s03:
-        'Mauricio · BFF POST /demo/plant/events → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
       s03b:
-        'Mauricio · BFF POST /demo/plant/events (qa_fail) → Camilo · replan + hold rules → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + hold rules → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF merges explanation into event response.',
       s05: 'Camilo · Data API (queue[] in replan response). Mauricio · BFF — no separate timeline endpoint.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept (demo audit; optional Camilo persist).',
@@ -119,8 +119,8 @@ export const en = {
     triggers: {
       s01: 'User opens /demo/plant — useEffect calls plantDemoApi.getQueue().',
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
-      s03: 'User clicks Simulate rush batch — POST /demo/plant/events.',
-      s03b: 'User clicks Simulate QA failure — POST /demo/plant/events with qa_fail.',
+      s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
+      s03b: 'Operator posts pass/fail Fail row — POST /demo/plant/ingest/pass-fail-log.',
       s04: 'Copilot fills from POST response explanation (BFF calls Agent explain-replan).',
       s05: 'Timeline derives from event response queue[] — no GET /timeline.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
@@ -129,8 +129,8 @@ export const en = {
     slideTitles: {
       s01: 'Queue table — page load',
       s02: 'Scheduled finish & at-risk rows',
-      s03: 'Simulate rush batch',
-      s03b: 'Simulate QA failure',
+      s03: 'SAP priority ingest',
+      s03b: 'Pass/fail log ingest',
       s04: 'AI Copilot — what changed',
       s05: 'Schedule timeline / Gantt',
       s06: 'Accept schedule',
@@ -141,7 +141,7 @@ export const en = {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
     title: 'Pasco conditioning — Line 1',
     subtitle:
-      'Interactive scheduling demo: ranked queue, live rush/QA inject, timeline + copilot explanation, human accept — same BFF contract as production (MSW or core-api).',
+      'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
     links: {
       tour: 'Guided story (5 steps)',
@@ -151,7 +151,7 @@ export const en = {
       backMvp: 'Back to Line 1 demo',
     },
     lineTitle: 'Line 1 queue',
-    lineSubtitle: 'Calm baseline — inject an event to replan (Syngenta demo-ready flow).',
+    lineSubtitle: 'Calm baseline — replans appear when Data API or BFF ingest receives new source rows (poll every ~5s).',
     loading: 'Loading queue…',
     status: { calm: 'Calm & stable', eventActive: 'Event active — review proposed plan' },
     statusLabels: { planned: 'PLANNED', atRisk: 'AT RISK', complete: 'COMPLETE', hold: 'QA HOLD' },
@@ -232,31 +232,19 @@ export const en = {
       notificationQueueTitle: 'Queue updated',
       notificationQueueBody: 'Accepted plan — check new order and dates',
     },
+    dataFeed: {
+      title: 'Events come from data — not from this screen',
+      body: 'Syngenta UC1: rush and QA replans trigger when SAP schedule data or LSV pass/fail rows update. Operators or Data API POST to BFF ingest; this UI polls the queue and shows notifications when a replan is pending.',
+      sapPath: 'POST /demo/plant/ingest/sap-priority-change',
+      passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
+      operatorDoc: 'Operator curl examples: docs/hackathon/uc1-demo-operator-ingest.md',
+    },
     actions: {
-      rush: 'Simulate rush batch',
-      rushTooltip:
-        'Urgent customer window: a high-priority PO moves up in the queue (demo: PO 1002307551).',
-      qaFail: 'Simulate QA failure',
-      qaFailTooltip:
-        'Failed pass/fail test: batch goes on QA hold and is removed from the active slot (demo: PO 1001858227).',
-      reset: 'Reset queue',
-      resetTooltip: 'Return to the calm baseline queue before any injected event.',
       accept: 'Accept schedule',
       accepted: 'Accepted',
     },
-    eventHelp: {
-      title: 'What each inject button simulates (Syngenta demo-ready)',
-      rushLabel: 'Rush',
-      rushBody:
-        'A surprise urgent batch (tight SAP / customer date). The system proposes moving it ahead and explains changeover impact. Planner must accept; no ERP write.',
-      qaLabel: 'QA failure',
-      qaBody:
-        'A batch fails quality (pass/fail log). It is placed on hold and the line is re-sequenced so other batches can keep running.',
-      resetLabel: 'Reset',
-      resetBody: 'Clears the injected event so you can run the live demo again from a stable queue.',
-    },
     copilotTitle: 'AI Copilot — What changed',
-    copilotIdle: 'Inject a rush batch or QA failure to see the proposed order and explanation.',
+    copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance logged (demo). No live ERP update.',
     apiNoteMsw:
@@ -326,7 +314,7 @@ export const en = {
       uc1: {
         title: 'UC1 — Plant capacity architecture',
         intro:
-          'Scheduler UI for line queue → inject event (rush or QA fail) → Data API replan → Agent explains diff → human accept.',
+          'Operator ingest (SAP / pass-fail) → BFF replan → UI polls queue → Agent explains diff → scheduler accept.',
         syngentaGoal: 'Recommendations with explanations; human validates; no live SAP connection.',
         dataSource:
           'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs).',
@@ -380,8 +368,8 @@ export const en = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../events (rush | qa_fail) · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
-        purpose: 'Three Syngenta triggers: rush, QA fail, explain batch + accept + demo reset',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
+        purpose: 'Syngenta triggers via ingest + explain batch + accept + demo reset',
       },
       {
         layer: 'Data API',
@@ -434,7 +422,7 @@ export const en = {
       },
       uc1Sequence: {
         title: 'UC1 — Sequence (event + replan + explain)',
-        description: 'Order of calls when a rush batch or QA failure is injected.',
+        description: 'Order of calls when upstream data triggers a rush or QA replan.',
       },
       uc4Flow: {
         title: 'UC4 — R&D unification flow',
