@@ -2,7 +2,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlantDemoLoginGate } from '../../components/plant/PlantDemoLoginGate';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { readPlantUxSession } from '../../demo/plant/plantDemoSessionAuth';
-import { demoDefaultAfterSignIn, paths } from '../../routes/paths';
+import { demoDefaultAfterSignIn } from '../../routes/paths';
 
 function safeReturnTo(raw: string | null): string {
   if (!raw || !raw.startsWith('/')) return demoDefaultAfterSignIn;

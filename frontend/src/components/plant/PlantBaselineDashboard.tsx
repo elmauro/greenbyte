@@ -265,9 +265,10 @@ export function PlantBaselineDashboard({
 
   useEffect(() => {
     if (!showProgramTimeline && (activeSection === 'scheduling' || activeSection === 'copilot')) {
-      setActiveSection('queue');
+      if (sectionControlled) onSectionChange!('queue');
+      else setInternalSection('queue');
     }
-  }, [activeSection, showProgramTimeline]);
+  }, [activeSection, onSectionChange, sectionControlled, showProgramTimeline]);
 
   function sectionTitle(): string {
     switch (activeSection) {
