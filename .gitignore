@@ -39,6 +39,7 @@ frontend/cypress/videos/
 
 # OS and editors
 .DS_Store
+~$*
 Thumbs.db
 .idea/
 .vscode/

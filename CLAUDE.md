@@ -20,6 +20,7 @@ The canonical rules live in `.cursor/rules/*.mdc` (written for Cursor). This fil
 
 - Always: `project.config.json`, `cursor/context-map.md`.
 - Hackathon scope and architecture: `docs/hackathon/syngenta-demo-architecture.md`, `docs/hackathon/uc1-mvp-scope.md` (UC1 is the selected use case).
+- Data model and integration (Data API): `backend/data-model/` (model, CSV → raw integration) and `…/UC1 - Plant Capacity Utilization/data_sources/observations.md` (source-to-target mapping, DQ).
 - Product/scope decisions: `cursor/company/README.md`, `cursor/company/HACKATHON.md`.
 - Before editing a stack, read its context: `cursor/projects/{frontend,backend,infrastructure}/project-context.md`. Cross-stack work: read every affected one.
 - Full lifecycle: `cursor/docs/AI-Project-Playbook.md`.
