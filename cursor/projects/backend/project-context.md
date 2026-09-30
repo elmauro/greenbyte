@@ -35,9 +35,11 @@ Use `backend/backend.config.json` as the source of truth for selected APIs and l
 
 Backend must support **three demo triggers** aligned with the live site:
 
-1. **Rush batch** — `POST /demo/plant/events` `{ type: "rush" }`
-2. **QA failure** — same route `{ type: "qa_fail" }`
+1. **Rush batch** — `POST /demo/plant/ingest/sap-priority-change` (legacy: `POST /demo/plant/events` `{ type: "rush" }`)
+2. **QA failure** — `POST /demo/plant/ingest/pass-fail-log` (legacy: `{ type: "qa_fail" }`)
 3. **Explain my batch** — `POST /demo/plant/batches/explain`
+
+Scheduler UI polls `GET .../queue`; it does not call ingest or legacy events.
 
 Full handoff (owners Mauricio/Camilo/David, JSON shapes, demo POs, flow URLs):
 

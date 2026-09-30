@@ -131,7 +131,7 @@ export const es: Messages = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../events (rush | qa_fail) · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
         purpose: 'Tres triggers Syngenta: rush, QA, explicar lote + accept + reset demo',
       },
       {
@@ -280,9 +280,9 @@ export const es: Messages = {
       s01: 'Mauricio · BFF (core-api) → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (seed Pasco).',
       s02: 'Igual que paso 01 — sin servicio extra; Camilo · Data API (campos de cola).',
       s03:
-        'Mauricio · BFF POST /demo/plant/events → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
       s03b:
-        'Mauricio · BFF POST /demo/plant/events (qa_fail) → Camilo · replan + reglas hold → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + reglas hold → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF integra explanation en la respuesta del evento.',
       s05: 'Camilo · Data API (queue[] en replan). Mauricio · BFF — sin endpoint de timeline aparte.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept (auditoría demo; opcional persist Camilo).',
@@ -302,8 +302,8 @@ export const es: Messages = {
     slideTitles: {
       s01: 'Tabla de cola — carga inicial',
       s02: 'Fecha programada y filas en riesgo',
-      s03: 'Simular lote rush',
-      s03b: 'Simular fallo QA',
+      s03: 'Ingest prioridad SAP',
+      s03b: 'Ingest log pass/fail',
       s04: 'Copiloto IA — qué cambió',
       s05: 'Timeline / Gantt de programación',
       s06: 'Aceptar programación',

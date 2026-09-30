@@ -46,18 +46,18 @@ We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferre
 | # | Deliverable | Owner |
 | --- | --- | --- |
 | 1 | `/demo/plant` queue + rush/QA + copilot + accept | Mauricio (UI) — **in repo** |
-| 2 | BFF contract: `GET queue`, `POST events`, `POST accept`, `POST reset` | Mauricio — MSW + `plantDemoServer` until Lambda |
+| 2 | BFF contract: `GET queue`, `POST ingest/*`, `POST accept`, `POST reset` | Mauricio — MSW + `plantDemoServer` until Lambda |
 | 3 | Pasco ETL → PostgreSQL; `POST replan` + `GET queue` | Camilo |
 | 4 | `POST explain-replan` from structured diff (no invented POs) | David |
 | 5 | Wire `VITE_API_BASE_APP` to deployed BFF | Mauricio / infra |
-| 6 | Demo script: tour (2 min) → live inject → accept | Team |
+| 6 | Demo script: tour (2 min) → operator **ingest** → UI poll → accept | Team |
 
 ### 4.1 UI blocks on `/demo/plant` (current — matches site)
 
 1. Header + **Demo target B+** badge  
-2. **Simulate rush batch** / **Simulate QA failure** / **Reset**  
-3. **Calm state:** `PlantBaselineDashboard` (queue table, KPIs, sidebar chrome) — `GET queue`  
-4. **After inject:** `PlantScheduleWorkspace` (top bar, alert, **Gantt**, **AI copilot** cards, Accept / Adjust manually) — `POST events` response  
+2. **Data-feed note** (ingest paths; no rush/QA buttons on scheduler UI)  
+3. **Calm state:** `PlantBaselineDashboard` (queue table, KPIs, sidebar chrome) — `GET queue` + poll  
+4. **After upstream ingest:** notifications → **Scheduling** + **Copilot** (Gantt, what changed, Accept) — driven by `lastEvent` on GET queue  
 5. **Explain my batch** (sales) — `POST batches/explain` (no queue change)  
 6. Accept schedule + audit message  
 

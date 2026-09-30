@@ -68,7 +68,7 @@ flowchart TB
 
 | System | Role | Owns |
 | --- | --- | --- |
-| **React UI** | Scheduler workspace; inject (demo); accept; read-only sales explain | Presentation, nav badges, section state (local) |
+| **React UI** | Scheduler workspace; poll queue; accept; read-only sales explain | Presentation, nav badges, section state (local) |
 | **BFF (`core-api`)** | Single contract to browser; auth boundary; orchestration | `PlantQueueResponse`, `PlantEventResponse`, accept audit, demo reset |
 | **Data API** | Truth for queue, rules, diffs, source events | Replan heuristics, ETL freshness, `planVersion`, row-level reasons |
 | **Agent API** | NL explanations grounded in JSON | `PlantExplanation`, batch Q&A citations — **no invented POs** |

@@ -16,7 +16,7 @@
 | **Triggers (production intent)** | **Rush lands** or **failed test lands** → automatic re-plan loop (human validates before final). |
 | **Out of scope** | Live ERP, optimal solver comparison, predicting harvest arrival. |
 
-The hackathon **inject buttons** simulate business events for judges; they are not the long-term production trigger model.
+The hackathon **ingest APIs** (operator / Data API) simulate upstream data landing for judges; they are not the long-term production trigger model. The scheduler UI has **no** rush/QA buttons.
 
 ---
 

@@ -10,7 +10,7 @@
 
 | URL | Purpose |
 | --- | --- |
-| `/demo/plant` | Interactive demo — inject rush / QA, accept, sales explain |
+| `/demo/plant` | Interactive demo — poll queue, accept replan, sales explain (rush/QA via **ingest**, not UI buttons) |
 | `/demo/plant/tour` | 5-step story with **same React components** (read-only) |
 | `/demo/plant/flow?step=01`…`07` | UI ↔ BFF map + JSON + **backend owner** per step |
 
@@ -84,7 +84,7 @@ Response includes `source: "sap_priority_change"`.
 
 `PlantEventResponse` — see `plantDemoTypes.ts` (`eventType`, `queue`, `planVersion`, `diff`, `explanation`).
 
-**Example (200, rush, `locale: en`):** full request/response in [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST /demo/plant/events.response200Rush`. The UI also shows this JSON on `/demo/plant/flow?step=03`.
+**Example (200, rush):** [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST /demo/plant/ingest/sap-priority-change`. Flow map: `/demo/plant/flow?step=03`.
 
 ---
 
@@ -198,7 +198,7 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 
 | Capability | Mauricio · BFF `core-api` | Camilo · Data API | David · Agent API |
 | --- | --- | --- | --- |
-| Rush / QA inject | `POST /demo/plant/events` orchestrates | `POST /schedule/replan` → `queue`, `diff.moves`, `diff.reasons` | `POST /explain-replan` ← structured diff |
+| Rush / QA ingest | `POST /demo/plant/ingest/*` orchestrates | `POST /schedule/replan` → `queue`, `diff.moves`, `diff.reasons` | `POST /explain-replan` ← structured diff |
 | Explain batch | `POST /demo/plant/batches/explain` proxy | Tools: queue + batch read | NL answer + `citations[]` |
 | Queue load | `GET /demo/plant/.../queue` proxy | Pasco ETL → PG | — |
 | Accept / reset | Implement demo routes | Optional persist accept | — |

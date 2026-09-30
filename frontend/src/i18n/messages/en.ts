@@ -107,9 +107,9 @@ export const en = {
       s01: 'Mauricio · BFF (core-api) proxies → Camilo · Data API GET /lines/line-1/queue · PostgreSQL (Pasco seed).',
       s02: 'Same as step 01 — no extra service; Camilo · Data API (queue fields).',
       s03:
-        'Mauricio · BFF POST /demo/plant/events → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/* → Camilo · Data API POST /schedule/replan → David · Agent API POST /explain-replan.',
       s03b:
-        'Mauricio · BFF POST /demo/plant/events (qa_fail) → Camilo · replan + hold rules → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + hold rules → David · explain-replan.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF merges explanation into event response.',
       s05: 'Camilo · Data API (queue[] in replan response). Mauricio · BFF — no separate timeline endpoint.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept (demo audit; optional Camilo persist).',
@@ -129,8 +129,8 @@ export const en = {
     slideTitles: {
       s01: 'Queue table — page load',
       s02: 'Scheduled finish & at-risk rows',
-      s03: 'Simulate rush batch',
-      s03b: 'Simulate QA failure',
+      s03: 'SAP priority ingest',
+      s03b: 'Pass/fail log ingest',
       s04: 'AI Copilot — what changed',
       s05: 'Schedule timeline / Gantt',
       s06: 'Accept schedule',
@@ -314,7 +314,7 @@ export const en = {
       uc1: {
         title: 'UC1 — Plant capacity architecture',
         intro:
-          'Scheduler UI for line queue → inject event (rush or QA fail) → Data API replan → Agent explains diff → human accept.',
+          'Operator ingest (SAP / pass-fail) → BFF replan → UI polls queue → Agent explains diff → scheduler accept.',
         syngentaGoal: 'Recommendations with explanations; human validates; no live SAP connection.',
         dataSource:
           'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs).',
@@ -368,8 +368,8 @@ export const en = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../events (rush | qa_fail) · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
-        purpose: 'Three Syngenta triggers: rush, QA fail, explain batch + accept + demo reset',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
+        purpose: 'Syngenta triggers via ingest + explain batch + accept + demo reset',
       },
       {
         layer: 'Data API',
@@ -422,7 +422,7 @@ export const en = {
       },
       uc1Sequence: {
         title: 'UC1 — Sequence (event + replan + explain)',
-        description: 'Order of calls when a rush batch or QA failure is injected.',
+        description: 'Order of calls when upstream data triggers a rush or QA replan.',
       },
       uc4Flow: {
         title: 'UC4 — R&D unification flow',

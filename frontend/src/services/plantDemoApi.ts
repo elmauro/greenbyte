@@ -4,6 +4,8 @@ import type {
   PlantBatchExplainResponse,
   PlantEventResponse,
   PlantEventType,
+  PlantIngestPassFailRequest,
+  PlantIngestSapPriorityRequest,
   PlantQueueResponse,
 } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n';
@@ -55,7 +57,7 @@ async function postIngestPassFailLog(
   locale: Locale,
   lineId: string = PLANT_DEMO_LINE_ID,
 ): Promise<PlantEventResponse> {
-  const body = {
+  const body: PlantIngestPassFailRequest = {
     lineId,
     locale,
     po: '1001884747',
@@ -74,7 +76,7 @@ async function postIngestSapPriorityChange(
   locale: Locale,
   lineId: string = PLANT_DEMO_LINE_ID,
 ): Promise<PlantEventResponse> {
-  const body = {
+  const body: PlantIngestSapPriorityRequest = {
     lineId,
     locale,
     po: '1002307551',

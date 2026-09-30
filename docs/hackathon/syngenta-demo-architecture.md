@@ -179,7 +179,7 @@ The **React app must not call Data or Agent APIs directly** in the demo environm
 ### 7.1 Business flow
 
 1. Scheduler views **line queue** (batches, priority, due dates).
-2. **Event** injected: rush batch or failed QA.
+2. **Upstream data** lands (SAP signal or pass/fail row) → replan.
 3. **Replan** updates order (heuristics in Data API or BFF).
 4. **Agent** explains what changed in plain language.
 5. Human **accepts** the recommendation (no auto-write to ERP).
@@ -194,7 +194,7 @@ React Plant Demo ──► BFF (core-api)
                          └──► Agent API ──► Data API (context)
                                               └──► explain / optional suggest (validated)
 
-UI ── inject event ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI
+Operator/Data ── ingest ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI polls queue
 ```
 
 ### 7.3 BFF endpoints (frontend contract — implemented in MSW + `plantDemoApi`)
