@@ -2,7 +2,7 @@
 
 **Purpose:** Align product, architecture, and demo copy with Syngenta’s official UC1 brief and Pasco extracts.  
 **Sources:** `Hackathon 2026 - Use Cases/.../2026_Use_Case_Briefs.pdf` (UC1), `Pasco LSV and SSV Conditioning sheets and data.xlsx` (Schedule Updating, Excel SAP data, LSV Pass_Fail Log).  
-**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
+**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [uc1-system-blueprint.md](./uc1-system-blueprint.md) · [UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
 
 ---
 

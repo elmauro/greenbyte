@@ -16,6 +16,7 @@ Initial documentation for `GreenByte`.
 - `cost-baseline.md`: initial AWS cost guide.
 - `hackathon/uc1-mvp-scope.md`: UC1 hackathon MVP scope (team-selected use case).
 - `hackathon/uc1-syngenta-assumptions.md`: Syngenta UC1 brief vs Pasco data vs GreenByte demo triggers.
+- `hackathon/uc1-system-blueprint.md`: **UC1 system blueprint** — architecture, data sources → events, decisions, queue/scheduling/notifications, AI logical data model (Mermaid).
 - `hackathon/uc1-ui-backend-flow.md`: UC1 UI actions, BFF calls, sequences (Mermaid), response shapes.
 - `backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md`: **Backend handoff** — Rush, QA, Explain batch (BFF + Data + Agent).
 - `hackathon/syngenta-demo-architecture.md` (and `.pdf`): Syngenta hackathon demo architecture (BFF + Data API + Agent API).

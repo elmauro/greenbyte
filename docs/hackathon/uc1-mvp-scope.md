@@ -6,7 +6,8 @@
 **Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7  
 **UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/plant/flow`  
 **Backend handoff (Rush · QA · Explain batch):** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)  
-**Syngenta brief vs demo assumptions:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md)
+**Syngenta brief vs demo assumptions:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md)  
+**Architecture, events, decisions, AI data model:** [uc1-system-blueprint.md](./uc1-system-blueprint.md)
 
 ---
 

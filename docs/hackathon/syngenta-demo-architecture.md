@@ -209,7 +209,8 @@ UI ── inject event ──► BFF ──► Data API (replan) ──► Agent
 
 **Deferred (not in current UI contract):** `GET /demo/plant/batches/{po}/summary` — batch drawer; use queue row + explain until added.
 
-**UX timing, sequences, JSON examples:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · **Interactive:** `/demo/plant/flow`.
+**UX timing, sequences, JSON examples:** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · **Interactive:** `/demo/plant/flow`.  
+**Events, decisions, notifications, AI data model (deep dive):** [uc1-system-blueprint.md](./uc1-system-blueprint.md).
 
 **Data API (Camilo)**
 
