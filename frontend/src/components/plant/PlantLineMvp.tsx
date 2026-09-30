@@ -185,7 +185,11 @@ export function PlantLineMvp() {
           <p className="text-center text-sm font-medium text-brand-green-dark">{copy.acceptedNote}</p>
         )}
         <p className="text-xs text-gray-500">
-          {plantDemoApi.useRemoteBff ? copy.apiNoteBff : copy.apiNoteLocal}
+          {plantDemoApi.connectionMode === 'bff'
+            ? copy.apiNoteBff
+            : plantDemoApi.connectionMode === 'msw'
+              ? copy.apiNoteMsw
+              : copy.apiNoteLocal}
         </p>
       </div>
     </div>

@@ -7,6 +7,8 @@ Initial documentation for `GreenByte`.
 - `domain.md`: business domain and shared language.
 - `architecture.md`: initial technical architecture.
 - `runbook.md`: operations, deployments and incident response.
+- **`frontend/docs/development/getting-started.md`**: run the React app locally (port 51730, MSW mocks).
+- `frontend/docs/development/api-mocks-and-bff.md`: MSW vs live BFF env vars.
 - `infrastructure/web-deployment.md`: steps to create web infrastructure, deploy and open the initial page.
 - `infrastructure/greenbyte-ag-domain.md`: greenbyte-ag.com domain and CI/CD setup.
 - `adr-template.md`: template for architecture decisions.

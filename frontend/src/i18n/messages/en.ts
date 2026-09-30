@@ -246,9 +246,12 @@ export const en = {
     copilotIdle: 'Inject a rush batch or QA failure to see the proposed order and explanation.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance logged (demo). No live ERP update.',
+    apiNoteMsw:
+      'Dev mocks: HTTP → MSW → same BFF paths as production. Set VITE_USE_MSW=false and VITE_API_BASE_APP when Mauricio’s core-api is live.',
     apiNoteLocal:
-      'Using BFF-shaped API locally (plantDemoServer). Set VITE_API_BASE_APP to core-api when live; enable VITE_USE_MSW=true for MSW in dev.',
-    apiNoteBff: 'Connected to BFF (VITE_API_BASE_APP). Agent explain-replan should replace templated bullets when David’s service is live.',
+      'Static demo: in-process plantDemoServer (no HTTP). For local dev with mocks use .env.development (MSW).',
+    apiNoteBff:
+      'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     salesChat: {
       eyebrow: 'Syngenta nice-to-have',
       title: 'Explain my batch (sales / customer service)',

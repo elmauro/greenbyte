@@ -13,7 +13,7 @@ terraform apply -var-file=dev.tfvars
 terraform output backend_config_snippet
 ```
 
-Copy the output into **`infrastructure/backend.dev.hcl`** (or confirm it matches the committed template).
+Copy the output into **`infrastructure/backend.dev.hcl`** (or compare with [`backend.dev.hcl.example`](../backend.dev.hcl.example)). See [`../REMOTE-STATE.md`](../REMOTE-STATE.md) for all state keys.
 
 ## Then per capability
 

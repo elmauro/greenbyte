@@ -7,13 +7,17 @@ import type {
   PlantQueueResponse,
 } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n';
-import { apiConfig } from './apiConfig';
+import { apiBaseApp, getApiConnectionMode } from './apiConfig';
 import { axiosApp } from './axiosInstance';
 
-const useRemoteBff = Boolean(apiConfig.apiBaseApp?.trim());
+/** True when HTTP goes to BFF (live API Gateway). */
+const useLiveBff = getApiConnectionMode() === 'bff';
+
+/** True when HTTP goes through axios (MSW or live BFF). */
+const useHttp = getApiConnectionMode() !== 'in-process';
 
 async function getQueue(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueueResponse> {
-  if (!useRemoteBff) return plantDemoServer.getQueue(lineId);
+  if (!useHttp) return plantDemoServer.getQueue(lineId);
   const { data } = await axiosApp.get<PlantQueueResponse>(`/demo/plant/lines/${lineId}/queue`);
   return data;
 }
@@ -23,7 +27,7 @@ async function postEvent(
   locale: Locale,
   lineId: string = PLANT_DEMO_LINE_ID,
 ): Promise<PlantEventResponse> {
-  if (!useRemoteBff) return plantDemoServer.applyEvent(lineId, type, locale);
+  if (!useHttp) return plantDemoServer.applyEvent(lineId, type, locale);
   const { data } = await axiosApp.post<PlantEventResponse>(`/demo/plant/events`, {
     type,
     lineId,
@@ -33,13 +37,13 @@ async function postEvent(
 }
 
 async function postAccept(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantAcceptResponse> {
-  if (!useRemoteBff) return plantDemoServer.accept(lineId);
+  if (!useHttp) return plantDemoServer.accept(lineId);
   const { data } = await axiosApp.post<PlantAcceptResponse>(`/demo/plant/schedule/accept`, { lineId });
   return data;
 }
 
 async function resetDemo(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueueResponse> {
-  if (!useRemoteBff) {
+  if (!useHttp) {
     plantDemoServer.reset();
     return plantDemoServer.getQueue(lineId);
   }
@@ -52,7 +56,7 @@ async function postBatchExplain(
   question: string,
   locale: Locale,
 ): Promise<PlantBatchExplainResponse> {
-  if (!useRemoteBff) return plantDemoServer.explainBatch(po, question, locale);
+  if (!useHttp) return plantDemoServer.explainBatch(po, question, locale);
   const { data } = await axiosApp.post<PlantBatchExplainResponse>(`/demo/plant/batches/explain`, {
     po,
     question,
@@ -67,5 +71,8 @@ export const plantDemoApi = {
   postAccept,
   resetDemo,
   postBatchExplain,
-  useRemoteBff,
+  /** @deprecated use connectionMode === 'bff' */
+  useRemoteBff: useLiveBff,
+  connectionMode: getApiConnectionMode(),
+  apiBaseApp,
 };

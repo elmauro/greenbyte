@@ -21,8 +21,12 @@ infrastructure/
 
 Each capability keeps its own **remote state key**, variables and runbook.
 
+**Remote state reference:** [`REMOTE-STATE.md`](./REMOTE-STATE.md) · bucket **`greenbyte-dev-terraform-state`**.
+
 ## Remote state (order)
 
 1. `terraform-state/` — apply once (creates `greenbyte-dev-terraform-state` + lock table).
-2. Each capability: `terraform init -backend-config=../backend.dev.hcl` (see `dynamodb/state.tf`, `postgresdb/state.tf`).
+2. Init capabilities: `../scripts/tf-init-remote-dev.ps1` **or** per folder `terraform init -backend-config=../backend.dev.hcl`.
 3. Plan/apply that capability (e.g. `postgresdb/` for RDS).
+
+Capabilities with `state.tf` today: `dynamodb`, `postgresdb`, `web`, `cognito`.

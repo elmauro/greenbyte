@@ -419,10 +419,12 @@ export const es: Messages = {
     copilotIdle: 'Inyecta rush o fallo QA para ver el orden propuesto y la explicación.',
     footerStats: '{count} lotes activos en cola (POs estilo Pasco).',
     acceptedNote: 'Aceptación humana registrada (demo). Sin actualización ERP en vivo.',
+    apiNoteMsw:
+      'Mocks dev: HTTP → MSW → mismas rutas BFF que producción. Cuando core-api esté listo: VITE_USE_MSW=false y VITE_API_BASE_APP.',
     apiNoteLocal:
-      'API con forma BFF en local (plantDemoServer). Configura VITE_API_BASE_APP hacia core-api; VITE_USE_MSW=true en dev.',
+      'Demo estática: plantDemoServer en memoria (sin HTTP). En local con mocks usa .env.development (MSW).',
     apiNoteBff:
-      'Conectado al BFF (VITE_API_BASE_APP). Las viñetas deben venir del Agent explain-replan cuando el servicio de David esté en vivo.',
+      'BFF en vivo (VITE_API_BASE_APP). Camilo Data + David Agent detrás del core-api — sin cambiar el frontend.',
     salesChat: {
       eyebrow: 'Nice-to-have Syngenta',
       title: 'Explicar mi lote (ventas / servicio al cliente)',

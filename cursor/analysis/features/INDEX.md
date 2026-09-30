@@ -22,6 +22,7 @@ Path:
 
 | Ticket | Backlog ID | Slug | Name | Area | Stage |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-002 | n/a | uc1-msw-bff-dev-modes | UC1 frontend MSW and BFF connection modes | frontend | done |
 | GREENBYTE-001 | n/a | site-language-es-en | Site language support (Spanish and English) | frontend | done |
 
 ## How to update

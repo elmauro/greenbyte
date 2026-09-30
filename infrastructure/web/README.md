@@ -11,8 +11,10 @@ Resources:
 
 ## Create dev web infrastructure
 
-```bash
-terraform init
+Remote state: `web/terraform.tfstate` in **`greenbyte-dev-terraform-state`** — see [`../REMOTE-STATE.md`](../REMOTE-STATE.md).
+
+```powershell
+terraform init -backend-config=../backend.dev.hcl
 terraform plan -var-file=dev.tfvars
 terraform apply -var-file=dev.tfvars
 ```

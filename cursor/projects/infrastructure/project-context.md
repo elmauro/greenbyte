@@ -23,6 +23,15 @@ infrastructure/
 └─ README.md
 ```
 
+## Remote state (dev)
+
+- **Bucket:** `greenbyte-dev-terraform-state` · **Locks:** `greenbyte-dev-terraform-locks`.
+- **Config:** `infrastructure/backend.dev.hcl` · **Guide:** `infrastructure/REMOTE-STATE.md`.
+- **Bootstrap:** `infrastructure/terraform-state/` (local state only).
+- **Init all capabilities:** `infrastructure/scripts/tf-init-remote-dev.ps1`.
+
+Folders with `state.tf`: `dynamodb`, `postgresdb`, `web`, `cognito` (each has its own S3 state key).
+
 ## Rules
 
 - Every Terraform change must have a reviewable plan.

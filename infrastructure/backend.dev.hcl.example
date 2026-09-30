@@ -1,0 +1,7 @@
+# Copy to backend.dev.hcl after bootstrap, or verify values match terraform-state output.
+# Committed backend.dev.hcl in this repo targets the GreenByte hackathon dev account.
+
+bucket         = "greenbyte-dev-terraform-state"
+region         = "us-east-1"
+dynamodb_table = "greenbyte-dev-terraform-locks"
+encrypt        = true

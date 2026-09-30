@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-002 — UC1 frontend MSW and BFF connection modes
+
+- FW: `n/a` · Slug: `uc1-msw-bff-dev-modes` · Stack: frontend
+- Change type: `feat` · Branch: `feature/greenbyte-002` · PR: `GREENBYTE-002: UC1 frontend MSW and BFF connection modes`
+- Status: shipped · Shipped: 2026-09-29 · Package: [`frontend/uc1-msw-bff-dev-modes/`](../../../analysis/features/frontend/uc1-msw-bff-dev-modes/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: uc1-msw-bff-dev-modes
+Feature name: UC1 frontend MSW and BFF connection modes
+Ticket/story: GREENBYTE-002
+Backlog ID: n/a
+Change type: feat
+Stack scope: frontend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-001 — Site language support (Spanish and English)
 
 - FW: `n/a` · Slug: `site-language-es-en` · Stack: frontend
