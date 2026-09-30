@@ -235,10 +235,12 @@ export const en = {
     actions: {
       rush: 'Simulate rush batch',
       rushTooltip:
-        'Urgent customer window: a high-priority PO moves up in the queue (demo: PO 1002307551).',
+        'Simulates a rush landing: re-prioritize existing PO 1002307551 (Syngenta brief also allows new SAP PO on refresh).',
       qaFail: 'Simulate QA failure',
       qaFailTooltip:
-        'Failed pass/fail test: batch goes on QA hold and is removed from the active slot (demo: PO 1001858227).',
+        'Simulates pass/fail log landing: HOLD PO 1001884747 (Pasco Fail — Dent, Line 1).',
+      injectSimNote:
+        'Inject buttons simulate Syngenta demo events (rush lands / test fails). Production would react to SAP schedule refresh and LSV pass/fail rows — see docs/hackathon/uc1-syngenta-assumptions.md.',
       reset: 'Reset queue',
       resetTooltip: 'Return to the calm baseline queue before any injected event.',
       accept: 'Accept schedule',
@@ -248,10 +250,10 @@ export const en = {
       title: 'What each inject button simulates (Syngenta demo-ready)',
       rushLabel: 'Rush',
       rushBody:
-        'A surprise urgent batch (tight SAP / customer date). The system proposes moving it ahead and explains changeover impact. Planner must accept; no ERP write.',
+        'In this stub: existing PO 1002307551 moves up (priority 2, finish 2026-07-06). In plant operations, a rush can also be a new active PO from SAP COISPI refresh.',
       qaLabel: 'QA failure',
       qaBody:
-        'A batch fails quality (pass/fail log). It is placed on hold and the line is re-sequenced so other batches can keep running.',
+        'Simulates a Fail row on the LSV pass/fail log (demo PO 1001884747, Dent). Batch goes on HOLD and the line re-sequences.',
       resetLabel: 'Reset',
       resetBody: 'Clears the injected event so you can run the live demo again from a stable queue.',
     },

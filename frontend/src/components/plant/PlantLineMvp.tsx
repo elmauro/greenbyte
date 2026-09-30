@@ -207,6 +207,7 @@ export function PlantLineMvp() {
               {copy.actions.reset}
             </button>
           </div>
+          <p className="text-xs leading-relaxed text-gray-600">{copy.actions.injectSimNote}</p>
           <details className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
             <summary className="cursor-pointer font-semibold text-gray-900">{copy.eventHelp.title}</summary>
             <ul className="mt-2 space-y-2">

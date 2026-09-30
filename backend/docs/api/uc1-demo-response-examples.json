@@ -17,9 +17,9 @@
             "status": "PLANNED"
           },
           {
-            "po": "1001858227",
+            "po": "1001884747",
             "species": "SWCO",
-            "kg": 3100,
+            "kg": 9800,
             "finish": "2026-07-05 16:00",
             "status": "PLANNED",
             "atRisk": true,
@@ -90,9 +90,9 @@
             "reasonShort": "On plan"
           },
           {
-            "po": "1001858227",
+            "po": "1001884747",
             "species": "SWCO",
-            "kg": 3100,
+            "kg": 9800,
             "finish": "2026-07-05 16:00",
             "status": "PLANNED",
             "atRisk": true,
@@ -188,9 +188,9 @@
             "status": "COMPLETE"
           },
           {
-            "po": "1001858227",
+            "po": "1001884747",
             "species": "SWCO",
-            "kg": 3100,
+            "kg": 9800,
             "finish": "2026-07-05 16:00",
             "status": "HOLD",
             "atRisk": true,
@@ -199,14 +199,14 @@
           }
         ],
         "diff": {
-          "moves": [{ "po": "1001858227", "fromPosition": 2, "toPosition": 6 }],
+          "moves": [{ "po": "1001884747", "fromPosition": 2, "toPosition": 6 }],
           "reasons": ["qa_fail_pass_fail_log", "isolate_hold", "resequence_downstream"]
         },
         "explanation": {
           "alertBanner": "Event injected: Failed QA test — batch moved to hold and queue re-sequenced.",
-          "summary": "PO 1001858227 placed on QA hold; remaining SWCO batches keep flow without the failed slot.",
+          "summary": "PO 1001884747 placed on QA hold; remaining SWCO batches keep flow without the failed slot.",
           "bullets": [
-            "PO 1001858227 set to HOLD from LSV pass/fail log (Pasco seed data).",
+            "PO 1001884747 set to HOLD from LSV pass/fail log — Fail (Dent), Line 1 (Pasco extract).",
             "Downstream positions shifted; no ERP write — planner validates.",
             "Next runnable SWCO batches grouped to limit changeover."
           ],
@@ -219,21 +219,21 @@
     "POST /demo/plant/batches/explain": {
       "description": "Trigger C — read-only Q&A. Context = current queue state (example: after rush, planVersion 2).",
       "request": {
-        "po": "1001858227",
+        "po": "1002307551",
         "question": "When does it ship?",
         "locale": "en"
       },
       "response200": {
-        "po": "1001858227",
-        "answer": "On the current Line 1 plan, PO 1001858227 (SWCO, 3100 kg) shows **scheduled finish 2026-07-05 16:00**. It is **position 3** of 5; batches ahead must run first (same line, changeover rules).",
-        "citations": ["PO 1001858227", "Line 1 queue v2", "2026-07-05 16:00"],
+        "po": "1002307551",
+        "answer": "On the current Line 1 plan, PO 1002307551 (SWCO, 2800 kg) shows **scheduled finish 2026-07-06 09:00**. It is **position 3** of 5; batches ahead must run first (same line, changeover rules).",
+        "citations": ["PO 1002307551", "Line 1 queue v2", "2026-07-06 09:00"],
         "suggestedFollowUps": ["Why is it waiting?", "What would move it up?"]
       },
       "response200HoldExample": {
-        "_note": "Same request after qa_fail on PO 1001858227",
-        "po": "1001858227",
-        "answer": "PO 1001858227 is on **QA hold** after a failed pass/fail test. It has no ship date until the line scheduler releases or replans the batch. No automatic ERP write.",
-        "citations": ["PO 1001858227", "Line 1 queue v2", "2026-07-05 16:00", "LSV pass/fail log (Pasco demo)"],
+        "_note": "Same request after qa_fail on PO 1001884747",
+        "po": "1001884747",
+        "answer": "PO 1001884747 is on **QA hold** after a failed pass/fail test. It has no ship date until the line scheduler releases or replans the batch. No automatic ERP write.",
+        "citations": ["PO 1001884747", "Line 1 queue v2", "2026-07-05 16:00", "LSV pass/fail log (Pasco demo)"],
         "suggestedFollowUps": ["Who approves disposition?", "Which batches run first?"]
       },
       "response400": { "message": "po and question required" },
@@ -264,9 +264,9 @@
             "status": "PLANNED"
           },
           {
-            "po": "1001858227",
+            "po": "1001884747",
             "species": "SWCO",
-            "kg": 3100,
+            "kg": 9800,
             "finish": "2026-07-05 16:00",
             "status": "PLANNED",
             "atRisk": true,

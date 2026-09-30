@@ -173,7 +173,7 @@ Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`. Full array in JSO
 { "type": "qa_fail", "lineId": "line-1", "locale": "en" }
 ```
 
-**Response (200, qa_fail)** — PO `1001858227` → `status: "HOLD"`, moved to end of list; see `response200QaFail`.
+**Response (200, qa_fail)** — PO `1001884747` → `status: "HOLD"`, moved to end of list; see `response200QaFail`.
 
 **Errors:** `400` `{ "message": "Invalid event type" }` · `404` `{ "message": "Unknown line" }`.
 
@@ -183,7 +183,7 @@ Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`. Full array in JSO
 
 ```json
 {
-  "po": "1001858227",
+  "po": "1002307551",
   "question": "When does it ship?",
   "locale": "en"
 }

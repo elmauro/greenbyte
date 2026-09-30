@@ -61,7 +61,7 @@ export function applyEvent(state, lineId, type, locale) {
       reasons.push('priority_2', 'sap_finish_2026-07-06', 'same_species_changeover');
     }
   } else if (type === 'qa_fail') {
-    const failPo = '1001858227';
+    const failPo = '1001884747';
     const failIdx = next.findIndex((r) => r.po === failPo);
     if (failIdx >= 0) {
       next[failIdx] = { ...next[failIdx], status: 'HOLD', previousPosition: failIdx + 1 };

@@ -408,10 +408,12 @@ export const es: Messages = {
     actions: {
       rush: 'Simular lote rush',
       rushTooltip:
-        'Ventana de cliente urgente: un PO de alta prioridad sube en la cola (demo: PO 1002307551).',
+        'Simula llegada de rush: repriorizar PO 1002307551 existente (el brief también contempla PO nuevo vía refresh SAP).',
       qaFail: 'Simular fallo QA',
       qaFailTooltip:
-        'Test pass/fail fallido: el lote pasa a hold QA y sale del slot activo (demo: PO 1001858227).',
+        'Simula fila Fail en log pass/fail: HOLD PO 1001884747 (Pasco Fail — Dent, Línea 1).',
+      injectSimNote:
+        'Los botones simulan eventos demo Syngenta (rush / test fallido). En planta real reaccionarían al refresh SAP y filas LSV pass/fail — ver docs/hackathon/uc1-syngenta-assumptions.md.',
       reset: 'Restablecer cola',
       resetTooltip: 'Vuelve a la cola base tranquila, antes de cualquier evento inyectado.',
       accept: 'Aceptar programa',
@@ -421,10 +423,10 @@ export const es: Messages = {
       title: 'Qué simula cada botón (demo-ready Syngenta)',
       rushLabel: 'Rush',
       rushBody:
-        'Lote urgente sorpresa (fecha SAP / cliente apretada). El sistema propone subirlo y explica el impacto en changeover. El programador acepta; sin escribir en ERP.',
+        'En este stub: el PO 1002307551 existente sube (prioridad 2, fin 2026-07-06). En operación, un rush también puede ser un PO activo nuevo desde COISPI/SAP.',
       qaLabel: 'Fallo QA',
       qaBody:
-        'Un lote no pasa calidad (log pass/fail). Queda en retención y se reordena la línea para que el resto siga corriendo.',
+        'Simula fila Fail en log pass/fail LSV (demo PO 1001884747, Dent). El lote queda en HOLD y se reordena la línea.',
       resetLabel: 'Restablecer',
       resetBody: 'Quita el evento inyectado para repetir la demo en vivo desde cola estable.',
     },

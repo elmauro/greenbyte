@@ -3,9 +3,9 @@ export const PLANT_DEMO_LINE_ID = 'line-1';
 export const BASE_QUEUE = [
   { po: '1001759341', species: 'SWCO', kg: 4200, finish: '2026-07-04 11:30', status: 'PLANNED' },
   {
-    po: '1001858227',
+    po: '1001884747',
     species: 'SWCO',
-    kg: 3100,
+    kg: 9800,
     finish: '2026-07-05 16:00',
     status: 'PLANNED',
     atRisk: true,
@@ -39,9 +39,9 @@ export const EXPLANATIONS = {
     },
     qa_fail: {
       alertBanner: 'Event injected: Failed QA test — batch moved to hold and queue re-sequenced.',
-      summary: 'PO 1001858227 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
+      summary: 'PO 1001884747 placed on QA hold; remaining SWCO batches keep flow without the failed slot.',
       bullets: [
-        'PO 1001858227 set to HOLD from LSV pass/fail log (Pasco seed data).',
+        'PO 1001884747 set to HOLD from LSV pass/fail log — Fail (Dent), Line 1 (Pasco extract).',
         'Downstream positions shifted; no ERP write — planner validates.',
         'Next runnable SWCO batches grouped to limit changeover.',
       ],
@@ -61,9 +61,9 @@ export const EXPLANATIONS = {
     },
     qa_fail: {
       alertBanner: 'Evento inyectado: Test QA fallido — lote en hold y cola reordenada.',
-      summary: 'PO 1001858227 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
+      summary: 'PO 1001884747 en hold QA; el resto de lotes SWCO sigue flujo sin el slot fallido.',
       bullets: [
-        'PO 1001858227 en HOLD según log pass/fail LSV (datos Pasco).',
+        'PO 1001884747 en HOLD según log pass/fail LSV — Fail (Dent), Línea 1 (extracto Pasco).',
         'Posiciones siguientes ajustadas; sin escritura en ERP — valida el programador.',
         'Bloques SWCO siguientes agrupados para limitar changeover.',
       ],

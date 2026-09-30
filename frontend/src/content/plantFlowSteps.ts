@@ -143,7 +143,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'explain',
     method: 'POST',
     path: '/demo/plant/batches/explain',
-    request: { po: '1001858227', question: 'When does it ship?', locale: 'en|es' },
+    request: { po: '1002307551', question: 'When does it ship?', locale: 'en|es' },
     responseKey: 'explain',
     mapping: [
       { jsonPath: 'answer', ui: 'Chat answer' },

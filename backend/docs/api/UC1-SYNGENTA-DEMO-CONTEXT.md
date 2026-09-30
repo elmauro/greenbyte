@@ -103,8 +103,8 @@ Same route as rush, different body:
 
 | Field | Demo rule |
 | --- | --- |
-| Failed PO | **`1001858227`** |
-| Status | **`HOLD`** (pass/fail log — Pasco seed narrative) |
+| Failed PO | **`1001884747`** (Pasco `LSV Pass_Fail Log`: **Fail**, **Dent**, Line 1) |
+| Status | **`HOLD`** (simulates pass/fail log landing — demo inject) |
 | Replan | Remove hold batch from active slot; shift downstream |
 | `diff.reasons[]` | `qa_fail_pass_fail_log`, `isolate_hold`, `resequence_downstream` |
 | `explanation` | QA-specific copy (EN/ES) |
@@ -129,7 +129,7 @@ Same **`PlantEventResponse`** shape as rush.
 POST /demo/plant/batches/explain
 
 {
-  "po": "1001858227",
+  "po": "1002307551",
   "question": "When does it ship?",
   "locale": "en" | "es"
 }
@@ -210,6 +210,7 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 
 | Doc | Path |
 | --- | --- |
+| Syngenta brief vs demo assumptions | `docs/hackathon/uc1-syngenta-assumptions.md` |
 | MVP scope & week plan | `docs/hackathon/uc1-mvp-scope.md` |
 | Sequences + narrative | `docs/hackathon/uc1-ui-backend-flow.md` |
 | **BFF request/response JSON (all routes)** | [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) |

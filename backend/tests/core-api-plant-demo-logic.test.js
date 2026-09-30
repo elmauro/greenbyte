@@ -26,6 +26,15 @@ describe('plant demo logic', () => {
     expect(response.explanation.summary).toMatch(/1002307551/);
   });
 
+  it('qa_fail holds PO 1001884747 and resequences', () => {
+    const state = createBaselineState();
+    const { state: next, response } = applyEvent(state, 'line-1', 'qa_fail', 'en');
+    const held = response.queue.find((r) => r.po === '1001884747');
+    expect(held?.status).toBe('HOLD');
+    expect(response.queue[response.queue.length - 1].po).toBe('1001884747');
+    expect(next.lastEvent).toBe('qa_fail');
+  });
+
   it('accept clears lastEvent on stored state', () => {
     const state = createBaselineState();
     const { state: afterRush } = applyEvent(state, 'line-1', 'rush', 'en');
