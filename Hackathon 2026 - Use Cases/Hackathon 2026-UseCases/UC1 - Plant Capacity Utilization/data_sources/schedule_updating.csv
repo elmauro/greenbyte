@@ -1,0 +1,16 @@
+,
+,
+,"To update the Conditioning Schedules, we use a SAP COISPI report variant that pulls in all acitve non-complete conditioning process orders."
+,Completed or locked process orders are not in the scope of this variant.
+,
+,"That data is shown on the ""SAP Coispi report"" sheet."
+,
+,The data from that report is copy/paste into an Excel file 
+,"Once the old data is cleared and the new data has been pasted into the Main tab, a data refresh is ran to refresh all of the sheets in the workbook."
+,Each sheet is verified for accuracy at this point
+,
+,A copy of that workbook has been embedded here>>>>>>>>>
+,
+,
+,
+,"Once verified, Smartsheet Data Shuttle is used to refresh all of the conditioning schedules in Smartsheet."

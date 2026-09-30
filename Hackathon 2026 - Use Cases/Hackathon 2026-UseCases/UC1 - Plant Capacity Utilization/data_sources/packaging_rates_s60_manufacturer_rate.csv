@@ -1,0 +1,7 @@
+equipment_model,species_name,seeds_per_second,dq_flags,source_row_number
+S-60,Tomato,400,,1
+S-60,Pepper,500,,2
+S-60,Watermelon,100,,3
+S-60,Melon,90,,4
+S-60,Corn,67,,5
+S-60,Squash,,value_unknown_in_source,6

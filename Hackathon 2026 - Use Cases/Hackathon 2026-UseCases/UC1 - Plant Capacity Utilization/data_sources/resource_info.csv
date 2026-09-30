@@ -1,0 +1,32 @@
+Work Center,Pack Line,Department
+SSVLN3,SSV Line 3,SSV Conditioning
+SSVLN5,SSV Line 5,SSV Conditioning
+SSVLN6,SSV Line 6,SSV Conditioning
+SSVLN7,SSV Line 7,SSV Conditioning
+SSVRPR3,SSV Line 3 Repair,SSV Conditioning
+SSVRPR5,SSV Line 5 Repair,SSV Conditioning
+SSVRPR6,SSV Line 6 Repair,SSV Conditioning
+SSVRPR7,SSV Line 7 Repair,SSV Conditioning
+LSVLN1,LSV Line 1,LSV Conditioning
+LSVLN2,LSV Line 2,LSV Conditioning
+LSVCLSRT,LSV Colorsort,LSV Conditioning
+LSVGRVTY,LSV Gravity,LSV Conditioning
+LSVBULK,LSV Bulk,LSV Treatpack
+LSVBAGCO,LSV Concetti,LSV Treatpack
+LSVBAGSA,LSV Stand Alone,LSV Treatpack
+SSVFOIL1,SSV Line 1,SSV Treatpack
+SSVFOIL2,SSV Line 2,SSV Treatpack
+PASFOIL,SSV S60,SSV Treatpack
+SSVS60,SSV S60,SSV Treatpack
+SSVBULK,SSV Bulk,SSV Treatpack
+PASSHLTH,Seed Health,Seed Health
+SHHWT,Hot Water Treat,Seed Health
+SHNACL,Sodium Chloride,Seed Health
+SHTSP,TSP,Seed Health
+SHPRIME,Priming,Seed Health
+SHHAT,Hot Air Treat,Seed Health
+TRT50,Heid 50,Treating Lines
+TRT250,Heid 250,Treating Lines
+TRTFBT,Fluidized Batch Treater,Treating Lines
+TRTHP350,Hoopman 350,Treating Lines
+TRTHP600,Hoopman 600,Treating Lines

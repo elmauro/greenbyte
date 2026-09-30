@@ -1,0 +1,11 @@
+report_year,site_code,card_name,work_center_code,metric_code,aggregation,metric_value,unit_of_measure,dq_flags,source_row_number
+2026,LSV,Line 1 Throughput,LSVLN1,kg_per_hour,avg,1378.3,kg/h,work_center_code_inferred,1
+2026,LSV,Line 1 Throughput,LSVLN1,kg_per_total_hour,avg,1181.1,kg/h,work_center_code_inferred,1
+2026,LSV,Line 1 Throughput,LSVLN1,raw_kg_per_hour,avg,1795.7,kg/h,work_center_code_inferred,1
+2026,LSV,Line 1 Throughput,LSVLN1,raw_kg_per_total_hour,avg,1539.4,kg/h,work_center_code_inferred,1
+2026,LSV,Line 1 Throughput,LSVLN1,scrap_rate,avg,0.23,ratio,work_center_code_inferred,1
+2026,LSV,Line 2 Throughput,LSVLN2,kg_per_hour,avg,446.1,kg/h,,2
+2026,LSV,Line 2 Throughput,LSVLN2,raw_kg_per_hour,avg,615.0,kg/h,,2
+2026,LSV,Line 2 Throughput,LSVLN2,kg_per_total_hour,avg,367.5,kg/h,,2
+2026,LSV,Line 2 Throughput,LSVLN2,scrap_rate,avg,0.28,ratio,,2
+2026,LSV,Gravity/Colorsort Throughput,,kg_per_hour,avg,461.2,kg/h,combined_work_centers,3
