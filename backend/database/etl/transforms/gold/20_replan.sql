@@ -1,14 +1,17 @@
 -- Heuristic v1 (uc1-data-model §7.1): a transparent ranking, not a solver. Every replan writes an immutable
 -- gold.schedule_plan (version + 1) with entries and machine reasons.
 --
--- Ranking of runnable batches (greedy, one pick at a time, clock advancing with each pick):
---   1. ONLINE first (already running).
---   2. Rush (SAP-style priority change that raised urgency).
---   3. Urgent = would finish after its due date even if started now -> earliest due first.
---   4. Priority rank (1 = highest).
---   5. Changeover: same variety as the previous batch, then same species.
---   6. Due date, run order, PO number (stable tie-breaks).
--- Held batches (QA FAIL, ON_HOLD, LAB) go after the planned ones, without planned times.
+-- v4: the soft ranking comes from the active gold.policy (seeds/gold_policy.sql; policy v1 = the heuristic-v1 order
+-- below) and is recorded in schedule_plan.policy_id. Hard rules stay here: ONLINE first, held batches out.
+-- Ranking of runnable batches (greedy, one pick at a time, clock advancing with each pick), policy v1:
+--   1. ONLINE first (already running).                                    ONLINE_FIRST (always, hard rule)
+--   2. Rush (SAP-style priority change, RUSH priority text, trusted RUSH note).   RUSH
+--   3. Urgent = would finish after its due date even if started now -> earliest due first.   URGENT_DUE
+--   4. Priority rank (1 = highest).                                       PRIORITY
+--   5. Changeover: same variety as the previous batch, then same species. SAME_VARIETY, SAME_SPECIES
+--   6. Due date, run order (stable tie-breaks), then PO number (always last).   DUE_DATE, RUN_ORDER
+-- Held batches (QA FAIL, ON_HOLD, LAB, trusted NOT_READY / HOLD note unless ONLINE) go after the planned ones,
+-- without planned times.
 
 -- Accepts a BFF lineId ('line-1') or a work-center code ('LSVLN1').
 CREATE FUNCTION gold.resolve_line(p_line text) RETURNS silver.work_center
@@ -46,12 +49,78 @@ LANGUAGE sql STABLE AS $$
          ORDER BY (r.rule_source = 'SME') DESC LIMIT 1), 0)
 $$;
 
-CREATE FUNCTION gold.add_reason(p_schedule_entry_id bigint, p_seq int, p_reason_code text, p_params jsonb)
-RETURNS void
-LANGUAGE sql AS $$
+-- v4: validates the code and its required params (reason_code.param_keys, G-21) and links the supporting facts.
+CREATE FUNCTION gold.add_reason(p_schedule_entry_id bigint, p_seq int, p_reason_code text, p_params jsonb,
+                                p_fact_ids bigint[] DEFAULT NULL)
+RETURNS bigint
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_rc     gold.reason_code;
+    v_params jsonb := jsonb_strip_nulls(coalesce(p_params, '{}'));
+    v_id     bigint;
+BEGIN
+    SELECT * INTO v_rc FROM gold.reason_code WHERE reason_code = p_reason_code;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Unknown reason code %', p_reason_code USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    IF NOT (v_params ?& v_rc.param_keys) THEN
+        RAISE EXCEPTION 'Reason % needs params % (got %)', p_reason_code, v_rc.param_keys, v_params
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
     INSERT INTO gold.entry_reason (schedule_entry_id, seq, reason_code_id, params)
-    SELECT p_schedule_entry_id, p_seq, rc.reason_code_id, jsonb_strip_nulls(p_params)
-    FROM gold.reason_code rc WHERE rc.reason_code = p_reason_code
+    VALUES (p_schedule_entry_id, p_seq, v_rc.reason_code_id, v_params)
+    RETURNING entry_reason_id INTO v_id;
+    IF p_fact_ids IS NOT NULL THEN
+        INSERT INTO gold.entry_reason_fact (entry_reason_id, semantic_fact_id)
+        SELECT v_id, f FROM unnest(p_fact_ids) f WHERE f IS NOT NULL
+        ON CONFLICT DO NOTHING;
+    END IF;
+    RETURN v_id;
+END
+$$;
+
+-- Fact params for a reason (semantic_fact_id, label, note text) from gold.v_trusted_fact.
+CREATE FUNCTION gold.fact_params(p_semantic_fact_id bigint) RETURNS jsonb
+LANGUAGE sql STABLE AS $$
+    SELECT jsonb_build_object('semantic_fact_id', f.semantic_fact_id, 'fact_label', f.fact_label, 'note_text', f.note_text,
+                              'fact_type', f.fact_type, 'source', f.source_csv || ':' || f.source_row_number || ':' || f.source_column,
+                              'reader', f.model_id)
+    FROM gold.v_trusted_fact f WHERE f.semantic_fact_id = p_semantic_fact_id
+$$;
+
+-- ORDER BY of the greedy pick for a LEXICOGRAPHIC policy. Placeholders: $1 clock, $2 plant time zone,
+-- $3 previous species, $4 previous variety. ONLINE_FIRST is forced first; po_number is always the last tie-break.
+CREATE FUNCTION gold.policy_order_by(p_policy gold.policy) RETURNS text
+LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+    v_urgent constant text :=
+        '(due_date < (($1 + coalesce(input_kg / nullif(kg_per_h, 0), 0) * interval ''1 hour'') AT TIME ZONE $2)::date)';
+    v_parts text[] := ARRAY['(status_code = ''ONLINE'') DESC'];
+    v_code  text;
+BEGIN
+    IF p_policy.ranking_mode <> 'LEXICOGRAPHIC' THEN
+        RAISE EXCEPTION 'Policy % ranking_mode % is not implemented yet', p_policy.policy_id, p_policy.ranking_mode
+            USING ERRCODE = 'feature_not_supported';
+    END IF;
+    FOR v_code IN SELECT c ->> 'code' FROM jsonb_array_elements(p_policy.criteria) c LOOP
+        v_parts := v_parts || CASE v_code
+            WHEN 'ONLINE_FIRST' THEN NULL
+            WHEN 'RUSH'         THEN ARRAY['is_rush DESC']
+            WHEN 'URGENT_DUE'   THEN ARRAY[v_urgent || ' DESC NULLS LAST',
+                                           'CASE WHEN ' || v_urgent || ' THEN due_date END ASC NULLS LAST']
+            WHEN 'PRIORITY'     THEN ARRAY['priority_rank ASC NULLS LAST']
+            WHEN 'SAME_VARIETY' THEN ARRAY['(species_code = $3 AND variety_code = $4) DESC NULLS LAST']
+            WHEN 'SAME_SPECIES' THEN ARRAY['(species_code = $3) DESC NULLS LAST']
+            WHEN 'DUE_DATE'     THEN ARRAY['due_date ASC NULLS LAST']
+            WHEN 'RUN_ORDER'    THEN ARRAY['run_order ASC NULLS LAST']
+        END;
+        IF v_code NOT IN ('ONLINE_FIRST', 'RUSH', 'URGENT_DUE', 'PRIORITY', 'SAME_VARIETY', 'SAME_SPECIES', 'DUE_DATE', 'RUN_ORDER')
+           OR v_code IS NULL THEN
+            RAISE EXCEPTION 'Policy % has unknown criterion %', p_policy.policy_id, v_code USING ERRCODE = 'invalid_parameter_value';
+        END IF;
+    END LOOP;
+    RETURN array_to_string(v_parts || ARRAY['po_number'], ', ');
+END
 $$;
 
 CREATE FUNCTION gold.replan(p_line text, p_plan_event_id bigint DEFAULT NULL) RETURNS bigint
@@ -79,9 +148,17 @@ DECLARE
     v_prev_pos  int;
     v_entry_id  bigint;
     v_seq       int;
+    v_policy    gold.policy;
+    v_order_by  text;
+    v_found     int;
 BEGIN
     v_wc := gold.resolve_line(p_line);
     PERFORM pg_advisory_xact_lock(hashtext('gold.replan'), v_wc.work_center_id::int);
+    v_policy := gold.active_policy(v_wc.work_center_id);
+    IF v_policy.policy_id IS NULL THEN
+        RAISE EXCEPTION 'No ACTIVE gold.policy for % (seeds/gold_policy.sql)', v_wc.work_center_code USING ERRCODE = 'no_data_found';
+    END IF;
+    v_order_by := gold.policy_order_by(v_policy);
 
     SELECT * INTO v_parent FROM gold.schedule_plan
     WHERE work_center_id = v_wc.work_center_id ORDER BY plan_version DESC LIMIT 1;
@@ -95,9 +172,9 @@ BEGIN
     WHERE work_center_id = v_wc.work_center_id AND status <> 'SUPERSEDED';
 
     INSERT INTO gold.schedule_plan
-        (work_center_id, plan_version, parent_plan_id, status, plan_event_id, horizon_start, created_by)
+        (work_center_id, plan_version, parent_plan_id, status, plan_event_id, policy_id, horizon_start, created_by)
     VALUES (v_wc.work_center_id, coalesce(v_parent.plan_version, 0) + 1, v_parent.schedule_plan_id, 'PROPOSED',
-            p_plan_event_id, v_clock, gold.cfg('heuristic_version'))
+            p_plan_event_id, v_policy.policy_id, v_clock, gold.cfg('heuristic_version'))
     RETURNING schedule_plan_id INTO v_plan_id;
 
     DROP TABLE IF EXISTS _cand;
@@ -108,22 +185,11 @@ BEGIN
 
     -- Runnable batches, greedy
     LOOP
-        SELECT * INTO c FROM _cand
-        WHERE new_pos IS NULL AND NOT is_hold
-        ORDER BY (status_code = 'ONLINE') DESC,
-                 is_rush DESC,
-                 (due_date < ((v_clock + coalesce(input_kg / nullif(kg_per_h, 0), 0) * interval '1 hour')
-                              AT TIME ZONE v_tz)::date) DESC NULLS LAST,
-                 CASE WHEN due_date < ((v_clock + coalesce(input_kg / nullif(kg_per_h, 0), 0) * interval '1 hour')
-                                       AT TIME ZONE v_tz)::date THEN due_date END ASC NULLS LAST,
-                 priority_rank ASC NULLS LAST,
-                 (species_code = v_last_species AND variety_code = v_last_variety) DESC NULLS LAST,
-                 (species_code = v_last_species) DESC NULLS LAST,
-                 due_date ASC NULLS LAST,
-                 run_order ASC NULLS LAST,
-                 po_number
-        LIMIT 1;
-        EXIT WHEN NOT FOUND;
+        -- Policy-driven pick (policy v1 reproduces the heuristic-v1 ORDER BY exactly). EXECUTE does not set FOUND.
+        EXECUTE 'SELECT * FROM _cand WHERE new_pos IS NULL AND NOT is_hold ORDER BY ' || v_order_by || ' LIMIT 1'
+            INTO c USING v_clock, v_tz, v_last_species, v_last_variety;
+        GET DIAGNOSTICS v_found = ROW_COUNT;
+        EXIT WHEN v_found = 0;
 
         v_urgent := c.due_date < ((v_clock + coalesce(c.input_kg / nullif(c.kg_per_h, 0), 0) * interval '1 hour')
                                   AT TIME ZONE v_tz)::date;
@@ -160,8 +226,16 @@ BEGIN
             v_seq := v_seq + 1;
             PERFORM gold.add_reason(v_entry_id, v_seq, 'ALREADY_RUNNING',
                 jsonb_build_object('work_center_code', v_wc.work_center_code, 'status_code', c.status_code));
+            IF c.is_not_ready THEN
+                v_seq := v_seq + 1;
+                PERFORM gold.add_reason(v_entry_id, v_seq, 'NOT_READY_WARNING', gold.fact_params(c.not_ready_fact_id),
+                                        ARRAY[c.not_ready_fact_id]);
+            END IF;
         END IF;
-        IF c.is_rush THEN
+        IF c.is_rush_note THEN
+            v_seq := v_seq + 1;
+            PERFORM gold.add_reason(v_entry_id, v_seq, 'NOTE_RUSH', gold.fact_params(c.rush_fact_id), ARRAY[c.rush_fact_id]);
+        ELSIF c.is_rush THEN
             v_seq := v_seq + 1;
             PERFORM gold.add_reason(v_entry_id, v_seq, 'RUSH_PRIORITY',
                 jsonb_build_object('priority_rank', c.priority_rank, 'previous_priority', c.schedule_priority_rank,
@@ -213,6 +287,11 @@ BEGIN
             PERFORM gold.add_reason(v_entry_id, v_seq, 'CHANGEOVER',
                 jsonb_build_object('transition_code', v_trans, 'hours', v_co_h, 'from_po', v_last_po));
         END IF;
+        IF c.throughput_basis = 'WORK_CENTER' THEN
+            v_seq := v_seq + 1;
+            PERFORM gold.add_reason(v_entry_id, v_seq, 'THROUGHPUT_FALLBACK',
+                jsonb_build_object('species_code', c.species_code, 'work_center_code', v_wc.work_center_code));
+        END IF;
 
         v_last_species := c.species_code;
         v_last_variety := c.variety_code;
@@ -230,16 +309,22 @@ BEGIN
         VALUES (v_plan_id, v_pos, c.process_order_id, c.line_schedule_item_id, 'HOLD', c.due_date, v_prev_pos)
         RETURNING schedule_entry_id INTO v_entry_id;
 
-        IF c.quality_status = 'FAIL' THEN
-            PERFORM gold.add_reason(v_entry_id, 1, 'QA_HOLD',
-                jsonb_build_object('quality_test_id', c.latest_fail_test_id, 'fail_reason', c.latest_fail_reason,
-                                   'source', 'pass_fail_log'));
-        ELSE
-            PERFORM gold.add_reason(v_entry_id, 1, 'STATUS_HOLD', jsonb_build_object('status_code', c.status_code));
-        END IF;
+        CASE c.hold_reason
+            WHEN 'QA_FAIL' THEN
+                PERFORM gold.add_reason(v_entry_id, 1, 'QA_HOLD',
+                    jsonb_build_object('quality_test_id', c.latest_fail_test_id, 'fail_reason', c.latest_fail_reason,
+                                       'source', 'pass_fail_log'));
+            WHEN 'NOT_READY' THEN
+                PERFORM gold.add_reason(v_entry_id, 1, 'NOT_READY_HOLD', gold.fact_params(c.not_ready_fact_id),
+                                        ARRAY[c.not_ready_fact_id]);
+            WHEN 'NOTE_HOLD' THEN
+                PERFORM gold.add_reason(v_entry_id, 1, 'NOTE_HOLD', gold.fact_params(c.hold_fact_id), ARRAY[c.hold_fact_id]);
+            ELSE
+                PERFORM gold.add_reason(v_entry_id, 1, 'STATUS_HOLD', jsonb_build_object('status_code', c.status_code));
+        END CASE;
     END LOOP;
 
     RETURN v_plan_id;
 END
 $$;
-COMMENT ON FUNCTION gold.replan(text, bigint) IS 'Heuristic v1 replan for one line; inserts schedule_plan v+1 with entries and reasons; returns schedule_plan_id';
+COMMENT ON FUNCTION gold.replan(text, bigint) IS 'Heuristic v1 replan for one line, ordered by the active gold.policy; inserts schedule_plan v+1 (policy_id) with entries, reasons and reason->fact links; returns schedule_plan_id';
