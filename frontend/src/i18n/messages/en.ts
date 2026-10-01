@@ -431,9 +431,6 @@ export const en = {
       colFinish: 'Planned finish',
       colStatus: 'Status',
       paused: 'No ship date',
-      operatorsTitle: 'For demo operators',
-      operatorsBody:
-        'Schedule changes are triggered via BFF ingest (SAP priority / pass-fail log), not from the scheduler UI. See docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
       eyebrow: 'When a customer asks about a batch',

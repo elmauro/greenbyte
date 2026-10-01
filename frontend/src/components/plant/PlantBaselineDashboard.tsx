@@ -385,8 +385,10 @@ export function PlantBaselineDashboard({
         {isUx && (
           <p className="font-semibold">{ux.amberTitle}</p>
         )}
-        <p className={isUx ? 'mt-1' : ''}>{explanation.alertBanner}</p>
-        {explanation.summary && (
+        {!isUx && (
+          <p>{explanation.alertBanner}</p>
+        )}
+        {!isUx && explanation.summary && (
           <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
         )}
         {isUx && (

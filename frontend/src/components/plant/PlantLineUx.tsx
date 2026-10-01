@@ -103,12 +103,6 @@ export function PlantLineUx() {
         {accepted && (
           <p className="text-center text-sm font-medium text-brand-green-dark">{copy.acceptedNote}</p>
         )}
-        <details className="rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3 text-sm text-gray-600">
-          <summary className="cursor-pointer font-semibold text-brand-blue">
-            {copy.ux.operatorsTitle}
-          </summary>
-          <p className="mt-2 leading-relaxed">{copy.ux.operatorsBody}</p>
-        </details>
       </DemoPageBody>
     </div>
   );

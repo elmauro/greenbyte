@@ -2,7 +2,7 @@
 
 ## What shipped
 
-The scheduler reorders batches by dragging a row in the expanded timeline (the same dialog opened with the expand control). Up and down controls remain on each runnable row. There is no separate Adjust manually action on the plant or UX screens.
+The scheduler reorders batches by dragging a row on the program timeline, including the compact view. The same controls stay available in the expanded timeline. Up and down buttons sit on each runnable row. There is no separate Adjust manually action.
 
 - Position 1 (the running batch) has no move buttons.
 - Other runnable rows move up or down and cannot pass position 1.

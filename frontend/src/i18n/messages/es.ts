@@ -599,9 +599,6 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
       colFinish: 'Fin programado',
       colStatus: 'Estado',
       paused: 'Sin fecha de envío',
-      operatorsTitle: 'Para operadores de la demo',
-      operatorsBody:
-        'Los cambios de programa se disparan vía ingest del BFF (prioridad SAP / log pass-fail), no desde la UI del planificador. Ver docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
       eyebrow: 'Cuando un cliente pregunta por un lote',

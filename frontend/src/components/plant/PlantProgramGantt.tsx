@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { QueueRow } from '../../demo/plant/plantDemoTypes';
 import { PLANT_SCHEDULE_META } from '../../demo/plant/plantScheduleMeta';
 import { useLocale } from '../../i18n';
@@ -219,7 +219,7 @@ export function PlantProgramGantt({
 
   function canDragRow(index: number) {
     const row = rows[index];
-    return Boolean(expanded && onPlaceRow && row && row.status !== 'HOLD' && index > 0);
+    return Boolean(onPlaceRow && row && row.status !== 'HOLD' && index > 0);
   }
 
   function onDragPointerDown(index: number, event: ReactPointerEvent<HTMLElement>) {
@@ -350,16 +350,12 @@ export function PlantProgramGantt({
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
             {layout === 'approval' ? s.approvalTitle.replace('{line}', lineNo) : s.ganttTitle}
-            <span className="font-normal text-gray-400" title={s.ganttHint}>
-              ⓘ
-            </span>
+            <TimelineInfo text={s.ganttHint} />
           </h3>
           {layout === 'approval' && (
             <p className="text-xs text-gray-500">{s.approvalSubtitle}</p>
           )}
-          {expanded && onMoveRow && (
-            <p className="text-xs text-gray-500">{s.adjustHint}</p>
-          )}
+          {onPlaceRow && <p className="text-xs text-gray-500">{s.adjustHint}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
           {onLayoutChange && (
@@ -447,14 +443,16 @@ export function PlantProgramGantt({
                 const place = scale ? barPlacement(row.finish, scale) : { left: 2, width: 16 };
                 const color = toneTrack(tone);
                 const note = showMoves ? moveNote(row, index, s) : null;
-                const noteOnLeft = place.left + place.width > 58;
+                const barEnd = place.left + place.width;
+                const roomRight = 100 - barEnd;
+                const noteOnLeft = roomRight < 22;
 
                 return (
                   <li
                     key={row.po}
                     data-queue-index={index}
                     onPointerDown={(event) => onDragPointerDown(index, event)}
-                    className={`grid grid-cols-[14rem_1fr] items-center gap-2 py-2 ${
+                    className={`grid grid-cols-[14rem_minmax(0,1fr)] items-center gap-2 py-2 ${
                       isHold
                         ? 'bg-red-50/80 ring-1 ring-inset ring-red-200'
                         : isRush
@@ -462,7 +460,7 @@ export function PlantProgramGantt({
                           : ''
                     } ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : ''} ${dragClass(index)}`}
                   >
-                    <div className="px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
+                    <div className="min-w-0 px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
                       {canDragRow(index) && (
                         <span className="mr-1 text-gray-400" aria-hidden="true" title={s.adjustDrag}>
                           ⋮⋮
@@ -473,12 +471,11 @@ export function PlantProgramGantt({
                         index={index}
                         row={row}
                         rows={rows}
-                        expanded={expanded}
                         onMoveRow={onMoveRow}
                         labels={s}
                       />
                     </div>
-                    <div className="relative h-11 rounded bg-gray-50/80">
+                    <div className="relative h-11 min-w-0">
                       <div
                         className={`absolute top-1.5 flex h-8 items-center rounded px-2 text-[10px] font-medium shadow ${color}`}
                         style={{ left: `${place.left}%`, width: `${place.width}%` }}
@@ -489,11 +486,17 @@ export function PlantProgramGantt({
                       </div>
                       {note && (
                         <span
-                          className="absolute top-1.5 flex h-8 items-center whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
+                          className="absolute top-1.5 flex h-8 items-center truncate whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
                           style={
                             noteOnLeft
-                              ? { right: `calc(${100 - place.left}% + 8px)` }
-                              : { left: `calc(${place.left + place.width}% + 8px)` }
+                              ? {
+                                  right: `calc(${100 - place.left}% + 8px)`,
+                                  maxWidth: `calc(${Math.max(place.left - 4, 12)}% - 8px)`,
+                                }
+                              : {
+                                  left: `calc(${barEnd}% + 8px)`,
+                                  maxWidth: `calc(${Math.max(roomRight - 2, 12)}% - 12px)`,
+                                }
                           }
                         >
                           {note}
@@ -548,7 +551,6 @@ export function PlantProgramGantt({
                     index={index}
                     row={row}
                     rows={rows}
-                    expanded={expanded}
                     onMoveRow={onMoveRow}
                     labels={s}
                   />
@@ -587,7 +589,6 @@ export function PlantProgramGantt({
                       index={index}
                       row={row}
                       rows={rows}
-                      expanded={expanded}
                       onMoveRow={onMoveRow}
                       labels={s}
                     />
@@ -719,18 +720,16 @@ function RowMoveControls({
   index,
   row,
   rows,
-  expanded,
   onMoveRow,
   labels,
 }: {
   index: number;
   row: QueueRow;
   rows: QueueRow[];
-  expanded: boolean;
   onMoveRow?: (index: number, direction: -1 | 1) => void;
   labels: { adjustUp: string; adjustDown: string; adjustRunning: string };
 }) {
-  if (!expanded || !onMoveRow || row.status === 'HOLD') return null;
+  if (!onMoveRow || row.status === 'HOLD') return null;
   if (index === 0) {
     return (
       <span className="mt-1 inline-block text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -758,6 +757,39 @@ function RowMoveControls({
       >
         ↓
       </button>
+    </span>
+  );
+}
+
+function TimelineInfo({ text }: { text: string }) {
+  const tipId = useId();
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-describedby={open ? tipId : undefined}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-300 bg-white text-[11px] font-semibold leading-none text-brand-blue shadow-sm transition hover:border-brand-blue hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+      >
+        i
+        <span className="sr-only">{text}</span>
+      </button>
+      {open && (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="absolute left-0 top-full z-30 mt-2 w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-xs font-normal leading-relaxed text-gray-600 shadow-lg"
+        >
+          {text}
+        </span>
+      )}
     </span>
   );
 }
