@@ -1,0 +1,27 @@
+-- Reason codes written by gold.replan into gold.entry_reason. Templates are a fallback; the Agent API writes the prose
+-- from the same params and must cite only the ids they contain.
+INSERT INTO gold.reason_code (reason_code, category, description, template) VALUES
+    ('ALREADY_RUNNING', 'STATE', 'Batch is already running on the line: kept first',
+        'Already running on {work_center_code} — kept in position 1'),
+    ('QA_HOLD', 'HARD', 'A QA test failed: the batch is held out of the run sequence',
+        'QA fail ({fail_reason}) on test {quality_test_id} — on hold'),
+    ('STATUS_HOLD', 'HARD', 'Schedule status is not runnable (ON_HOLD / LAB)',
+        'Schedule status {status_code} — not runnable'),
+    ('RUSH_PRIORITY', 'EVENT', 'SAP-style priority change marked the batch as rush',
+        'Rush: priority {previous_priority} → {priority_rank} (SAP change)'),
+    ('RESEQUENCED', 'EVENT', 'Position changed because of the triggering event',
+        'Moved {from_position} → {to_position} after {event_type} on PO {event_po}'),
+    ('DUE_DATE_RISK', 'URGENCY', 'Projected finish is after the due date',
+        'At risk: due {due_date}, projected {planned_end_date} ({slack_days} days)'),
+    ('EARLIEST_DUE', 'URGENCY', 'Earliest due date among the remaining batches',
+        'Earliest due date remaining ({due_date})'),
+    ('PRIORITY', 'PRIORITY', 'Scheduler / SAP priority rank (1 = highest)',
+        'Priority {priority_rank}'),
+    ('SAME_VARIETY_GROUP', 'CHANGEOVER', 'Grouped with the previous batch of the same variety',
+        'Same variety as previous ({variety_code}) — saves ~{saved_h} h changeover'),
+    ('SAME_SPECIES_GROUP', 'CHANGEOVER', 'Grouped with the previous batch of the same species',
+        'Same species as previous ({species_code})'),
+    ('CUSTOMER_DEMAND', 'DEMAND', 'Covers an open customer order (synthetic in the demo)',
+        'Covers order {order_number} due {need_by_date}'),
+    ('CHANGEOVER', 'CHANGEOVER', 'Estimated changeover vs the previous batch',
+        '{transition_code} changeover: {hours} h');

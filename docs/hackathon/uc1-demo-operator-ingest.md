@@ -90,6 +90,20 @@ Content-Type: application/json
 
 ---
 
+## Data API (PostgreSQL gold) — same routes, real open Line 1 POs
+
+When the BFF calls the Data API, the same ingest routes map to `gold.ingest_sap_priority_change(...)` and `gold.ingest_pass_fail(...)` ([uc1-data-model.md §7](../../backend/data-model/uc1-data-model.md)). The Data API only accepts POs that are on the line's **open** queue, so the stub anchors above won't validate: `1002307551` is routed to LSVLN2, and `1001884747` has been complete since 2023. Proposed payloads:
+
+```json
+{ "lineId": "line-1", "po": "1002295402", "priority": 2, "scheduledFinish": "2026-10-03" }
+```
+
+```json
+{ "lineId": "line-1", "po": "1002307552", "passFail": "Fail", "failedFor": "Dent", "equipmentId": "Line 1" }
+```
+
+---
+
 ## Accept (scheduler UI or API)
 
 Human sign-off on the latest **proposed** plan for that line. With `PGHOST` set, the handler calls `gold.accept_plan`. That inserts `gold.plan_decision` (`ACCEPT`) and sets `gold.schedule_plan.status` to `ACCEPTED`. It does not write SAP, raw extracts, or silver rows. A second accept on the same plan returns `409`.

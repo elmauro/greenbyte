@@ -143,10 +143,12 @@ flowchart LR
 
 ### 4.1 Demo PO anchors (Syngenta/Pasco)
 
-| Inject | PO | Pasco anchor |
-| --- | --- | --- |
-| Rush (stub) | `1002307551` | Priority 2, finish `2026-07-06` story |
-| QA fail (stub) | `1001884747` | **Fail / Dent**, Line 1 in pass/fail log |
+| Inject | PO (BFF stub today) | Pasco anchor | **Proposed for the Data API** (real open Line 1 PO) |
+| --- | --- | --- | --- |
+| Rush | `1002307551` | Priority 2, finish `2026-07-06` story | **`1002295402`** — SWCO EA SUNGLOW, NEW, priority 9 → 2; last and at risk in the baseline |
+| QA fail | `1001884747` | **Fail / Dent**, Line 1 in pass/fail log | **`1002307552`** — SWCO GH4927-C, NEW, priority 5; new Fail / Dent row on Line 1 |
+
+**Proposal for the BFF owner (2026-09-30).** In the extract, `1002307551` is routed to **LSVLN2** (finish 2026-10-29), and `1001884747` has been **COMPLETE since 2023-09** (its Fail/Dent row is historical, and 3 of its 4 output batches passed). Neither is on the open Line 1 queue that the Data API serves, and gold refuses ingest for POs that aren't on the line. The proposed anchors are tested end to end in `backend/database/tests/demo_scenario.sql`. Switch the stub when the BFF moves to the Data API.
 
 Do **not** use **`1001858227`** as QA fail — **Pass** in historical log ([uc1-syngenta-assumptions.md §2.3](./uc1-syngenta-assumptions.md)).
 
@@ -260,6 +262,8 @@ sequenceDiagram
 ## 7. Logical data model (for Data API + AI)
 
 This model supports **replan**, **audit**, **event detection**, and **grounded** Agent responses. Types align with [`plantDemoTypes.ts`](../../frontend/src/demo/plant/plantDemoTypes.ts).
+
+> **Implemented physical model:** this section is the logical view. The PostgreSQL model as built (raw → silver → gold, ER diagram, and the gold functions that return these JSON shapes) is [`backend/data-model/uc1-data-model.md`](../../backend/data-model/uc1-data-model.md) §5 and §7. Mapping: `PRODUCTION_ORDER` = `silver.process_order` (+ `silver.line_schedule_item` per line) · `PASS_FAIL_RESULT` = `silver.quality_test` · `QUEUE_SNAPSHOT` / `QUEUE_ROW` = `gold.schedule_plan` / `gold.schedule_entry` (+ `gold.entry_reason`) · `REPLAN_EVENT` = `raw.ingest_event` → `gold.plan_event` · `PLAN_DIFF` / `QUEUE_MOVE` = `gold.v_plan_diff` · `PLAN_ACCEPTANCE` = `gold.plan_decision`.
 
 ### 7.1 Entity-relationship (logical)
 
@@ -479,3 +483,4 @@ UC4 (breeding) shares the **same container** (React → BFF → Data + Agent →
 | --- | --- |
 | 2026-09-30 | Initial blueprint: architecture, sources → events, decisions, notifications, manual adjust target, AI data model |
 | 2026-09-30 | Demo UX: no scheduler inject buttons; BFF ingest routes; operator guide |
+| 2026-09-30 | §4.1 proposed Data API anchors on real open Line 1 POs; §7 points to the implemented raw → silver → gold model |

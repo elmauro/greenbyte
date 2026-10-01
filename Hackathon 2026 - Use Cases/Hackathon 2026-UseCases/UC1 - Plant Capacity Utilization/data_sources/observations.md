@@ -529,7 +529,7 @@ Same column layout (and mapping) in `main.csv` (identical content) and in the pe
 
 ## 8. Data quality catalog
 
-Row numbers are Excel rows, which are also CSV record numbers. Each issue is stored on the target row as a code in `dq_flags`. **Severity:** 🔴 blocks a join or key · 🟠 wrong or missing value · 🟡 cosmetic / standardization.
+Row numbers are Excel rows, which are also CSV record numbers. Each issue is stored on the target row as a code in `dq_flags`. **As built (2026-09-30):** the counts that `backend/database/etl/build_model.py` computes and reconciles are in [uc1-data-model.md §3.1](../../../../backend/data-model/uc1-data-model.md). They are the authoritative ones: DQ-02, -03, -06, -07, -08, -12 and -23 differ from the counts below. **Severity:** 🔴 blocks a join or key · 🟠 wrong or missing value · 🟡 cosmetic / standardization.
 
 | ID | Sev | Issue | Where (count) | ETL action |
 | --- | --- | --- | --- | --- |
@@ -563,6 +563,8 @@ Row numbers are Excel rows, which are also CSV record numbers. Each issue is sto
 ---
 
 ## 9. Core data model
+
+> **Implemented (v3):** the target layers are now `silver` (this section's `ref.*` and `ops.*` tables) and `gold` (the `plan.*` tables, plus `changeover_rule` and `reason_code`). See [uc1-data-model.md §5](../../../../backend/data-model/uc1-data-model.md). `etl.load` is covered by `raw.load_batch`.
 
 Extends [`uc1-data-model.md`](../../../../backend/data-model/uc1-data-model.md) §5 with the key standard (§5) and two refinements found while profiling:
 

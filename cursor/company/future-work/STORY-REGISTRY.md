@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-004` (update when assigning).
+**Next free execution ID:** `GREENBYTE-006` (update when assigning).
 
 ---
 
@@ -31,6 +31,8 @@ Status: **backlog** = FW without execution ID; **active** = feature folder exist
 
 | Execution story | Backlog ID | Feature slug | Feature name | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-005 | n/a | `uc1-data-model-medallion` | UC1 data model medallion (raw silver gold) | P2 | shipped |
+| GREENBYTE-004 | n/a | `uc1-plant-ux-compare` | UC1 Plant UX compare page | P2 | shipped |
 | GREENBYTE-003 | n/a | `uc1-bff-demo-plant-dynamo-stub` | UC1 BFF demo plant Dynamo stub | P2 | shipped |
 | GREENBYTE-002 | n/a | `uc1-msw-bff-dev-modes` | UC1 frontend MSW and BFF connection modes | P2 | planned |
 | GREENBYTE-001 | n/a | `site-language-es-en` | Site language support (Spanish and English) | P2 | shipped |

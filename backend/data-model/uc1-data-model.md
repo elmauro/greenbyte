@@ -1,15 +1,16 @@
 # UC1 data model — Pasco conditioning (batch allocation)
 
-**Owner:** Data API (Camilo) · **Status:** v2 (2026-09-30) · **Use case:** UC1 Plant Capacity Utilization
+**Owner:** Data API (Camilo) · **Status:** v3 (2026-09-30), **built and reconciled** · **Use case:** UC1 Plant Capacity Utilization
 **Sources:** `Hackathon 2026 - Use Cases/Hackathon 2026-UseCases/UC1 - Plant Capacity Utilization/` (workbooks) and its `data_sources/` (CSVs)
-**Related:** [csv-to-raw-integration.md](./csv-to-raw-integration.md) (what is built) · [observations.md](../../Hackathon%202026%20-%20Use%20Cases/Hackathon%202026-UseCases/UC1%20-%20Plant%20Capacity%20Utilization/data_sources/observations.md) (column mapping, DQ catalog) · [syngenta-demo-architecture.md](../../docs/hackathon/syngenta-demo-architecture.md) §7 · [uc1-mvp-scope.md](../../docs/hackathon/uc1-mvp-scope.md)
+**Related:** [csv-to-raw-integration.md](./csv-to-raw-integration.md) (raw layer) · [observations.md](../../Hackathon%202026%20-%20Use%20Cases/Hackathon%202026-UseCases/UC1%20-%20Plant%20Capacity%20Utilization/data_sources/observations.md) (column mapping, DQ catalog) · [uc1-system-blueprint.md](../../docs/hackathon/uc1-system-blueprint.md) (events, decisions, API) · [uc1-blueprint-narrative.md](../../docs/hackathon/uc1-blueprint-narrative.md) (storyline) · [`backend/database/`](../database/README.md) (code)
 
-This document describes the source extracts, the core entities for batch allocation (sequencing), and the PostgreSQL model that the Data API serves. The **raw layer is built and loaded**; `ref`, `ops` and `plan` are designed here and not yet implemented.
+This document describes the source extracts, the core entities for batch allocation (sequencing), and the PostgreSQL model the Data API serves. The model is a **medallion**: `raw` (verbatim) → `silver` (typed, conformed) → `gold` (everything the use case consumes). All three layers are **built on the dev database and reconciled** (61 checks) by `backend/database/etl/build_model.py`.
 
 | Version | Date | Change |
 | --- | --- | --- |
 | v1 | 2026-09-29 | First model from workbook profiling (`docs/hackathon/uc1-data-model.md`) |
 | v2 | 2026-09-30 | Moved to `backend/data-model/`. Added the key standard (surrogate PKs + business keys + lineage), `line_schedule_item`, `process_order_source`, `process_order_work_center`, the raw layer as built, transcribed sources, corrected DQ counts, and consolidated open questions |
+| v3 | 2026-09-30 | `ref`/`ops`/`plan` → **`silver`/`gold`** medallion, implemented and reconciled. `raw.ingest_event` for upstream signals (rush, QA fail). Gold API functions (queue, event, accept, reset, Agent context, batch detail). Mermaid ER diagram. Throughput basis clarified (input vs output kg/h), DQ counts recomputed, demo anchors re-pointed to real open Line 1 POs |
 
 ---
 
@@ -84,7 +85,7 @@ The full catalog (24 issues, with counts and Excel rows) and the column-by-colum
 
 | Finding | Evidence | Model decision |
 | --- | --- | --- |
-| PO number is the shared join key but **not a clean key** | Placeholders (`Off System` ×12, `BAYER 1–4`), lot numbers in the PO column (69 rows), leading zeros (98), typos (8) | Surrogate `process_order_id`; `po_number` = normalized business key (nullable, partial unique index); `po_number_raw` always kept |
+| PO number is the shared join key but **not a clean key** | Placeholders (`Off System` ×12, `BAYER 1–4`), lot numbers in the PO column (69 rows), leading zeros (98), typos (8) | Surrogate `process_order_id`; `po_number` = normalized business key (`UNIQUE NOT NULL`: only valid/normalized numbers create a PO). Placeholders and lot numbers stay on the fact rows with `po_number_raw` + `po_number_status` (R-PO) |
 | **POs move between work centers** | Gravity ∩ Colorsort 28 POs, Line 5 ∩ Line 6 25, Line 3 ∩ Line 6 14, … | New `line_schedule_item` (PO × work center), separate from `process_order` |
 | Logs and QA have **no natural key** | Even (PO, equipment, date, lot, size, kg) repeats; 15 full-duplicate rows | Surrogate PK + lineage (`source_csv`, `source_row_number`) as identity |
 | A lot has many POs | 345 lots with more than one PO | `lot` is its own entity; PO → lot N:1 |
@@ -93,6 +94,23 @@ The full catalog (24 issues, with counts and Excel rows) and the column-by-colum
 | Derived columns are unreliable | `#DIVIDE BY ZERO` / `#INVALID OPERATION` in 26 cells (all in rate/difference columns); helper columns | Never migrate rates or loss %: recompute in views |
 
 Join health (good): 453 of 470 Line 1 POs have a conditioning log; 1,850 of 1,888 logged LSV POs have QA rows; all 12 open Line 1 POs are in SAP.
+
+### 3.1 DQ counts as built (v3)
+
+`gold.v_dq_summary` holds the flag counts per table; `tests/reconciliation.sql` asserts them. Where they differ from observations §8, the build is right and §8 was incomplete:
+
+| Code | Observations §8 | Built (rows) | Why it differs |
+| --- | --- | --- | --- |
+| DQ-02 malformed numbers | 2 | 6 (runs) | 4 more in the SSV log: `5.5.`, `..75`, `..50`, `3,5` |
+| DQ-03 suspect PO | 8 | 15 runs + 1 schedule row | More SSV log values: `102253598`, `15093699`, `3000101300`, `3001022122`, 9-digit `100…` outside `10002…` |
+| DQ-06 PO twice in a tab | 2 pairs | 3 pairs (6 rows) | Normalization reveals `0300098954` = `300098954` on Line 5 |
+| DQ-07 leading zero | 98 | 94 runs + 3 schedule rows | `0150978387` strips to a lot number, so it is counted as DQ-08 |
+| DQ-08 lot in PO column | 69 | 41 schedule rows + 29 runs | +1 from the leading-zero lot above |
+| DQ-12 off-grammar material | 24 of 1,118 | 13 of 1,115 | Descriptions are upper-cased and space-collapsed first, which fixes the lower-case ones |
+| DQ-16 SAP NEW vs schedule COMPLETE | 3 (LSVLN1) | 3 on LSVLN1, 15 on all lines | Checked on every SAP work center |
+| DQ-23 PO only in the logs | LSV 10, QA 2, SSV 624 | 543 POs · 551 runs · 2 tests | Counted as "not in SAP, routing or any schedule" |
+
+Exact matches: DQ-04 (16), DQ-05 (15), DQ-13 (1), DQ-14 (20), DQ-15 (103), DQ-18 (74).
 
 ---
 
@@ -137,7 +155,7 @@ Join health (good): 453 of 470 Line 1 POs have a conditioning log; 1,850 of 1,88
 
 1. **ProcessOrder (PO) is the batch**: the unit the scheduler sequences. It has one row per PO; where it sits on each line is a **LineScheduleItem**.
 2. **Lot is separate from PO.** One lot can have several POs (first pass, rework, size splits). QA failures attach to the lot/output batch and propagate to the POs that depend on it.
-3. **Reference vs facts vs decisions.** Reference data (`ref`) is loaded once. Operational facts (`ops`) come from the extracts. Decisions (`plan`) are the only tables written at runtime.
+3. **Reference vs facts vs decisions.** Reference data and operational facts live in `silver`, rebuilt from the extracts. Decisions (plans, reasons, accepts) live in `gold` and are the only tables written at runtime.
 4. **Plans are immutable and versioned.** Every re-sequence creates `schedule_plan` v+1, so the diff and the "why it changed" story come from comparing two versions. This matches `planVersion` / `diff.moves[]` in the frontend contract.
 5. **Reasons are data, not prose.** Each entry stores reason codes plus parameters (e.g. `DUE_DATE_RISK {slack_days: -2}`). The Agent API turns them into plain language and cites stable IDs.
 6. **Capacity is derived, not typed in.** Throughput and changeover durations are views over the conditioning logs (SAP `Hours`/`Capacity` are empty).
@@ -145,202 +163,349 @@ Join health (good): 453 of 470 Line 1 POs have a conditioning log; 1,850 of 1,88
 
 ### 4.2 Capacity model (derived from logs)
 
-Median values from `raw.lsv_conditioning_logs` (all years):
+`gold.v_throughput` over `silver.conditioning_run` (all years, runs with `run_h > 0`). There are two bases, and they differ by the scrap rate:
 
-| Work center | kg/h (run) | kg/h (incl. prep+clean) | Scrap rate | Prep h | Cleandown h |
-| --- | --- | --- | --- | --- | --- |
-| **Line 1** | **1,114** | 874 | 19 % | 1.00 | 1.50 |
-| Line 2 | 274 | 175 | 25 % | 0.50 | 1.50 |
-| Gravity | 434 | 358 | 9 % | 0.25 | 0.25 |
-| Colorsorter | 227 | 161 | 5 % | 0.25 | 0.50 |
+- **Input kg per run hour** (`median_kg_per_h`, the source's `RAW KG per hour`). This is the duration rate: **run duration = input kg / kg/h (line, species)**.
+- **Output kg per run hour** (`median_output_kg_per_h`, the source's `KG per hour`). This is the basis of the v2 figures.
 
-Line 1 by species (median kg/h): PECO 1,341 · SWCO 1,085 · BECO 930 · SWBS 656 · SWTO 1,845. So **run duration = input kg / kg/h(line, species)**.
+| Work center | Input kg/h (run) | Output kg/h (run) | Input kg/h (incl. prep + clean) | Scrap | Prep h | Cleandown h | Runs |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **Line 1** (`LSVLN1`) | **1,377** | 1,114 | 1,090 | 19 % | 1.17 | 1.50 | 458 |
+| Line 2 (`LSVLN2`) | 367 | 274 | 234 | 25 % | 0.50 | 1.50 | 400 |
+| Gravity (`LSVGRVTY`) | 476 | 419 | 374 | 9 % | 0.25 | 0.33 | 621 |
+| Colorsorter (`LSVCLSRT`) | 114 | 98 | 86 | 7 % | 0.17 | 0.33 | 303 |
 
-**Cross-check with the transcribed 2026 dashboard cards** (`raw.large_seed_conditioning_throughput`, mean values):
+Line 1 by species (input kg/h, used when a species has ≥ 5 runs): PECO 1,743 · SWCO 1,322 · BECO 1,353 · BEBS 1,333 · PEBS 1,311 · SWBS 903 · SWTO 2,070.
 
-| | Card | 2026 log mean |
-| --- | --- | --- |
-| Line 1 kg/h / scrap | 1,378 / 0.23 | 1,439 / 0.217 |
-| Line 2 kg/h / scrap | 446 / 0.28 | 388 / 0.285 |
+**Cross-check:** the transcribed 2026 dashboard card for Line 1 (`raw.large_seed_conditioning_throughput`, 1,378 kg/h) matches the **input** basis. For ranking, use the medians over the logs: they're robust to outliers and reproducible.
 
-They agree in magnitude (the card's snapshot date is unknown). For ranking, use **medians over the logs**: they're robust to outliers and reproducible.
+### 4.3 Changeover rule (derived from the run sequence)
 
-### 4.3 Changeover rule (derived from the Line 1 run sequence)
+`gold.v_changeover_observed`: each run is compared with the previous run on the same work center (ordered by date, file, row). `gold.changeover_rule` stores the median prep + cleandown per transition (`rule_source = DERIVED`, n ≥ 5).
 
-| Transition (vs previous run) | Median prep h | Median cleandown h | n |
-| --- | --- | --- | --- |
-| Same variety | 0.92 | **0.50** | 199 |
-| Same species, different variety | 1.50 | **2.25** | 214 |
-| Species change | 1.50 | 1.29 | 48 |
+| Line 1 transition | Median prep h | Median cleandown h | Rule hours (median prep + clean) | n |
+| --- | --- | --- | --- | --- |
+| Same variety | 1.00 | **0.50** | 2.00 | 187 |
+| Same species, different variety | 1.50 | **2.25** | 3.50 | 213 |
+| Species change | 1.00 | 1.50 | 2.50 | 60 |
 
-**Heuristic v1:** a variety change costs about **+1.75 h** of cleandown compared with a same-variety run. This backs the "group same variety, limit changeover" reason. The trait-family penalty (moving between Excelis, GMO and Fresh) needs to be validated with Syngenta.
+- **Heuristic v1:** grouping the same variety saves about **1.5 h** compared with a variety change inside the species. This backs the `SAME_VARIETY_GROUP` reason.
+- A species change is logged as *cheaper* than a variety change. The trait-family penalty (moving between Excelis, GMO and Fresh) has no data. Both are SME questions (§9).
+- The v2 counts (199 / 214 / 48) used a different run order; v3 is the reproducible one.
 
 ---
 
 ## 5. Logical model (PostgreSQL)
 
-### 5.1 Layers
+### 5.1 Layers (medallion)
 
-| Schema | Purpose | Written by | Status |
-| --- | --- | --- | --- |
-| `raw` | 1:1 copy of each CSV, all `text` | `backend/database/etl/load_raw.py` | ✅ **Loaded** (load_id 1, 40 tables, 12,488 rows, verified) |
-| `ref` | Reference/master data | ETL + manual seeds | Designed |
-| `ops` | Typed, standardized operational facts | ETL (SQL from `raw`) | Designed |
-| `plan` | Scheduling decisions and audit trail | Data API at runtime | Designed |
+| Schema | Purpose | Written by | Rebuild | Status |
+| --- | --- | --- | --- | --- |
+| `raw` (bronze) | 1:1 copy of each CSV, all `text` + **`raw.ingest_event`** (append-only upstream signals) | `etl/load_raw.py` · `gold.ingest*` | CSV tables: `load_raw.py` · `ingest_event`: never (voided, not deleted) | ✅ load_id 1 |
+| `silver` | Typed, conformed entities: reference (work center, species, material, …) and facts (PO, schedule rows, runs, QA tests, synthetic demand, ingest overlays) | `etl/build_model.py` (SQL from raw) + `silver.apply_ingest_event` | Dropped and rebuilt from raw on every build, replaying `raw.ingest_event` | ✅ built |
+| `gold` | Everything the use case consumes: capacity, changeover, QA status, open queue, versioned plans + reasons + decisions, contract-shaped JSON, Agent context | `build_model.py` (views, seeds) · Data API at runtime (plans via functions) | Dropped and rebuilt; plans regenerated (baseline v1 per line + replay of the ingest log) | ✅ built |
 
-Derived metrics live in views (`ops.v_*`), never in columns.
+Derived metrics live in views, never in columns (R-DERIVED). Because silver and gold are fully derived from `raw`, a rebuild is always safe. A rebuild regenerates the plans from the ingest log, but it does **not** keep accept decisions: those are demo-session state.
 
-### 5.2 Key and column standard (applies to `ref`, `ops`, `plan`)
+### 5.2 Entity-relationship diagram
+
+```mermaid
+erDiagram
+  silver_species ||--o{ silver_material : "classifies"
+  silver_species |o--o{ silver_lot : "of"
+  silver_material |o--o{ silver_process_order : "produces"
+  silver_lot |o--o{ silver_process_order : "input lot"
+  silver_work_center |o--o{ silver_process_order : "SAP routing"
+  silver_work_center ||--o{ silver_equipment_alias : "spelled as"
+  silver_process_order ||--o{ silver_process_order_source : "traced to"
+  silver_process_order ||--o{ silver_process_order_work_center : "routed"
+  silver_work_center ||--o{ silver_process_order_work_center : "routes"
+  silver_process_order |o--o{ silver_line_schedule_item : "scheduled as"
+  silver_work_center ||--o{ silver_line_schedule_item : "schedule of"
+  silver_lot |o--o{ silver_line_schedule_item : "lot"
+  silver_process_order |o--o{ silver_conditioning_run : "run"
+  silver_work_center |o--o{ silver_conditioning_run : "ran on"
+  silver_process_order |o--o{ silver_quality_test : "tested"
+  silver_lot |o--o{ silver_quality_test : "lot"
+  silver_process_order ||--o{ silver_process_order_change : "SAP-style delta"
+  raw_ingest_event ||--o| silver_process_order_change : "applied as"
+  raw_ingest_event |o--o| silver_quality_test : "applied as"
+  silver_material ||--o{ silver_customer_order : "ordered"
+  silver_customer_order ||--o{ silver_order_allocation : "covered by"
+  silver_process_order ||--o{ silver_order_allocation : "covers"
+  silver_work_center ||--o{ gold_changeover_rule : "costs"
+  silver_work_center ||--o{ gold_schedule_plan : "plans"
+  gold_plan_event |o--o{ gold_schedule_plan : "triggers"
+  raw_ingest_event |o--o| gold_plan_event : "from"
+  gold_schedule_plan |o--o{ gold_schedule_plan : "parent"
+  gold_schedule_plan ||--|{ gold_schedule_entry : "positions"
+  silver_process_order ||--o{ gold_schedule_entry : "placed"
+  gold_schedule_entry ||--o{ gold_entry_reason : "why"
+  gold_reason_code ||--o{ gold_entry_reason : "code"
+  gold_schedule_plan ||--o{ gold_plan_decision : "decided"
+
+  silver_work_center {
+    bigint work_center_id PK
+    text work_center_code UK "LSVLN1"
+    text line_type "LINE GRAVITY COLORSORT ..."
+    text demo_line_id UK "line-1"
+    boolean is_in_scope
+  }
+  silver_species {
+    bigint species_id PK
+    text species_code UK "SWCO"
+    text seed_class "CO BS"
+  }
+  silver_material {
+    bigint material_id PK
+    text material_description UK
+    bigint species_id FK
+    text variety_code
+    text state_code
+    boolean is_parsed
+  }
+  silver_lot {
+    bigint lot_id PK
+    text lot_number UK
+    bigint species_id FK
+    smallint crop_year
+  }
+  silver_process_order {
+    bigint process_order_id PK
+    text po_number UK "R-PO normalized"
+    bigint material_id FK
+    bigint lot_id FK
+    bigint work_center_id FK
+    boolean is_in_sap
+    date sap_finish_date
+    smallint priority_rank
+    text_array dq_flags
+  }
+  silver_line_schedule_item {
+    bigint line_schedule_item_id PK
+    bigint process_order_id FK "UK with work_center_id"
+    bigint work_center_id FK
+    text po_number_raw
+    text status_code "NEW RELEASED ONLINE COMPLETE ..."
+    smallint priority_rank
+    date scheduled_finish_date
+    numeric input_kg
+    text trait_family_code
+    text source_csv "lineage"
+    int source_row_number "Excel row"
+  }
+  silver_conditioning_run {
+    bigint conditioning_run_id PK
+    bigint process_order_id FK
+    bigint work_center_id FK
+    date run_date
+    numeric input_kg
+    numeric run_h
+    numeric cleandown_h
+  }
+  silver_quality_test {
+    bigint quality_test_id PK
+    bigint process_order_id FK
+    bigint output_batch_number
+    text result_code "PASS FAIL PENDING"
+    text fail_reason_code
+    bigint ingest_event_id FK
+  }
+  silver_process_order_change {
+    bigint process_order_change_id PK
+    bigint process_order_id FK
+    bigint ingest_event_id FK
+    smallint priority_rank
+    boolean is_rush
+  }
+  silver_customer_order {
+    bigint customer_order_id PK
+    text order_number UK "SYN-CO-nnn"
+    date need_by_date
+    boolean is_synthetic
+  }
+  raw_ingest_event {
+    bigint ingest_event_id PK
+    text event_source "sap_priority_change pass_fail_log"
+    text line_id
+    jsonb payload
+    text idempotency_key UK
+    timestamptz voided_at
+  }
+  gold_schedule_plan {
+    bigint schedule_plan_id PK
+    bigint work_center_id FK
+    int plan_version "UK with work_center_id"
+    bigint parent_plan_id FK
+    text status "PROPOSED ACCEPTED SUPERSEDED"
+    bigint plan_event_id FK
+  }
+  gold_schedule_entry {
+    bigint schedule_entry_id PK
+    bigint schedule_plan_id FK
+    int position
+    bigint process_order_id FK
+    text entry_status "PLANNED HOLD"
+    timestamptz planned_end_at
+    boolean is_at_risk
+    int previous_position
+  }
+  gold_entry_reason {
+    bigint entry_reason_id PK
+    bigint schedule_entry_id FK
+    smallint seq
+    bigint reason_code_id FK
+    jsonb params "cites PO lot test order ids"
+  }
+  gold_plan_event {
+    bigint plan_event_id PK
+    text event_type "rush qa_fail ..."
+    text source
+    bigint process_order_id FK
+    bigint ingest_event_id FK
+  }
+  gold_plan_decision {
+    bigint plan_decision_id PK
+    bigint schedule_plan_id FK
+    text decision "ACCEPT OVERRIDE REJECT"
+    text decided_by
+  }
+```
+
+Not drawn: `silver.process_order_source` and `silver.process_order_work_center` (PO × source row / routed work center), `silver.equipment_alias`, `silver.order_allocation` and the `gold.config` / `gold.reason_code` / `gold.changeover_rule` reference tables. The full column lists are in the DDL (`backend/database/migrations/00{3,4,5}_*.sql`, with `COMMENT`s).
+
+### 5.3 Key and column standard (silver and gold)
 
 - **PK:** `<table>_id bigint GENERATED ALWAYS AS IDENTITY`. FKs are named after the referenced PK.
-- **Business key:** `UNIQUE` on the normalized natural key (`po_number`, `lot_number`, `work_center_code`, `material_description`, …).
-- **Lineage on every `ops` row:** `source_csv`, `source_row_number`, `source_file_sha256`, `load_id`, plus `dq_flags text[]` (codes DQ-01…DQ-24).
+- **Business key:** `UNIQUE` on the normalized natural key (`po_number`, `lot_number`, `work_center_code`, `material_description`, `order_number`, (`work_center_id`, `plan_version`), …).
+- **Lineage on every silver fact row:** `source_csv`, `source_row_number` (= Excel row), `source_file_sha256`, `load_id`, plus `dq_flags text[]` (DQ-01…DQ-24). Rows created from an ingest event have `source_csv = 'raw.ingest_event'` and `source_row_number = ingest_event_id`.
+- **PO references on fact rows:** `po_number_raw` (as in the source) + `po_number_status` (`VALID | NORMALIZED | NOT_A_PO | PLACEHOLDER | SUSPECT`). `process_order_id` is NULL unless the number is valid.
 - **Naming:** snake_case, singular tables. Suffixes `_code`, `_number` (ID kept as text), `_kg`, `_qty` + `uom_code`, `_h`, `_fraction` (0–1), `_date`, `_at`, `is_`/`has_`, `_raw` (original value).
 - Full conventions: [csv-to-raw-integration.md](./csv-to-raw-integration.md) §4 and observations §5.
 
-### 5.3 `ref`
+### 5.4 `raw`
 
-```sql
-ref.species         (species_id PK, species_code UNIQUE, crop_name, seed_class /* CO|BS */, seed_size /* LSV|SSV */)
-ref.material        (material_id PK, material_description UNIQUE, species_id FK, variety_code, type_code,
-                     state_code, uom_code, material_note, is_parsed bool)
-ref.work_center     (work_center_id PK, work_center_code UNIQUE /* LSVLN1 */, work_center_name, department,
-                     line_type /* LINE|GRAVITY|COLORSORT|REPAIR|SEED_HEALTH|TREATPACK|TREATING */, is_in_scope bool)
-ref.equipment_alias (equipment_alias_id PK, source_csv, alias, work_center_id FK, is_confirmed bool,
-                     UNIQUE (source_csv, alias))
-ref.changeover_rule (changeover_rule_id PK, work_center_id FK, transition_code
-                     /* SAME_VARIETY|SAME_SPECIES|SPECIES_CHANGE|TRAIT_CHANGE */, hours numeric(6,2),
-                     rule_source /* DERIVED|SME */, derived_n int, UNIQUE (work_center_id, transition_code))
-ref.reason_code     (reason_code_id PK, reason_code UNIQUE, description, template /* Agent fallback */)
-```
+The 40 CSV tables are described in [csv-to-raw-integration.md](./csv-to-raw-integration.md). New in v3:
 
-### 5.4 `ops`
+| Table | Grain | Notes |
+| --- | --- | --- |
+| `raw.ingest_event` | one upstream signal | `event_source` (`sap_priority_change` \| `pass_fail_log`), `line_id`, `payload` jsonb (request body as received), `idempotency_key` UNIQUE, `received_at`/`received_by`, `voided_at`/`void_reason`. It's append-only: `gold.reset_demo` voids rows and never deletes them. `load_raw.py` never touches it |
 
-```sql
-ops.lot                  (lot_id PK, lot_number UNIQUE, species_id FK, crop_year smallint, crop_year_suffix text)
+### 5.5 `silver`
 
-ops.process_order        (process_order_id PK, po_number text /* UNIQUE WHERE NOT NULL */, po_number_raw text,
-                          po_number_status /* VALID|NORMALIZED|NOT_A_PO|PLACEHOLDER|SUSPECT */,
-                          po_type /* PRODUCTION|GRAVITY|REPAIR|OTHER, from prefix */,
-                          material_id FK, lot_id FK NULL, work_center_id FK /* SAP routing */,
-                          sap_status, planned_output_qty numeric(14,3), uom_code, sap_finish_date date,
-                          priority_rank smallint, sap_notes text, is_notes_truncated bool,
-                          is_off_system bool, is_manual_shipment bool, + lineage)
-ops.process_order_source (process_order_source_id PK, process_order_id FK, source_csv, source_row_number,
-                          UNIQUE (source_csv, source_row_number))
-ops.process_order_work_center (process_order_work_center_id PK, process_order_id FK, work_center_id FK,
-                          UNIQUE (process_order_id, work_center_id))              -- from components
+| Table | Grain (one row per…) | Business key | Rows (load 1) | Source |
+| --- | --- | --- | --- | --- |
+| `work_center` | work center | `work_center_code` | 32 | `resource_info.csv` (31) + proposed `LSVHANDPICK` |
+| `equipment_alias` | Equipment ID spelling (+ file) | (`source_csv`, `alias`) | 19 | R-EQUIP table (observations §6.2); `is_confirmed = false` for Q-6 |
+| `species` | species code | `species_code` | 35 | every Crop / Species column |
+| `material` | material description | `material_description` (upper, trimmed, collapsed) | 1,115 (13 unparsed) | SAP + 7 schedules |
+| `lot` | seed lot | `lot_number` | 3,243 | all Lot Number columns + lot numbers in PO columns |
+| `process_order` | PO (the batch) | `po_number` | 4,539 (202 in SAP) | SAP → components → schedules → logs |
+| `process_order_source` | PO × source row | (`source_csv`, `source_row_number`) | 11,854 | every row that references a PO |
+| `process_order_work_center` | PO × routed work center | (`process_order_id`, `work_center_id`) | 214 | `components.csv` |
+| `line_schedule_item` | PO on one work-center schedule | (`process_order_id`, `work_center_id`) where not `is_duplicate` | 4,067 | 7 `*_schedule.csv` |
+| `conditioning_run` | logged run | lineage | 4,129 | LSV + SSV logs |
+| `quality_test` | output-batch test | lineage (`output_batch_number` indexed) | 3,142 + ingested | pass/fail log + `pass_fail_log` events |
+| `process_order_change` | SAP-style delta | `ingest_event_id` | ingested | `sap_priority_change` events |
+| `customer_order` / `order_allocation` | order line / order × PO | `order_number` / (order, PO) | 16 / 16 | **synthetic** seed (§6) |
 
-ops.line_schedule_item   (line_schedule_item_id PK, process_order_id FK NULL, work_center_id FK, lot_id FK,
-                          status_code /* NEW|RELEASED|STAGED|ONLINE|LAB|ON_HOLD|COMPLETE */, status_note,
-                          run_order smallint, run_order_note, priority_rank smallint, priority_note, is_rush bool,
-                          scheduled_finish_date date, original_finish_date date,
-                          input_kg numeric(14,3), input_qty numeric(14,3), uom_code, output_kg numeric(14,3),
-                          trait_family_code /* EXCELIS|GMO|FRESH|NONE */, size_fraction_code,
-                          psl_cleanout_value numeric, comments, + lineage)
-                          -- UNIQUE (process_order_id, work_center_id) except DQ-06 duplicates (flagged)
+### 5.6 `gold`
 
-ops.conditioning_run     (conditioning_run_id PK, process_order_id FK NULL, po_number_raw, work_center_id FK,
-                          equipment_raw, lot_id FK, run_date date, operator_name, species_code, variety_code,
-                          size_fraction_code, input_kg, output_kg, loss_kg numeric(14,3),
-                          prep_h, run_h, cleandown_h numeric(6,2), defect_comments, + lineage)
+| Object | Kind | Serves |
+| --- | --- | --- |
+| `config` | table | Demo clock (`as_of_date` 2026-09-28, `plan_start_at` 06:00 Pasco time), heuristic version |
+| `reason_code` | table | 12 machine codes + fallback templates (`ALREADY_RUNNING`, `QA_HOLD`, `RUSH_PRIORITY`, `RESEQUENCED`, `DUE_DATE_RISK`, `SAME_VARIETY_GROUP`, `CUSTOMER_DEMAND`, …) |
+| `changeover_rule` | table | Changeover hours by work center × transition (DERIVED from logs; SME rows override) |
+| `plan_event` · `schedule_plan` · `schedule_entry` · `entry_reason` · `plan_decision` | tables (runtime) | Versioned immutable plans, positions, reasons with params, human decisions |
+| `v_throughput` · `v_run_transition` · `v_changeover_observed` | views | Capacity and changeover (§4.2–4.3) |
+| `v_po_quality_status` | view | PASS / FAIL / PENDING per PO (any FAIL holds the PO: assumption, Q-3) |
+| `v_open_queue` | view | Open schedule rows with effective priority/finish after ingest, QA status, demand, `due_date` = least(need_by, finish), `is_hold` |
+| `v_latest_plan` · `v_plan_queue` · `v_plan_diff` · `v_order_risk` · `v_dq_summary` | views | Latest plan, entries with reasons + `queue_row` JSON, diff vs parent, order risk, DQ counts |
+| `replan(line, event)` | function | Heuristic v1 (§7.1) → new plan version |
+| `ingest(source, line, payload, key)` · `ingest_sap_priority_change(…)` · `ingest_pass_fail(…)` | functions | Upstream signal → `raw.ingest_event` → silver → `plan_event` → replan → `PlantEventResponse` facts |
+| `queue_response(line)` · `event_response(plan)` · `accept_plan(line, version)` · `reset_demo(line)` | functions | BFF contract JSON (`plantDemoTypes.ts`) |
+| `agent_context(plan, locale)` · `batch_detail(po)` | functions | Agent API grounding (facts + `citable` ids) and `GET /batches/{po}` |
 
-ops.quality_test         (quality_test_id PK, process_order_id FK, po_number_raw, lot_id FK, work_center_id FK,
-                          equipment_raw, output_batch_number bigint /* indexed, not unique */, test_date date,
-                          size_fraction_code, batch_kg numeric(14,3), result_code /* PASS|FAIL|PENDING */,
-                          fail_reason_code /* COB|DENT|DISCOLORED|OFF_TYPE|BROKEN|SMUT|WEED|INERT|TARE */,
-                          raw_germ_fraction, ready_germ_fraction, raw_vigor_fraction, ready_vigor_fraction
-                          numeric(5,4), comments, + lineage)
+### 5.7 Build
 
-ops.customer_order       (customer_order_id PK, order_number UNIQUE, customer_name, material_id FK,
-                          qty numeric(14,3), uom_code, need_by_date date,
-                          priority_tier /* STANDARD|KEY|RUSH */, is_synthetic bool DEFAULT true)
-ops.order_allocation     (order_allocation_id PK, customer_order_id FK, process_order_id FK,
-                          allocated_qty numeric(14,3), UNIQUE (customer_order_id, process_order_id))
-```
-
-### 5.5 `plan` (runtime, owned by the Data API)
-
-```sql
-plan.schedule_plan  (schedule_plan_id PK, work_center_id FK, plan_version int, parent_plan_id FK NULL,
-                     status /* PROPOSED|ACCEPTED|SUPERSEDED */, plan_event_id FK NULL,
-                     horizon_start timestamptz, created_at timestamptz, created_by /* 'heuristic-v1' */,
-                     UNIQUE (work_center_id, plan_version))
-plan.schedule_entry (schedule_entry_id PK, schedule_plan_id FK, position int, process_order_id FK,
-                     planned_start_at, planned_end_at timestamptz, est_run_h, est_changeover_h numeric(6,2),
-                     is_at_risk bool, previous_position int NULL, UNIQUE (schedule_plan_id, position))
-plan.entry_reason   (entry_reason_id PK, schedule_entry_id FK, seq smallint, reason_code_id FK,
-                     params jsonb, weight numeric, UNIQUE (schedule_entry_id, seq))
-                     -- ('DUE_DATE_RISK', {"sap_finish":"2026-10-05","slack_days":-2})
-                     -- ('SAME_VARIETY_GROUP', {"variety":"GSS3951","saved_h":1.75})
-                     -- ('QA_HOLD', {"quality_test_id":123,"fail_reason":"DENT"})
-plan.plan_event     (plan_event_id PK, work_center_id FK, event_type /* RUSH|QA_FAIL|NEW_BATCH */,
-                     process_order_id FK NULL, payload jsonb, created_at, created_by)
-plan.plan_decision  (plan_decision_id PK, schedule_plan_id FK, decision /* ACCEPT|OVERRIDE|REJECT */,
-                     override_detail jsonb, decided_by, decided_at, comment)
-```
-
-### 5.6 Derived views
-
-```sql
-ops.v_throughput          -- median/p75 kg/h by work_center × species (× variety when n ≥ 5), from conditioning_run
-ops.v_changeover_observed -- §4.3 transition stats; source for ref.changeover_rule
-ops.v_open_queue          -- open line_schedule_items per work center + material + latest QA + allocations
-ops.v_po_quality_status   -- per PO: PASS | FAIL (reason) | PENDING | NOT_TESTED
-ops.v_order_risk          -- per customer order: covering POs, planned finish vs need_by, slack days
-ops.v_dq_summary          -- dq_flags counts per table (must equal observations §8)
-```
+`python backend/database/etl/build_model.py` runs 19 SQL files in one transaction (migrations → silver rules/staging/reference → config → PO → facts → ingest → gold views → seeds → replan/API → baseline + replay), then `tests/reconciliation.sql` (61 checks). Any failure rolls back everything, so the previous build stays in place. It takes about 6 s on the dev RDS. Run instructions are in [`backend/database/README.md`](../database/README.md).
 
 ---
 
 ## 6. Gaps and synthetic data
 
-| Gap | Approach |
+| Gap | Approach (as built) |
 | --- | --- |
-| **Customer orders** (required by the brief) | About 15–25 synthetic orders for Line 1 materials: `need_by_date` = SAP finish ± a few days, 2–3 key customers, `is_synthetic = true` |
-| Arrival date | Treat open POs as in plant; `sheet1` field receipts can illustrate intake |
-| Changeover rules | Seed `ref.changeover_rule` from §4.3 (`rule_source = DERIVED`); SME confirms the trait penalty |
-| Line 1 queue is small (12 open POs) | Enough for the demo; optionally add "shadow" POs re-dated from 2026 history (flagged synthetic) |
-| Rush / QA-fail events | Rush: synthetic PO + `plan_event`. QA fail: an `ops.quality_test` FAIL row on an open PO's lot + `plan_event` |
+| **Customer orders** (required by the brief) | `seeds/silver_customer_order.sql` makes 16 synthetic orders (`SYN-CO-001…016`, `is_synthetic = true`) for the 12 open Line 1 POs: one per PO, two when input ≥ 30 t. Quantity ≈ 80 % of input. `need_by` = scheduled finish + (−2, 0, +1, +3, +5) days. Customers A (KEY), B and C are generic placeholders |
+| Arrival date | Open POs are treated as in plant |
+| Changeover rules | Derived (§4.3). Trait penalty pending SME |
+| Rush / QA-fail events | Real ingest path: `gold.ingest_*` writes `raw.ingest_event`, and the PO must be on the line's open queue (no invented POs) |
+| Line 1 queue is small (12 open POs) | Enough for the demo |
 
 ---
 
 ## 7. How the model serves the Data API
 
-| Endpoint | Reads | Writes |
+| BFF route (today) | Gold call | Returns |
 | --- | --- | --- |
-| `GET /lines/{id}/queue` | latest `plan.schedule_plan` + entries + reasons; falls back to `ops.v_open_queue` | — |
-| `POST /schedule/replan` | `v_open_queue`, `v_throughput`, `ref.changeover_rule`, `v_order_risk`, `v_po_quality_status` | `plan_event`, new `schedule_plan` (v+1), entries, reasons |
-| `GET /batches/{po}` | `process_order`, `material`, `lot`, `conditioning_run` history, `quality_test` | — |
-| `POST /schedule/accept` (via BFF) | `schedule_plan` | `plan_decision`, status → `ACCEPTED` |
+| `GET /demo/plant/queue?lineId=line-1` | `gold.queue_response('line-1')` | `PlantQueueResponse` (`queue[]` of `QueueRow`, `planVersion`, `lastEvent`, `acceptedPlanVersion`) |
+| `POST /demo/plant/ingest/sap-priority-change` | `gold.ingest_sap_priority_change(lineId, po, priority, scheduledFinish, idempotencyKey)` | `PlantEventResponse` facts (`eventType`, `queue`, `planVersion`, `diff.moves[]`, `diff.reasons[]`, `source`). The Agent adds `explanation` |
+| `POST /demo/plant/ingest/pass-fail-log` | `gold.ingest_pass_fail(lineId, po, passFail, failedFor, equipmentId, idempotencyKey)` | same |
+| `POST /demo/plant/schedule/accept` | `gold.accept_plan(lineId, planVersion)` | `PlantAcceptResponse`. Audit only, no SAP write; a stale version is refused |
+| `POST /demo/plant/reset` | `gold.reset_demo(lineId)` | calm baseline (v1) |
+| Agent `explain-replan` input | `gold.agent_context(schedule_plan_id, locale)` | event, queue with structured reasons, diff, constraints, `citable` ids |
+| `GET /batches/{po}` / batch Q&A | `gold.batch_detail(po)` | PO, material, lot, schedules, QA tests, runs, demand, place in the latest plans |
 
-`diff.moves[]` = `previous_position` vs `position` between plan v and v+1. `diff.reasons[]` and the Agent payload come from `entry_reason`, so explanations cite PO numbers, lots and test IDs.
+Contract mapping:
+- `QueueRow.status`: `PLANNED` (NEW/RELEASED/STAGED/ONLINE) or `HOLD` (QA FAIL, ON_HOLD, LAB).
+- `kg` = input kg.
+- `finish` = planned end (Pasco time), or the due date for HOLD rows.
+- `reasonShort` = the reason with seq 1.
+- `previousPosition` comes from the parent plan.
 
-### 7.1 Heuristic v1 (in the Data API, not a solver)
+**Storyline (uc1-blueprint-narrative.md) on real data**, checked by `tests/demo_scenario.sql`:
 
-Score each runnable PO (status not `ON_HOLD`/`LAB`/`COMPLETE`, QA not `FAIL`):
+| Act | Call | Result |
+| --- | --- | --- |
+| 1 Calm morning | `queue_response('line-1')` | v1: the 12 open LSVLN1 POs; `1002267630` (ONLINE) first; `1002295402` last and at risk |
+| 2A Rush lands | `ingest_sap_priority_change('line-1', '1002295402', 2, '2026-10-03')` | v2 `rush`: `1002295402` 12 → 2 (`RUSH_PRIORITY`); others `RESEQUENCED` |
+| 2B QA fail lands | `ingest_pass_fail('line-1', '1002307552', 'Fail', 'Dent', 'Line 1')` | v3 `qa_fail`: `1002307552` → `HOLD` (`QA_HOLD` citing the `quality_test_id`); downstream moves up |
+| 4 Scheduler accepts | `accept_plan('line-1', 3)` | `acceptedPlanVersion = 3`, `lastEvent` cleared |
+| 5 Reset | `reset_demo('line-1')` | back to v1 |
 
-1. **Hard:** exclude QA FAIL / ON_HOLD. Keep `ONLINE` at position 1 (already running).
-2. **Urgency:** slack = `need_by` (or `sap_finish_date`) − projected end. Overdue or negative slack first.
-3. **Priority:** `priority_rank` (1 = highest); a RUSH event or `is_rush` overrides it.
-4. **Changeover:** a greedy pass groups same variety, then same species and trait family, using `ref.changeover_rule`.
-5. Each rule that fires on a position writes an `entry_reason` row.
+**Demo anchors re-pointed (proposal for the BFF owner):** rush → `1002295402` and QA fail → `1002307552`, both open on Line 1. The older anchors don't fit the extract: `1002307551` is routed to LSVLN2 (finish 2026-10-29), and `1001884747` has been COMPLETE since 2023-09 (its Fail/Dent row is historical, and 3 of its 4 batches passed). Gold refuses ingest for a PO that isn't on the line's open queue.
+
+### 7.1 Heuristic v1 (as built in `gold.replan`)
+
+Greedy: one pick at a time, with the clock advancing by changeover + run duration. Ranking of runnable batches:
+
+1. **ONLINE** first (already running).
+2. **Rush**: an SAP-style priority change that raised urgency (`is_rush`).
+3. **Urgent**: would finish after its due date even if started now. Earliest due first.
+4. **Priority** rank (1 = highest).
+5. **Changeover:** same variety as the previous batch, then same species (`gold.changeover_rule`).
+6. Due date, run order, PO number (stable tie-breaks).
+
+- **Holds:** batches with QA FAIL, ON_HOLD or LAB go after the planned ones and get no times.
+- **Timing:** `est_run_h` = input kg / `gold.est_kg_per_h(line, species)`. `slack_days` = due − planned end date; `is_at_risk` = slack < 0.
+- **Reasons:** every rule that fires writes an `entry_reason` row with params, seq 1 first: `ALREADY_RUNNING`, `QA_HOLD`/`STATUS_HOLD`, `RUSH_PRIORITY`, `RESEQUENCED`, `DUE_DATE_RISK`/`EARLIEST_DUE`, `PRIORITY`, `SAME_VARIETY_GROUP`/`SAME_SPECIES_GROUP`, `CUSTOMER_DEMAND`, `CHANGEOVER`.
 
 ---
 
-## 8. Implementation plan and status
+## 8. Implementation status
 
 | Step | Status | Artifact |
 | --- | --- | --- |
 | 1. Excel → CSV (verified) | ✅ Done | `data_sources/*.csv` + `observations.md` |
 | 2. CSV → `raw` (verified) | ✅ Done (load_id 1) | `backend/database/etl/load_raw.py` · [csv-to-raw-integration.md](./csv-to-raw-integration.md) |
-| 3. `ref` DDL + load | Next | `backend/database/migrations/` |
-| 4. `ops` DDL + transforms (R-PO, R-STATUS, … from observations §6) | Next | SQL from `raw` |
-| 5. Seeds (customer orders, changeover rules, reason codes) | Next | `backend/database/seeds/` |
-| 6. Reconciliation checks (observations §9.4) | Next | SQL tests |
-| 7. Views + Data API endpoints | Then | `ops.v_*`, Data API |
+| 3. `silver` DDL + transforms (R-* rules) | ✅ Done | `backend/database/migrations/003–004`, `etl/transforms/silver/` |
+| 4. `gold` tables, views, replan, API functions | ✅ Done | `migrations/005`, `etl/transforms/gold/` |
+| 5. Seeds (config, reason codes, changeover rules, synthetic orders) | ✅ Done | `backend/database/seeds/` |
+| 6. Reconciliation (observations §9.4 + DQ counts) | ✅ 61 checks pass | `backend/database/tests/reconciliation.sql` |
+| 7. Demo storyline test | ✅ Passes (rolled back) | `backend/database/tests/demo_scenario.sql` |
+| 8. Data API endpoints calling the gold functions; BFF switch from DynamoDB stub | Next | Data API (Camilo) + BFF (Mauricio) |
 
-Scope order: Line 1 (`LSVLN1`) end to end first, then Line 2 / Gravity / Colorsort, then SSV (Phase 2).
+Scope order: Line 1 (`LSVLN1`) end to end first, then Line 2 / Gravity / Colorsort (silver and gold already cover them; baseline plans exist for `line-1` and `line-2`), then SSV (Phase 2).
 
 ---
 
@@ -353,3 +518,5 @@ Model-level questions (data-level questions Q-1…Q-10 are in observations §10)
 3. Does a QA fail on one size fraction block the whole PO, or only that output batch?
 4. Which source is authoritative for PO status when SAP and the line schedule disagree?
 5. Should `BAYER n` (off-system, third-party) runs count in the capacity baseline?
+6. Throughput basis: should planning use input kg/h (the Line 1 dashboard card, 1,378) or output kg/h (1,114)? Gold uses input kg/h for durations.
+7. Why would a species change on Line 1 need less changeover time (2.5 h) than a variety change inside the species (3.5 h)?
