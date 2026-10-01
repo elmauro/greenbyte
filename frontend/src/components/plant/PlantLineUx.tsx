@@ -41,6 +41,7 @@ export function PlantLineUx() {
     refreshing,
     busy,
     acceptPlan,
+    setManualOrder,
     loadError,
   } = usePlantDemoQueue(locale, line.id);
 
@@ -95,6 +96,7 @@ export function PlantLineUx() {
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void handleAccept()}
+            onManualOrder={setManualOrder}
           />
           </>
         )}

@@ -59,6 +59,8 @@ type PlantBaselineDashboardProps = {
   onLineChange?: (lineId: string) => void;
   /** Line switch in flight — dim the data area, keep nav and the line control. */
   dataRefreshing?: boolean;
+  /** Scheduler reorders the proposed plan. The running batch and holds stay put. */
+  onManualOrder?: (order: string[]) => void;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -126,6 +128,7 @@ export function PlantBaselineDashboard({
   selectedLineId,
   onLineChange,
   dataRefreshing = false,
+  onManualOrder,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -165,6 +168,7 @@ export function PlantBaselineDashboard({
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -207,6 +211,22 @@ export function PlantBaselineDashboard({
   const paginatedQueueRows = queuePag.pageItems;
 
   const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
+  const runnableRows = scheduleActive.filter((row) => row.status !== 'HOLD');
+  const heldRows = scheduleActive.filter((row) => row.status === 'HOLD');
+
+  function moveRunnable(index: number, direction: -1 | 1) {
+    placeRunnable(index, index + direction);
+  }
+
+  function placeRunnable(from: number, to: number) {
+    if (!onManualOrder) return;
+    if (from <= 0 || to <= 0 || from === to) return;
+    if (from >= runnableRows.length || to >= runnableRows.length) return;
+    const next = runnableRows.slice();
+    const [row] = next.splice(from, 1);
+    next.splice(to, 0, row);
+    onManualOrder([...next, ...heldRows].map((item) => item.po));
+  }
 
   useEffect(() => {
     setQueueFilter('all');
@@ -600,12 +620,6 @@ export function PlantBaselineDashboard({
         >
           ✓ {accepted ? copy.actions.accepted : copy.actions.accept}
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          ✎ {schedule.adjustManually}
-        </button>
       </div>
     </div>
   );
@@ -736,6 +750,10 @@ export function PlantBaselineDashboard({
                     onLayoutChange={setGanttLayout}
                     lineId={selectedLineId}
                     showMoves={eventPendingReview}
+                    expanded={timelineOpen}
+                    onExpandedChange={setTimelineOpen}
+                    onMoveRow={onManualOrder ? moveRunnable : undefined}
+                    onPlaceRow={onManualOrder ? placeRunnable : undefined}
                   />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
@@ -748,6 +766,10 @@ export function PlantBaselineDashboard({
                   onLayoutChange={setGanttLayout}
                   lineId={selectedLineId}
                   showMoves={eventPendingReview}
+                  expanded={timelineOpen}
+                  onExpandedChange={setTimelineOpen}
+                  onMoveRow={onManualOrder ? moveRunnable : undefined}
+                  onPlaceRow={onManualOrder ? placeRunnable : undefined}
                 />
               )}
             </div>

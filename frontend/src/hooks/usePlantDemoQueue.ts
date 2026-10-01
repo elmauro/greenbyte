@@ -16,6 +16,7 @@ import { getPlantEventExplanation, PLANT_DEMO_LINE_ID } from '../demo/plant/plan
 import type { PlantPlanDiff } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n/LocaleContext';
 import { getApiConnectionMode } from '../services/apiConfig';
+import { applyManualOrder, readManualOrder, rememberManualOrder } from '../demo/plant/plantManualOrder';
 import { plantDemoApi } from '../services/plantDemoApi';
 
 export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LINE_ID) {
@@ -46,9 +47,20 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     writeAckPlanVersion(lineId, version);
   }, [lineId]);
 
+  const planVersionRef = useRef(1);
+
+  const queueForSnapshot = useCallback(
+    (res: PlantQueueResponse) => {
+      const manual = readManualOrder(lineIdRef.current, res.planVersion);
+      return manual ? applyManualOrder(res.queue, manual, locale) : res.queue;
+    },
+    [locale],
+  );
+
   const applyQueueSnapshot = useCallback(
     (res: PlantQueueResponse) => {
-      setQueue(res.queue);
+      planVersionRef.current = res.planVersion;
+      setQueue(queueForSnapshot(res));
       setPlanVersion(res.planVersion);
 
       if (res.lastEvent) {
@@ -87,7 +99,19 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
         setAccepted(true);
       }
     },
-    [locale, syncAckPlanVersion],
+    [locale, queueForSnapshot, syncAckPlanVersion],
+  );
+
+  const setManualOrder = useCallback(
+    (order: string[]) => {
+      const version = planVersionRef.current;
+      const requestedLineId = lineIdRef.current;
+      setQueue((current) => {
+        const record = rememberManualOrder(requestedLineId, version, current, order);
+        return applyManualOrder(current, record, locale);
+      });
+    },
+    [locale],
   );
 
   const loadQueue = useCallback(async () => {
@@ -182,6 +206,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     loadError,
     busy,
     acceptPlan,
+    setManualOrder,
     connectionMode: plantDemoApi.connectionMode,
   };
 }

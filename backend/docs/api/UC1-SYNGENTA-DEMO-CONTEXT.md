@@ -210,4 +210,4 @@ With `PGHOST` set, this calls `gold.accept_plan`: inserts `gold.plan_decision` (
 - UC4 breeding (`/demo/breeding`) — separate contract
 - ERP / SAP writes
 - Multi-line plant
-- “Adjust manually” Gantt drag (UI button is display-only)
+- Persisting a manual adjust (`gold.adjust_plan`, Gantt drag). The scheduler button reorders the visible queue in the browser for the current plan version only (`GREENBYTE-006`).

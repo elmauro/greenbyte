@@ -24,6 +24,7 @@ export function PlantLineMvp() {
     refreshing,
     busy,
     acceptPlan,
+    setManualOrder,
     loadError,
   } = usePlantDemoQueue(locale, line.id);
 
@@ -104,6 +105,7 @@ export function PlantLineMvp() {
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void acceptPlan()}
+            onManualOrder={setManualOrder}
           />
           </>
         )}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { QueueRow } from '../../demo/plant/plantDemoTypes';
 import { PLANT_SCHEDULE_META } from '../../demo/plant/plantScheduleMeta';
 import { useLocale } from '../../i18n';
@@ -15,6 +15,13 @@ type PlantProgramGanttProps = {
   lineId?: string;
   /** Move callouts belong to a plan still waiting for acceptance. */
   showMoves?: boolean;
+  /** When set, the parent owns the expanded-timeline dialog. */
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
+  /** Reorder a runnable row while the expanded timeline is open. Index 0 stays put. */
+  onMoveRow?: (index: number, direction: -1 | 1) => void;
+  /** Drop a runnable row on another runnable position. Index 0 stays put. */
+  onPlaceRow?: (from: number, to: number) => void;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -88,7 +95,7 @@ function moveNote(
   if (previous == null || previous === current) return null;
   if (row.status === 'HOLD') return labels.heldWas.replace('{n}', String(previous));
   if (previous > current) return labels.movedUp.replace('{n}', String(previous));
-  return null;
+  return labels.movedDown.replace('{n}', String(previous));
 }
 
 function lineNumber(lineId?: string) {
@@ -178,11 +185,23 @@ export function PlantProgramGantt({
   onLayoutChange,
   lineId,
   showMoves = true,
+  expanded: expandedProp,
+  onExpandedChange,
+  onMoveRow,
+  onPlaceRow,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
-  const [expanded, setExpanded] = useState(false);
+  const [expandedInternal, setExpandedInternal] = useState(false);
+  const expanded = expandedProp ?? expandedInternal;
+  function setExpanded(next: boolean) {
+    if (expandedProp === undefined) setExpandedInternal(next);
+    onExpandedChange?.(next);
+  }
   const [zoomIndex, setZoomIndex] = useState(1);
+  const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  const dragRef = useRef<{ from: number; over: number } | null>(null);
+  const listRef = useRef<HTMLElement>(null);
   const zoom = ZOOM_STEPS[zoomIndex];
   const scale = dateScale(rows, zoom.ms);
   const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
@@ -197,6 +216,59 @@ export function PlantProgramGantt({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [expanded]);
+
+  function canDragRow(index: number) {
+    const row = rows[index];
+    return Boolean(expanded && onPlaceRow && row && row.status !== 'HOLD' && index > 0);
+  }
+
+  function onDragPointerDown(index: number, event: ReactPointerEvent<HTMLElement>) {
+    if (!canDragRow(index)) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    const session = { from: index, over: index };
+    dragRef.current = session;
+    setDrag(session);
+
+    function move(pointer: PointerEvent) {
+      const current = dragRef.current;
+      if (!current) return;
+      const scroller = listRef.current?.parentElement;
+      if (scroller) {
+        const box = scroller.getBoundingClientRect();
+        if (pointer.clientY < box.top + 28) scroller.scrollTop -= 14;
+        else if (pointer.clientY > box.bottom - 28) scroller.scrollTop += 14;
+      }
+      const hit = document.elementFromPoint(pointer.clientX, pointer.clientY);
+      const item = hit?.closest<HTMLElement>('[data-queue-index]');
+      const over = Number(item?.dataset.queueIndex);
+      if (!canDragRow(over) || current.over === over) return;
+      const next = { ...current, over };
+      dragRef.current = next;
+      setDrag(next);
+    }
+
+    function finish() {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+      const current = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (current && current.from !== current.over) onPlaceRow?.(current.from, current.over);
+    }
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+  }
+
+  function dragClass(index: number) {
+    if (!drag) return '';
+    if (drag.from === index) return 'opacity-40';
+    if (drag.over === index) return 'ring-2 ring-inset ring-brand-green';
+    return '';
+  }
   const footer = s.footerTotal
     .replace('{count}', String(rows.length))
     .replace('{runtime}', s.demoRuntime);
@@ -285,6 +357,9 @@ export function PlantProgramGantt({
           {layout === 'approval' && (
             <p className="text-xs text-gray-500">{s.approvalSubtitle}</p>
           )}
+          {expanded && onMoveRow && (
+            <p className="text-xs text-gray-500">{s.adjustHint}</p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
           {onLayoutChange && (
@@ -330,7 +405,7 @@ export function PlantProgramGantt({
           <ToolbarBtn
             label={expanded ? s.closeExpanded : s.expand}
             pressed={expanded}
-            onClick={() => setExpanded((open) => !open)}
+            onClick={() => setExpanded(!expanded)}
           >
             ⤢
           </ToolbarBtn>
@@ -364,7 +439,7 @@ export function PlantProgramGantt({
               </div>
             </div>
 
-            <ul className="space-y-0 divide-y divide-gray-100 border-y border-gray-100">
+            <ul ref={listRef} className="space-y-0 divide-y divide-gray-100 border-y border-gray-100">
               {rows.map((row, index) => {
                 const isRush = row.po === rushPo;
                 const isHold = row.status === 'HOLD';
@@ -377,16 +452,31 @@ export function PlantProgramGantt({
                 return (
                   <li
                     key={row.po}
+                    data-queue-index={index}
+                    onPointerDown={(event) => onDragPointerDown(index, event)}
                     className={`grid grid-cols-[14rem_1fr] items-center gap-2 py-2 ${
                       isHold
                         ? 'bg-red-50/80 ring-1 ring-inset ring-red-200'
                         : isRush
                           ? 'bg-orange-50/80 ring-1 ring-inset ring-orange-300'
                           : ''
-                    }`}
+                    } ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : ''} ${dragClass(index)}`}
                   >
                     <div className="px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
+                      {canDragRow(index) && (
+                        <span className="mr-1 text-gray-400" aria-hidden="true" title={s.adjustDrag}>
+                          ⋮⋮
+                        </span>
+                      )}
                       {renderRowMeta(row, index, isRush, isHold)}
+                      <RowMoveControls
+                        index={index}
+                        row={row}
+                        rows={rows}
+                        expanded={expanded}
+                        onMoveRow={onMoveRow}
+                        labels={s}
+                      />
                     </div>
                     <div className="relative h-11 rounded bg-gray-50/80">
                       <div
@@ -418,6 +508,7 @@ export function PlantProgramGantt({
         </div>
       ) : layout === 'horizontal' ? (
         <div
+          ref={listRef}
           className={expanded ? 'min-h-0 flex-1 overflow-auto p-4' : `${GANTT_SCROLL_MAX_CLASS} overflow-x-auto overflow-y-auto p-3`}
           tabIndex={0}
           role="region"
@@ -433,13 +524,15 @@ export function PlantProgramGantt({
               return (
                 <article
                   key={row.po}
+                  data-queue-index={index}
+                  onPointerDown={(event) => onDragPointerDown(index, event)}
                   className={`flex min-h-[7.5rem] flex-col rounded-xl border p-3 shadow-sm ${
                     tone === 'hold'
                       ? 'border-red-200 bg-red-50 ring-2 ring-red-300'
                       : tone === 'up'
                         ? 'border-green-200 bg-white'
                         : 'border-indigo-100 bg-indigo-50'
-                  }`}
+                  } ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : ''} ${dragClass(index)}`}
                 >
                   <span className={`mb-2 h-1.5 w-10 rounded-full ${toneFill(tone)}`} />
                   {renderRowMeta(row, index, isRush, isHold)}
@@ -451,21 +544,59 @@ export function PlantProgramGantt({
                       {note}
                     </p>
                   )}
+                  <RowMoveControls
+                    index={index}
+                    row={row}
+                    rows={rows}
+                    expanded={expanded}
+                    onMoveRow={onMoveRow}
+                    labels={s}
+                  />
                 </article>
               );
             })}
           </div>
         </div>
       ) : (
-        <ApprovalTimeline
-          rows={rows}
-          locale={locale}
-          labels={s}
-          showMoves={showMoves}
-          className={
-            expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
-          }
-        />
+        <>
+          <ApprovalTimeline
+            rows={rows}
+            locale={locale}
+            labels={s}
+            showMoves={showMoves}
+            className={
+              expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
+            }
+          />
+          {expanded && onMoveRow && (
+            <ol ref={listRef} className="max-h-40 space-y-1 overflow-auto border-t border-gray-100 px-4 py-2">
+              {rows.map((row, index) =>
+                row.status === 'HOLD' ? null : (
+                  <li
+                    key={row.po}
+                    data-queue-index={index}
+                    onPointerDown={(event) => onDragPointerDown(index, event)}
+                    className={`flex items-center justify-between gap-3 text-xs ${
+                      canDragRow(index) ? 'cursor-grab' : ''
+                    } ${dragClass(index)}`}
+                  >
+                    <span className="font-medium text-gray-800">
+                      {index + 1}. {row.po}
+                    </span>
+                    <RowMoveControls
+                      index={index}
+                      row={row}
+                      rows={rows}
+                      expanded={expanded}
+                      onMoveRow={onMoveRow}
+                      labels={s}
+                    />
+                  </li>
+                ),
+              )}
+            </ol>
+          )}
+        </>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500">
@@ -573,6 +704,61 @@ function ColorLegend({ labels, className = '' }: { labels: ApprovalLabels; class
         {labels.legendUnchanged}
       </span>
     </div>
+  );
+}
+
+function rowCanMove(rows: QueueRow[], index: number, direction: -1 | 1): boolean {
+  const row = rows[index];
+  if (!row || row.status === 'HOLD' || index <= 0) return false;
+  const target = index + direction;
+  if (target <= 0 || target >= rows.length) return false;
+  return rows[target].status !== 'HOLD';
+}
+
+function RowMoveControls({
+  index,
+  row,
+  rows,
+  expanded,
+  onMoveRow,
+  labels,
+}: {
+  index: number;
+  row: QueueRow;
+  rows: QueueRow[];
+  expanded: boolean;
+  onMoveRow?: (index: number, direction: -1 | 1) => void;
+  labels: { adjustUp: string; adjustDown: string; adjustRunning: string };
+}) {
+  if (!expanded || !onMoveRow || row.status === 'HOLD') return null;
+  if (index === 0) {
+    return (
+      <span className="mt-1 inline-block text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+        {labels.adjustRunning}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-1 flex gap-1">
+      <button
+        type="button"
+        aria-label={labels.adjustUp}
+        disabled={!rowCanMove(rows, index, -1)}
+        onClick={() => onMoveRow(index, -1)}
+        className="rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        aria-label={labels.adjustDown}
+        disabled={!rowCanMove(rows, index, 1)}
+        onClick={() => onMoveRow(index, 1)}
+        className="rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+      >
+        ↓
+      </button>
+    </span>
   );
 }
 

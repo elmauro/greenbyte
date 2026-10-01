@@ -96,7 +96,7 @@ When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **
 - Batch detail drawer: `GET /demo/plant/batches/{po}/summary`
 - Side-by-side before/after queue
 - ~~Real rows from Pasco Excel seed~~ **Partial:** `pascoLine1Baseline` generator — align to **active Line 1** slice (see mock-data doc)
-- “Adjust manually” disabled with tooltip
+- Manual adjust on the scheduler screen: reorder runnable batches in the browser. The running batch stays first; holds stay on hold. The order is kept in session storage for the current plan version (`GREENBYTE-006`). It is not written to PostgreSQL or SAP.
 
 **Out:** UC4 product, multi-line, ERP write, plant IoT.
 
