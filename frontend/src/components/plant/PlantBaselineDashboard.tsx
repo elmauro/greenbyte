@@ -725,6 +725,7 @@ export function PlantBaselineDashboard({
                     compact={compact}
                     layout={ganttLayout}
                     onLayoutChange={setGanttLayout}
+                    lineId={selectedLineId}
                   />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
@@ -735,22 +736,10 @@ export function PlantBaselineDashboard({
                   compact={compact}
                   layout={ganttLayout}
                   onLayoutChange={setGanttLayout}
+                  lineId={selectedLineId}
                 />
               )}
             </div>
-            {isUx && eventPendingReview && explanation && (
-              <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-                <h4 className="text-sm font-semibold text-gray-900">{ux.whatChanged}</h4>
-                {explanation.summary && (
-                  <p className="mt-2 text-sm text-gray-800">{explanation.summary}</p>
-                )}
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
-                  {explanation.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
             {acceptFooter}
           </>
         );
