@@ -357,6 +357,9 @@ export function PlantBaselineDashboard({
           <p className="font-semibold">{ux.amberTitle}</p>
         )}
         <p className={isUx ? 'mt-1' : ''}>{explanation.alertBanner}</p>
+        {explanation.summary && (
+          <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
+        )}
         {isUx && (
           <p className="mt-1 text-xs font-normal text-amber-900/80">{ux.amberBody}</p>
         )}
@@ -738,6 +741,9 @@ export function PlantBaselineDashboard({
             {isUx && eventPendingReview && explanation && (
               <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
                 <h4 className="text-sm font-semibold text-gray-900">{ux.whatChanged}</h4>
+                {explanation.summary && (
+                  <p className="mt-2 text-sm text-gray-800">{explanation.summary}</p>
+                )}
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-700">
                   {explanation.bullets.map((bullet) => (
                     <li key={bullet}>{bullet}</li>
@@ -867,7 +873,8 @@ export function PlantBaselineDashboard({
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
                               <p className="mt-0.5 text-xs text-gray-600">
-                                {eventType === 'qa_fail' ? ux.qBell : ux.pBell}
+                                {explanation?.summary ??
+                                  (eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
                               </p>
                               <div className="mt-2 flex flex-wrap gap-2">
                                 <button

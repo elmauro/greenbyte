@@ -8,7 +8,7 @@ Routes mirror MSW / `plantDemoHandlers.ts`. Demo queue state is stored in Dynamo
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/demo/plant/lines/{lineId}/queue` | UI poll. When `PGHOST` is set and the latest plan is `PROPOSED`, the response is that order, its reasons, and the simulated copilot text. Otherwise the rows come from `gold.v_open_queue`. |
+| GET | `/demo/plant/lines/{lineId}/queue` | UI poll. When `PGHOST` is set and a latest plan exists, the rows are that plan's queue, in array order. A `PROPOSED` plan also returns reasons and the simulated copilot text. An `ACCEPTED` plan keeps that order with the copilot cleared. With no plan, rows come from `gold.v_open_queue`. |
 | POST | `/demo/plant/ingest/sap-priority-change` | Urgency on an existing PO. With `PGHOST` set, calls `gold.ingest_sap_priority_change` (writes `raw.ingest_event` + `silver.process_order_change`, then replans). |
 | POST | `/demo/plant/ingest/sap-queue-refresh` | New PO from a COISPI refresh. With `PGHOST` set, inserts `silver.process_order` and `silver.line_schedule_item`, then `gold.replan` writes a proposed plan for that line. |
 | POST | `/demo/plant/ingest/pass-fail-log` | QA fail on an existing PO. With `PGHOST` set, calls `gold.ingest_pass_fail` (writes `raw.ingest_event` + `silver.quality_test`, then replans). |

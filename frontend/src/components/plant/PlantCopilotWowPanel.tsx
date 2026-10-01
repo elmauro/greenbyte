@@ -32,6 +32,9 @@ export function PlantCopilotWowPanel({ explanation, compact }: PlantCopilotWowPa
           <p className="text-sm text-gray-600">{copy.copilotIdle}</p>
         ) : (
           <>
+            {explanation.summary && (
+              <p className="text-sm font-medium leading-snug text-gray-900">{explanation.summary}</p>
+            )}
             {explanation.bullets.map((bullet, i) => (
               <div
                 key={bullet}

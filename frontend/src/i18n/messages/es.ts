@@ -377,7 +377,7 @@ export const es: Messages = {
       clockLabel: '10:42 PDT',
       notificationsAria: 'Notificaciones',
       ganttTitle: 'Línea de tiempo del programa',
-      ganttHint: 'Gantt simplificado para demo hackathon — programación completa vía Data API Pasco.',
+      ganttHint: 'De arriba a abajo es el orden de la cola. Cada barra está en la fecha de fin de ese lote.',
       batchCol: 'Lote / operación',
       species: 'Especie',
       client: 'Cliente',
@@ -396,6 +396,9 @@ export const es: Messages = {
       ganttScrollHint: 'Desplázate para ver todos los lotes en la línea de tiempo.',
       ganttScrollRegionVertical: 'Línea de tiempo del programa, vista vertical',
       ganttScrollRegionHorizontal: 'Línea de tiempo del programa, tira horizontal de tarjetas',
+      expand: 'Ampliar línea de tiempo',
+      closeExpanded: 'Cerrar línea de tiempo ampliada',
+      queuePosition: 'Posición en la cola {n}',
     },
     pagination: {
       rowsPerPage: 'Filas por página',

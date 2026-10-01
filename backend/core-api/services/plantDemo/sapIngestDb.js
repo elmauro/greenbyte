@@ -3,6 +3,7 @@ import { fetchOpenQueue, queryOpenQueue, withOpenQueueClient } from './openQueue
 import {
   attachPlanExplanation,
   localeOf,
+  normalizePlanQueue,
   queueResponseFromPlan,
   titleCaseToken,
 } from './planExplanation.js';
@@ -177,8 +178,9 @@ async function reasonHints(planId) {
 }
 
 /**
- * Scheduler poll. A PROPOSED plan returns that order, its reasons, and the
- * simulated copilot text. Any other state returns the open queue.
+ * Scheduler poll. The latest plan (proposed or accepted) is the queue on
+ * screen, in that array order. A proposed plan also returns the simulated
+ * copilot. With no plan, rows come from the open queue.
  */
 export async function fetchSchedulerQueue(lineId, locale) {
   const latest = await queryOpenQueue(
@@ -189,15 +191,27 @@ export async function fetchSchedulerQueue(lineId, locale) {
     [lineId],
   );
   const row = latest.rows[0];
-  if (row?.status === 'PROPOSED' && row.schedule_plan_id != null) {
+  if (row?.schedule_plan_id != null && (row.status === 'PROPOSED' || row.status === 'ACCEPTED')) {
     const { rows } = await queryOpenQueue('SELECT gold.event_response($1) AS result', [
       row.schedule_plan_id,
     ]);
     const plan = rows[0]?.result;
     if (plan) {
-      const hints = await reasonHints(row.schedule_plan_id);
-      const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
-      return queueResponseFromPlan(explained, explained.explanation ?? null);
+      if (row.status === 'PROPOSED') {
+        const hints = await reasonHints(row.schedule_plan_id);
+        const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
+        return queueResponseFromPlan(explained, explained.explanation ?? null);
+      }
+      const version = Number(plan.planVersion) || Number(row.plan_version) || 1;
+      return {
+        lineId: plan.lineId ?? lineId,
+        queue: normalizePlanQueue(plan.queue),
+        planVersion: version,
+        lastEvent: null,
+        acceptedPlanVersion: version,
+        pendingExplanation: null,
+        pendingDiff: null,
+      };
     }
   }
 

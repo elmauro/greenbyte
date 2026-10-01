@@ -44,7 +44,9 @@ export async function postExplainReplan(params) {
 
   return buildExplainReplan(loc, eventType, {
     ...explainContext,
+    lineId,
     moves: diff?.moves ?? [],
+    added: diff?.added ?? [],
     queue: queue ?? [],
   });
 }

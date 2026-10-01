@@ -51,30 +51,6 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
       setQueue(res.queue);
       setPlanVersion(res.planVersion);
 
-      const mergedAck = mergeAckPlanVersion(acceptedPlanVersionRef.current, res.acceptedPlanVersion);
-      if (mergedAck !== acceptedPlanVersionRef.current) {
-        syncAckPlanVersion(mergedAck);
-      }
-
-      if (res.planVersion <= 1 && !res.lastEvent) {
-        syncAckPlanVersion(null);
-        setEventType(null);
-        setExplanation(null);
-        setPendingDiff(null);
-        setEventHighlightPo(undefined);
-        setAccepted(false);
-        return;
-      }
-
-      if (isPlanAcknowledged(res.planVersion, mergedAck)) {
-        setEventType(null);
-        setExplanation(null);
-        setPendingDiff(null);
-        setEventHighlightPo(undefined);
-        setAccepted(true);
-        return;
-      }
-
       if (res.lastEvent) {
         syncAckPlanVersion(null);
         setEventType(res.lastEvent);
@@ -85,6 +61,30 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
         );
         setEventHighlightPo(primaryPoFromPending(res.lastEvent, diff, res.queue));
         setAccepted(false);
+        return;
+      }
+
+      const mergedAck = mergeAckPlanVersion(acceptedPlanVersionRef.current, res.acceptedPlanVersion);
+      if (mergedAck !== acceptedPlanVersionRef.current) {
+        syncAckPlanVersion(mergedAck);
+      }
+
+      if (res.planVersion <= 1 && res.acceptedPlanVersion == null) {
+        syncAckPlanVersion(null);
+        setEventType(null);
+        setExplanation(null);
+        setPendingDiff(null);
+        setEventHighlightPo(undefined);
+        setAccepted(false);
+        return;
+      }
+
+      if (isPlanAcknowledged(res.planVersion, mergedAck) || res.acceptedPlanVersion != null) {
+        setEventType(null);
+        setExplanation(null);
+        setPendingDiff(null);
+        setEventHighlightPo(undefined);
+        setAccepted(true);
       }
     },
     [locale, syncAckPlanVersion],

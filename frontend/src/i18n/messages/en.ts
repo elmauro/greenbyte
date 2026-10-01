@@ -204,7 +204,7 @@ export const en = {
       clockLabel: '10:42 AM PDT',
       notificationsAria: 'Notifications',
       ganttTitle: 'Program timeline',
-      ganttHint: 'Simplified Gantt for hackathon demo — full schedule from Pasco Data API.',
+      ganttHint: 'Top to bottom is queue order. Each bar sits on that batch’s scheduled finish date.',
       batchCol: 'Batch / operation',
       species: 'Species',
       client: 'Customer',
@@ -223,6 +223,9 @@ export const en = {
       ganttScrollHint: 'Scroll to see all batches on the timeline.',
       ganttScrollRegionVertical: 'Program timeline, vertical layout',
       ganttScrollRegionHorizontal: 'Program timeline, horizontal card strip',
+      expand: 'Expand timeline',
+      closeExpanded: 'Close expanded timeline',
+      queuePosition: 'Queue position {n}',
     },
     pagination: {
       rowsPerPage: 'Rows per page',
