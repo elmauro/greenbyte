@@ -12,7 +12,6 @@ type PlantProgramGanttProps = {
   compact?: boolean;
   layout?: ScheduleGanttLayout;
   onLayoutChange?: (layout: ScheduleGanttLayout) => void;
-  lineId?: string;
   /** Move callouts belong to a plan still waiting for acceptance. */
   showMoves?: boolean;
   /** When set, the parent owns the expanded-timeline dialog. */
@@ -98,10 +97,6 @@ function moveNote(
   return labels.movedDown.replace('{n}', String(previous));
 }
 
-function lineNumber(lineId?: string) {
-  return String(lineId ?? 'line-1').match(/(\d+)\s*$/)?.[1] ?? '1';
-}
-
 function weekdayTick(ms: number, locale: Locale) {
   const date = new Date(ms);
   const name = date.toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-US', {
@@ -183,7 +178,6 @@ export function PlantProgramGantt({
   compact,
   layout = 'vertical',
   onLayoutChange,
-  lineId,
   showMoves = true,
   expanded: expandedProp,
   onExpandedChange,
@@ -206,7 +200,6 @@ export function PlantProgramGantt({
   const scale = dateScale(rows, zoom.ms);
   const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
   const chartMinPx = Math.max(640, (scale?.ticks.length ?? 1) * tickPx);
-  const lineNo = lineNumber(lineId);
 
   useEffect(() => {
     if (!expanded) return;
@@ -218,6 +211,7 @@ export function PlantProgramGantt({
   }, [expanded]);
 
   function canDragRow(index: number) {
+    if (layout === 'approval') return false;
     const row = rows[index];
     return Boolean(onPlaceRow && row && row.status !== 'HOLD' && index > 0);
   }
@@ -346,66 +340,68 @@ export function PlantProgramGantt({
       aria-modal={expanded || undefined}
       aria-label={expanded ? s.ganttTitle : undefined}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
-        <div>
+      <div className="space-y-3 border-b border-gray-100 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            {layout === 'approval' ? s.approvalTitle.replace('{line}', lineNo) : s.ganttTitle}
+            {s.ganttTitle}
             <TimelineInfo text={s.ganttHint} />
           </h3>
-          {layout === 'approval' && (
-            <p className="text-xs text-gray-500">{s.approvalSubtitle}</p>
-          )}
-          {onPlaceRow && <p className="text-xs text-gray-500">{s.adjustHint}</p>}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            {onLayoutChange && (
+              <div className="flex rounded-lg border border-gray-200 p-0.5" role="group" aria-label={s.layoutToggleAria}>
+                <LayoutBtn
+                  active={layout === 'vertical'}
+                  label={s.layoutVertical}
+                  onClick={() => onLayoutChange('vertical')}
+                />
+                <LayoutBtn
+                  active={layout === 'horizontal'}
+                  label={s.layoutHorizontal}
+                  onClick={() => onLayoutChange('horizontal')}
+                />
+                <LayoutBtn
+                  active={layout === 'approval'}
+                  label={s.layoutApproval}
+                  onClick={() => onLayoutChange('approval')}
+                />
+              </div>
+            )}
+            {layout === 'vertical' && (
+              <div className="flex items-center gap-1">
+                <span className="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700" title={s.zoomHint}>
+                  {zoom.label}
+                </span>
+                <ToolbarBtn
+                  label={s.zoomIn}
+                  disabled={zoomIndex >= ZOOM_STEPS.length - 1}
+                  onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
+                >
+                  +
+                </ToolbarBtn>
+                <ToolbarBtn
+                  label={s.zoomOut}
+                  disabled={zoomIndex <= 0}
+                  onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
+                >
+                  −
+                </ToolbarBtn>
+              </div>
+            )}
+            <ToolbarBtn
+              label={expanded ? s.closeExpanded : s.expand}
+              pressed={expanded}
+              onClick={() => setExpanded(!expanded)}
+            >
+              ⤢
+            </ToolbarBtn>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-          {onLayoutChange && (
-            <div className="flex rounded-lg border border-gray-200 p-0.5" role="group" aria-label={s.layoutToggleAria}>
-              <LayoutBtn
-                active={layout === 'vertical'}
-                label={s.layoutVertical}
-                onClick={() => onLayoutChange('vertical')}
-              />
-              <LayoutBtn
-                active={layout === 'horizontal'}
-                label={s.layoutHorizontal}
-                onClick={() => onLayoutChange('horizontal')}
-              />
-              <LayoutBtn
-                active={layout === 'approval'}
-                label={s.layoutApproval}
-                onClick={() => onLayoutChange('approval')}
-              />
-            </div>
-          )}
-          {layout === 'vertical' && (
-            <>
-              <span className="rounded border border-gray-200 px-2 py-0.5 font-semibold text-gray-700" title={s.zoomHint}>
-                {zoom.label}
-              </span>
-              <ToolbarBtn
-                label={s.zoomIn}
-                disabled={zoomIndex >= ZOOM_STEPS.length - 1}
-                onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
-              >
-                +
-              </ToolbarBtn>
-              <ToolbarBtn
-                label={s.zoomOut}
-                disabled={zoomIndex <= 0}
-                onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
-              >
-                −
-              </ToolbarBtn>
-            </>
-          )}
-          <ToolbarBtn
-            label={expanded ? s.closeExpanded : s.expand}
-            pressed={expanded}
-            onClick={() => setExpanded(!expanded)}
-          >
-            ⤢
-          </ToolbarBtn>
-        </div>
+        {layout === 'approval' && (
+          <p className="max-w-2xl text-xs leading-relaxed text-gray-500">{s.approvalSubtitle}</p>
+        )}
+        {onPlaceRow && layout !== 'approval' && (
+          <p className="max-w-2xl text-xs leading-relaxed text-gray-500">{s.adjustHint}</p>
+        )}
       </div>
 
       {layout === 'vertical' ? (
@@ -560,44 +556,15 @@ export function PlantProgramGantt({
           </div>
         </div>
       ) : (
-        <>
-          <ApprovalTimeline
-            rows={rows}
-            locale={locale}
-            labels={s}
-            showMoves={showMoves}
-            className={
-              expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
-            }
-          />
-          {expanded && onMoveRow && (
-            <ol ref={listRef} className="max-h-40 space-y-1 overflow-auto border-t border-gray-100 px-4 py-2">
-              {rows.map((row, index) =>
-                row.status === 'HOLD' ? null : (
-                  <li
-                    key={row.po}
-                    data-queue-index={index}
-                    onPointerDown={(event) => onDragPointerDown(index, event)}
-                    className={`flex items-center justify-between gap-3 text-xs ${
-                      canDragRow(index) ? 'cursor-grab' : ''
-                    } ${dragClass(index)}`}
-                  >
-                    <span className="font-medium text-gray-800">
-                      {index + 1}. {row.po}
-                    </span>
-                    <RowMoveControls
-                      index={index}
-                      row={row}
-                      rows={rows}
-                      onMoveRow={onMoveRow}
-                      labels={s}
-                    />
-                  </li>
-                ),
-              )}
-            </ol>
-          )}
-        </>
+        <ApprovalTimeline
+          rows={rows}
+          locale={locale}
+          labels={s}
+          showMoves={showMoves}
+          className={
+            expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
+          }
+        />
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500">
@@ -774,6 +741,7 @@ function TimelineInfo({ text }: { text: string }) {
         type="button"
         aria-expanded={open}
         aria-describedby={open ? tipId : undefined}
+        onClick={() => setOpen(true)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
         className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-300 bg-white text-[11px] font-semibold leading-none text-brand-blue shadow-sm transition hover:border-brand-blue hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
@@ -807,7 +775,7 @@ function LayoutBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${
         active ? 'bg-brand-green text-white' : 'text-gray-600 hover:bg-gray-50'
       }`}
     >
@@ -836,7 +804,7 @@ function ToolbarBtn({
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
-      className={`rounded border border-gray-200 px-1.5 py-0.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`rounded border border-gray-200 px-2 py-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 ${
         pressed ? 'bg-brand-green text-white' : ''
       }`}
     >

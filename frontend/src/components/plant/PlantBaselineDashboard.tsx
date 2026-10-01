@@ -398,15 +398,6 @@ export function PlantBaselineDashboard({
           <p className="mt-1 text-xs font-normal text-amber-900/80">{b.eventBannerHint}</p>
         )}
       </div>
-      {isUx && (
-        <button
-          type="button"
-          onClick={() => setActiveSection('scheduling')}
-          className="shrink-0 rounded-lg bg-brand-green px-4 py-2 text-xs font-semibold text-white hover:bg-brand-green-dark"
-        >
-          {ux.goSchedule}
-        </button>
-      )}
     </div>
   );
 
@@ -750,7 +741,6 @@ export function PlantBaselineDashboard({
                     compact={compact}
                     layout={ganttLayout}
                     onLayoutChange={setGanttLayout}
-                    lineId={selectedLineId}
                     showMoves={eventPendingReview}
                     expanded={timelineOpen}
                     onExpandedChange={setTimelineOpen}
@@ -766,7 +756,6 @@ export function PlantBaselineDashboard({
                   compact={compact}
                   layout={ganttLayout}
                   onLayoutChange={setGanttLayout}
-                  lineId={selectedLineId}
                   showMoves={eventPendingReview}
                   expanded={timelineOpen}
                   onExpandedChange={setTimelineOpen}
