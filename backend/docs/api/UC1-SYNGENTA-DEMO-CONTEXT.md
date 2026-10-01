@@ -26,17 +26,17 @@ These are the **only** business events the hackathon demo script requires beyond
 | --- | --- | --- | --- | --- |
 | **A** | **Rush batch** / Lote rush | Operator / Data API posts SAP priority signal | `POST /demo/plant/ingest/sap-priority-change` | **Yes** — replan |
 | **B** | **QA failure** / Fallo QA | Operator / Data API posts pass/fail **Fail** row | `POST /demo/plant/ingest/pass-fail-log` | **Yes** — HOLD + resequence |
-| **C** | **Explain my batch** (sales nice-to-have) | Scheduler PO + question | `POST /demo/plant/batches/explain` | **No** — read-only Q&A |
+| **C** | **What changed** (copilot) | BFF after replan, not the browser | Agent `POST /explain-replan` (simulated) | **No** — text only |
 
-Scheduler UI **polls** `GET .../queue` — no rush/QA buttons on `/demo/plant`. Legacy: `POST /demo/plant/events`. Operator curl: [uc1-demo-operator-ingest.md](../../../docs/hackathon/uc1-demo-operator-ingest.md).
+Scheduler UI **polls** `GET .../queue`. Operator curl: [uc1-demo-operator-ingest.md](../../../docs/hackathon/uc1-demo-operator-ingest.md).
 
 Supporting (not Syngenta “inject” but required for demo):
 
 | Action | BFF route | Owner |
 | --- | --- | --- |
-| Load calm queue | `GET /demo/plant/lines/line-1/queue` | Camilo data · Mauricio proxy |
-| Human sign-off | `POST /demo/plant/schedule/accept` | Mauricio audit |
-| Repeat demo | `POST /demo/plant/reset` | Mauricio / demo helper |
+| Load open queue | `GET /demo/plant/lines/{lineId}/queue` | Camilo data · Mauricio proxy |
+| Human sign-off | `POST /demo/plant/schedule/accept` | Mauricio · `gold.accept_plan` |
+| Explain my batch (sales, nice-to-have) | `POST /demo/plant/batches/explain` | Mauricio · simulated Agent Q&A |
 
 ---
 
@@ -127,39 +127,11 @@ Same **`PlantEventResponse`** shape as rush.
 
 ---
 
-## 4. Trigger C — Explain my batch (sales)
+## 4. Trigger C — What changed (copilot)
 
-### UX
+The scheduling panel **AI Copilot — What changed** shows `explanation` (summary, bullets, impact). That text is the simulated Agent call `POST /explain-replan`. The browser does not call it. After each database replan, the BFF builds the summary from `gold.event_response` and returns it on the ingest response and on `GET .../queue` while the plan stays `PROPOSED`. The picture on `/demo/plant/flow` step 04 remains a scripted snapshot.
 
-- Section **Explain my batch** on `/demo/plant` (below workspace/table)
-- PO `<select>`, quick prompts (“When does it ship?”, …), free-text **Ask**
-- Flow map: `/demo/plant/flow?step=07`
-
-### BFF
-
-```http
-POST /demo/plant/batches/explain
-
-{
-  "po": "1002307551",
-  "question": "When does it ship?",
-  "locale": "en" | "es"
-}
-```
-
-### BFF orchestration (target)
-
-- **David — Agent API** answers from **facts** (queue position, finish, hold state, batches ahead)
-- **Camilo — Data API** tools: current line queue, batch row (read-only) — **no replan**
-- Optional: Agent calls Data; BFF forwards request/response unchanged
-
-### Demo behavior (mock)
-
-- Response: `PlantBatchExplainResponse` — `{ po, answer, citations[] }`
-- Answers reference **current** queue snapshot (`planVersion`, finish, position)
-- Must **not** mutate queue or ERP
-
-**Example (200):** [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST /demo/plant/batches/explain` (includes HOLD variant after QA). UI: `/demo/plant/flow?step=07`.
+The sales nice-to-have is separate: **Explain my batch** in the Copilot menu calls `POST /demo/plant/batches/explain`. It does not change the queue. Flow map: `/demo/plant/flow?step=07`.
 
 ---
 
@@ -180,17 +152,15 @@ Demo queue: 6 rows in `plantDemoServer.ts` (`BASE_QUEUE`) — SWCO/CORN POs, two
 
 ---
 
-## 6. Accept & reset (demo hygiene)
+## 6. Accept (human sign-off)
 
 ```http
 POST /demo/plant/schedule/accept   { "lineId": "line-1" }
-POST /demo/plant/reset             { "lineId": "line-1" }
 ```
 
-- **Accept:** audit only — **no ERP write** (Syngenta brief)
-- **Reset:** restore baseline queue for repeat demos (BFF or in-memory; may stay BFF-only)
+With `PGHOST` set, this calls `gold.accept_plan`: inserts `gold.plan_decision` (`ACCEPT`) and sets `gold.schedule_plan` to `ACCEPTED`. No SAP write.
 
-**Examples:** accept → `POST .../schedule/accept.response200` · reset → `POST .../reset.response200` (same queue as baseline GET). Error bodies (`400`/`404`) are listed per route in the same JSON file.
+**Example:** [uc1-demo-response-examples.json](./uc1-demo-response-examples.json) → `POST .../schedule/accept.response200`.
 
 ---
 
@@ -199,9 +169,10 @@ POST /demo/plant/reset             { "lineId": "line-1" }
 | Capability | Mauricio · BFF `core-api` | Camilo · Data API | David · Agent API |
 | --- | --- | --- | --- |
 | Rush / QA ingest | `POST /demo/plant/ingest/*` orchestrates | `POST /schedule/replan` → `queue`, `diff.moves`, `diff.reasons` | `POST /explain-replan` ← structured diff |
-| Explain batch | `POST /demo/plant/batches/explain` proxy | Tools: queue + batch read | NL answer + `citations[]` |
-| Queue load | `GET /demo/plant/.../queue` proxy | Pasco ETL → PG | — |
-| Accept / reset | Implement demo routes | Optional persist accept | — |
+| What changed | Merges `explanation` from Agent `POST /explain-replan` (simulated) | `diff` + `entry_reason` | NL summary of the replan |
+| Explain my batch | `POST /demo/plant/batches/explain` | Tools: queue + batch read | NL answer + `citations[]` |
+| Queue load | `GET /demo/plant/.../queue` reads `gold.v_open_queue` | Pasco ETL → PG | — |
+| Accept | `POST /demo/plant/schedule/accept` → `gold.accept_plan` | `plan_decision` + plan `ACCEPTED` | — |
 
 **Browser rule:** React calls **only BFF** (`plantDemoApi.ts`). Never call Data or Agent from the browser.
 

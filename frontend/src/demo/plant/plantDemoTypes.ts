@@ -29,6 +29,11 @@ export type PlantExplanation = {
 export type PlantPlanDiff = {
   moves: QueueMove[];
   reasons: string[];
+  /** POs newly placed on HOLD by this plan. */
+  held?: string[];
+  /** POs that were not on the previous plan. */
+  added?: string[];
+  removed?: string[];
 };
 
 export type PlantQueueResponse = {

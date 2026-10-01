@@ -17,6 +17,7 @@ export function PlantLineMvp() {
     explanation,
     eventHighlightPo,
     accepted,
+    acceptNotice,
     planAcknowledged,
     loading,
     refreshing,
@@ -94,6 +95,7 @@ export function PlantLineMvp() {
             eventHighlightPo={eventHighlightPo}
             accepted={accepted}
             planAcknowledged={planAcknowledged}
+            acceptNotice={acceptNotice}
             acceptDisabled={busy}
             selectedLineId={line.id}
             dataRefreshing={refreshing}

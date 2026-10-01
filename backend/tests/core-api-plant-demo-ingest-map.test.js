@@ -1,5 +1,4 @@
 import {
-  dataReplanRequestFromLegacyEvent,
   dataReplanRequestFromPassFailIngest,
   dataReplanRequestFromSapIngest,
   dataReplanRequestFromSapQueueRefresh,
@@ -38,11 +37,5 @@ describe('BFF ingest → Data API replan request', () => {
     expect(req.trigger).toBe('sap_queue_refresh');
     expect(req.focusPo).toBe('1002408120');
     expect(req.ingest.source).toBe('sap_queue_refresh');
-  });
-
-  it('maps legacy events inject', () => {
-    const req = dataReplanRequestFromLegacyEvent({ type: 'rush', lineId: 'line-1' });
-    expect(req.trigger).toBe('legacy_inject');
-    expect(req.type).toBe('rush');
   });
 });

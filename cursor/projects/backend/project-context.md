@@ -35,9 +35,10 @@ Use `backend/backend.config.json` as the source of truth for selected APIs and l
 
 Backend must support **three demo triggers** aligned with the live site:
 
-1. **Rush batch** — `POST /demo/plant/ingest/sap-priority-change` (legacy: `POST /demo/plant/events` `{ type: "rush" }`)
-2. **QA failure** — `POST /demo/plant/ingest/pass-fail-log` (legacy: `{ type: "qa_fail" }`)
-3. **Explain my batch** — `POST /demo/plant/batches/explain`
+1. **Rush batch** — `POST /demo/plant/ingest/sap-priority-change`
+2. **QA failure** — `POST /demo/plant/ingest/pass-fail-log`
+3. **Explain my batch** (sales nice-to-have) — `POST /demo/plant/batches/explain`
+4. **What changed** — simulated Agent `POST /explain-replan` (not a browser route). The BFF calls it after a database replan. The scheduler UI shows that text on the scheduling copilot via `GET .../queue`.
 
 Scheduler UI polls `GET .../queue`; it does not call ingest or legacy events.
 

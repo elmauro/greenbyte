@@ -1,5 +1,11 @@
 import { PLANT_DEMO_LINE_ID } from './constants.js';
-import { queryOpenQueue, withOpenQueueClient } from './openQueueDb.js';
+import { fetchOpenQueue, queryOpenQueue, withOpenQueueClient } from './openQueueDb.js';
+import {
+  attachPlanExplanation,
+  localeOf,
+  queueResponseFromPlan,
+  titleCaseToken,
+} from './planExplanation.js';
 
 export class SapIngestError extends Error {
   constructor(status, message) {
@@ -136,6 +142,78 @@ function mapPgError(err) {
   return err;
 }
 
+async function explainOrPlan(plan, context) {
+  try {
+    return await attachPlanExplanation(plan, context);
+  } catch (err) {
+    console.error('explain-replan', err);
+    return plan;
+  }
+}
+
+async function reasonHints(planId) {
+  const { rows } = await queryOpenQueue(
+    `SELECT rc.reason_code, er.params
+     FROM gold.schedule_entry se
+     JOIN gold.entry_reason er ON er.schedule_entry_id = se.schedule_entry_id
+     JOIN gold.reason_code rc ON rc.reason_code_id = er.reason_code_id
+     WHERE se.schedule_plan_id = $1
+       AND rc.reason_code IN ('QA_HOLD', 'RUSH_PRIORITY')
+     ORDER BY se.position, er.seq`,
+    [planId],
+  );
+  let failedFor = null;
+  let priority = null;
+  for (const row of rows) {
+    const params = row.params ?? {};
+    if (row.reason_code === 'QA_HOLD' && failedFor == null && params.fail_reason) {
+      failedFor = titleCaseToken(params.fail_reason);
+    }
+    if (row.reason_code === 'RUSH_PRIORITY' && priority == null && params.priority_rank != null) {
+      priority = Number(params.priority_rank);
+    }
+  }
+  return { failedFor, priority };
+}
+
+/**
+ * Scheduler poll. A PROPOSED plan returns that order, its reasons, and the
+ * simulated copilot text. Any other state returns the open queue.
+ */
+export async function fetchSchedulerQueue(lineId, locale) {
+  const latest = await queryOpenQueue(
+    `SELECT sp.schedule_plan_id, sp.status, sp.plan_version
+     FROM silver.work_center wc
+     LEFT JOIN gold.v_latest_plan sp ON sp.work_center_id = wc.work_center_id
+     WHERE wc.demo_line_id = $1`,
+    [lineId],
+  );
+  const row = latest.rows[0];
+  if (row?.status === 'PROPOSED' && row.schedule_plan_id != null) {
+    const { rows } = await queryOpenQueue('SELECT gold.event_response($1) AS result', [
+      row.schedule_plan_id,
+    ]);
+    const plan = rows[0]?.result;
+    if (plan) {
+      const hints = await reasonHints(row.schedule_plan_id);
+      const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
+      return queueResponseFromPlan(explained, explained.explanation ?? null);
+    }
+  }
+
+  const queue = await fetchOpenQueue(lineId);
+  const version = row?.plan_version != null ? Number(row.plan_version) : 1;
+  return {
+    lineId,
+    queue,
+    planVersion: version,
+    lastEvent: null,
+    acceptedPlanVersion: row?.status === 'ACCEPTED' ? version : null,
+    pendingExplanation: null,
+    pendingDiff: null,
+  };
+}
+
 /** QA fail on a lot already in process. Writes raw.ingest_event and silver.quality_test, then replans. */
 export async function recordPassFail(body) {
   const parsed = parsePassFail(body);
@@ -144,7 +222,11 @@ export async function recordPassFail(body) {
       'SELECT gold.ingest_pass_fail($1, $2, $3, $4, $5, NULL, CURRENT_USER) AS result',
       [parsed.lineId, parsed.po, parsed.passFail, parsed.failedFor, parsed.equipmentId],
     );
-    return rows[0].result;
+    return explainOrPlan(rows[0].result, {
+      locale: localeOf(body.locale),
+      focusPo: parsed.po,
+      failedFor: parsed.failedFor,
+    });
   } catch (err) {
     throw mapPgError(err);
   }
@@ -193,7 +275,12 @@ export async function recordPriorityChange(body) {
       'SELECT gold.ingest_sap_priority_change($1, $2, $3, $4) AS result',
       [parsed.lineId, parsed.po, parsed.priority, parsed.scheduledFinish],
     );
-    return rows[0].result;
+    return explainOrPlan(rows[0].result, {
+      locale: localeOf(body.locale),
+      focusPo: parsed.po,
+      priority: parsed.priority,
+      scheduledFinish: parsed.scheduledFinish,
+    });
   } catch (err) {
     throw mapPgError(err);
   }
@@ -311,7 +398,12 @@ export async function insertCoispiPo(body) {
       ]);
 
       await client.query('COMMIT');
-      return response.rows[0].result;
+      return explainOrPlan(response.rows[0].result, {
+        locale: localeOf(body.locale),
+        focusPo: parsed.po,
+        priority: parsed.priority,
+        scheduledFinish: parsed.scheduledFinish,
+      });
     } catch (err) {
       await client.query('ROLLBACK');
       throw mapPgError(err);

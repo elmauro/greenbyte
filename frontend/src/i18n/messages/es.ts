@@ -110,7 +110,7 @@ export const es: Messages = {
         owner: 'Mauricio / GreenByte',
         responsibility: 'Contrato único al React; CORS; MSW; persistencia de override',
         useCases:
-          'UC1: /demo/plant/* cola, eventos, accept, reset, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
+          'UC1: /demo/plant/* cola, ingest, accept, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
       },
       {
         role: 'Data API',
@@ -135,8 +135,8 @@ export const es: Messages = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
-        purpose: 'Tres triggers Syngenta: rush, QA, explicar lote + accept + reset demo',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
+        purpose: 'Triggers Syngenta vía ingest, visto bueno humano y pregunta de ventas',
       },
       {
         layer: 'Data API',
@@ -270,8 +270,8 @@ export const es: Messages = {
       },
       {
         title: '5. Programación + copiloto',
-        plainLine: 'La respuesta del ingest es el orden recomendado, con una razón en cada posición.',
-        body: 'GET /demo/plant/lines/{lineId}/queue sigue leyendo la lista abierta (gold.v_open_queue). No la reemplaza por el plan propuesto.',
+        plainLine: 'Después de un recálculo, el planificador ve el orden propuesto, la razón de cada lote y el resumen simulado del copiloto.',
+        body: 'GET /demo/plant/lines/{lineId}/queue devuelve ese plan propuesto mientras espera la aceptación. El navegador no llama al agente. El BFF arma el resumen a partir del plan.',
         highlight: '/demo/plant/flow?step=04 · Poll: paso=05',
       },
       {
@@ -286,11 +286,11 @@ export const es: Messages = {
     eyebrow: 'Mapa de integración UC1',
     title: 'Controles UI ↔ BFF ↔ JSON (componentes en vivo)',
     subtitle:
-      'Izquierda: los mismos widgets que la pantalla de planta. Derecha: el contrato HTTP. La cola en vivo es gold.v_open_queue; estas imágenes usan el snapshot del guion para que rush y QA sigan una sola historia.',
-    componentNote: 'Snapshot de la vista previa: plantDemoServer. /demo/plant en vivo: GET cola desde gold.v_open_queue.',
+      'Izquierda: los mismos widgets que la pantalla de planta. Derecha: el contrato HTTP. Mientras un plan está PROPOSED, GET cola devuelve ese plan y el resumen del copiloto; si no, lee gold.v_open_queue. Estas imágenes usan el snapshot del guion para que rush y QA sigan una sola historia.',
+    componentNote: 'Snapshot de la vista previa: plantDemoServer. /demo/plant en vivo: GET cola devuelve el plan propuesto mientras está PROPOSED; si no, gold.v_open_queue.',
     previewHeading: 'Vista previa UI',
     previewNote:
-      'En /demo/plant el selector llama GET /demo/plant/lines/{lineId}/queue (line-1 o line-2) y el BFF lee gold.v_open_queue.',
+      'En /demo/plant el selector llama GET /demo/plant/lines/{lineId}/queue (line-1 o line-2). Mientras un plan está PROPOSED el BFF devuelve ese plan y el resumen del copiloto; si no, lee gold.v_open_queue.',
     liveDemoCta: 'Probar el demo de planta en vivo',
     tourLink: 'Historia en 6 pasos',
     stepNavLabel: 'Pasos del flujo',
@@ -298,7 +298,7 @@ export const es: Messages = {
     next: 'Siguiente',
     backendOwnersLabel: 'Responsables backend (hackathon)',
     backendOwners: {
-      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue lee gold.v_open_queue en PostgreSQL (line-1 = LSVLN1, line-2 = LSVLN2).',
+      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue. Este ejemplo es la cola abierta en calma (gold.v_open_queue; lastEvent y pendingExplanation van en null). Mientras un plan está PROPOSED, el mismo GET devuelve ese orden, sus razones y el resumen del copiloto — ver paso 05.',
       s02: 'Igual que paso 01 — sin servicio extra; Camilo · Data API (campos de cola).',
       s03:
         'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change llama gold.ingest_sap_priority_change: prioridad o fecha de un PO existente, y luego un plan propuesto.',
@@ -306,11 +306,11 @@ export const es: Messages = {
         'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh inserta el PO nuevo en la línea y llama gold.replan (evento queue_refresh).',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log llama gold.ingest_pass_fail: fila Fail en silver.quality_test, y luego un plan propuesto con ese lote en hold.',
-      s04: 'David · Agent API (explain-replan). Mauricio · BFF integra explanation en la respuesta del evento.',
-      s05: 'Camilo · Data API (queue[] en replan). Mauricio · BFF — sin endpoint de timeline aparte.',
+      s04: 'David · Agent POST /explain-replan sigue simulado dentro del BFF. Después de cada ingest, esa llamada convierte el diff del plan en el resumen del copiloto. GET queue lo devuelve mientras el plan está PROPOSED.',
+      s05: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue mientras el plan está PROPOSED. La misma ruta que el paso 01. El ejemplo es el cuerpo del poll: lastEvent, pendingDiff, pendingExplanation — no el cuerpo del POST de ingest.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept llama gold.accept_plan: plan_decision ACCEPT y schedule_plan → ACCEPTED. Sin escritura SAP.',
       s07:
-        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API · tools sobre Camilo · Data API.',
+        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (pregunta de ventas, nice-to-have) · tools sobre Camilo · Data API.',
     },
     triggers: {
       s01: 'Usuario abre /demo/plant y elige línea — plantDemoApi.getQueue(lineId).',
@@ -318,10 +318,10 @@ export const es: Messages = {
       s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operador publica un PO nuevo de COISPI — POST /demo/plant/ingest/sap-queue-refresh (inserta y replanifica).',
       s03b: 'Operador publica una fila Fail — POST /demo/plant/ingest/pass-fail-log (PO abierto, Equipment ID, failedFor).',
-      s04: 'Copiloto desde explanation (respuesta ingest + pendingExplanation en poll).',
-      s05: 'Gantt tras poll GET — queue[] + eventHighlightPo desde pendingDiff.',
+      s04: 'El copiloto lee el resumen simulado de explain-replan que devuelve GET queue después de un recálculo.',
+      s05: 'La pantalla consulta GET cola. Mientras está PROPOSED la respuesta trae el orden propuesto, pendingDiff y pendingExplanation.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
-      s07: 'Pregunta en panel ventas — POST /demo/plant/batches/explain.',
+      s07: 'Ventas pregunta por un lote — POST /demo/plant/batches/explain.',
     },
     slideTitles: {
       s01: 'Tabla de cola — carga inicial',

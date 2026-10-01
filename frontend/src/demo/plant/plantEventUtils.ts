@@ -13,13 +13,16 @@ export function primaryPoFromPending(
   diff: PlantPlanDiff | null | undefined,
   queue: QueueRow[],
 ): string | undefined {
-  const firstMove = diff?.moves?.[0]?.po;
-  if (firstMove) return firstMove;
-
   if (eventType === 'qa_fail') {
     const held = queue.find((r) => r.status === 'HOLD');
     if (held) return held.po;
+    if (diff?.held?.[0]) return diff.held[0];
   }
+
+  if (diff?.added?.[0]) return diff.added[0];
+
+  const firstMove = diff?.moves?.[0]?.po;
+  if (firstMove) return firstMove;
 
   if (eventType === 'rush') {
     const moved = queue.find((r) => r.previousPosition != null && r.status === 'PLANNED');

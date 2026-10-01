@@ -33,6 +33,8 @@ type PlantBaselineDashboardProps = {
   accepted?: boolean;
   /** True when this plan version was accepted — blocks stale BFF `lastEvent` from re-opening alerts. */
   planAcknowledged?: boolean;
+  /** True only after Accept in this visit. A remembered accept must not reopen the bell. */
+  acceptNotice?: boolean;
   onAccept?: () => void;
   acceptDisabled?: boolean;
   /** Tour / flow: hide scheduling & copilot sections entirely. */
@@ -109,6 +111,7 @@ export function PlantBaselineDashboard({
   explanation = null,
   accepted = false,
   planAcknowledged = false,
+  acceptNotice = false,
   onAccept,
   acceptDisabled = false,
   showProgramTimeline = true,
@@ -216,9 +219,12 @@ export function PlantBaselineDashboard({
 
   useEffect(() => {
     if (staticPreview) return;
-    if (accepted || planAcknowledged) setQueueUpdateUnread(true);
-    else setQueueUpdateUnread(false);
-  }, [accepted, planAcknowledged, staticPreview]);
+    setQueueUpdateUnread(acceptNotice);
+  }, [acceptNotice, staticPreview]);
+
+  useEffect(() => {
+    if (eventPendingReview) setQueueUpdateUnread(false);
+  }, [eventPendingReview]);
 
   useEffect(() => {
     if (eventPendingReview) setNotificationDismissed(false);
@@ -387,7 +393,7 @@ export function PlantBaselineDashboard({
 
   const approvedStrip =
     isUx &&
-    (accepted || planAcknowledged) &&
+    acceptNotice &&
     !eventPendingReview &&
     (activeSection === 'dashboard' || activeSection === 'scheduling') && (
       <div className="mb-4 flex items-center gap-2 rounded-lg border border-brand-green/25 bg-brand-green/5 px-4 py-3 text-sm text-brand-green-dark">
@@ -609,7 +615,7 @@ export function PlantBaselineDashboard({
             )}
             {isUx && !eventPendingReview && (
               <p className="mt-2 text-sm text-gray-500">
-                {accepted || planAcknowledged ? ux.nextApproved : ux.nextCalm}
+                {acceptNotice ? ux.nextApproved : ux.nextCalm}
               </p>
             )}
           </>
@@ -623,7 +629,7 @@ export function PlantBaselineDashboard({
               <p className="text-xs text-gray-500">
                 {eventPendingReview
                   ? b.queueSubtitleEvent
-                  : isUx && (accepted || planAcknowledged)
+                  : isUx && acceptNotice
                     ? ux.queueSubAfter
                     : b.queueSubtitle}
               </p>
@@ -948,9 +954,11 @@ export function PlantBaselineDashboard({
                   )}
                 </div>
               )}
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-green/15 text-brand-green">
-                👤
-              </span>
+              <img
+                src="/demo/syngenta-logo.png"
+                alt="Syngenta"
+                className="h-8 w-auto"
+              />
             </div>
           </header>
 

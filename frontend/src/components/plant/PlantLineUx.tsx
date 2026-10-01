@@ -37,6 +37,7 @@ export function PlantLineUx() {
     explanation,
     eventHighlightPo,
     accepted,
+    acceptNotice,
     planAcknowledged,
     loading,
     refreshing,
@@ -114,6 +115,7 @@ export function PlantLineUx() {
             eventHighlightPo={eventHighlightPo}
             accepted={accepted}
             planAcknowledged={planAcknowledged}
+            acceptNotice={acceptNotice}
             acceptDisabled={busy}
             uxApprovalHistory={approvalHistory}
             selectedLineId={line.id}

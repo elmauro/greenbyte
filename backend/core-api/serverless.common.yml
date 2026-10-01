@@ -64,13 +64,6 @@ functions:
           method: GET
           path: /demo/plant/lines/{lineId}/queue
 
-  plantDemoEvents:
-    handler: functions/plant-demo-events/handler.handler
-    events:
-      - httpApi:
-          method: POST
-          path: /demo/plant/events
-
   plantDemoIngestPassFail:
     handler: functions/plant-demo-ingest-pass-fail/handler.handler
     environment:
@@ -115,13 +108,6 @@ functions:
       - httpApi:
           method: POST
           path: /demo/plant/ingest/sap-queue-refresh
-
-  plantDemoReset:
-    handler: functions/plant-demo-reset/handler.handler
-    events:
-      - httpApi:
-          method: POST
-          path: /demo/plant/reset
 
   plantDemoAccept:
     handler: functions/plant-demo-accept/handler.handler

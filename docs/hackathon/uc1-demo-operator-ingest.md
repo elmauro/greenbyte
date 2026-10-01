@@ -9,17 +9,6 @@ Poll: the UI refreshes queue every ~5s when connected via BFF or MSW.
 
 ---
 
-## Reset baseline (between runs)
-
-```http
-POST /demo/plant/reset
-Content-Type: application/json
-
-{ "lineId": "line-1" }
-```
-
----
-
 ## Rush — urgency on a lot already in the queue
 
 Changes **priority** and/or **scheduled finish** on an open PO. When the API has `PGHOST` set, this calls `gold.ingest_sap_priority_change`. The row stays the same PO. The new rank and date land in `silver.process_order_change`, and `gold.v_open_queue` shows them on the next read. The database function also builds a new plan.
@@ -37,7 +26,7 @@ Content-Type: application/json
 }
 ```
 
-**Response (database connected):** the JSON from `gold.ingest_sap_priority_change` (`eventType`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
+**Response (database connected):** the JSON from `gold.ingest_sap_priority_change` (`eventType`, `planVersion`, `queue`, `diff`) plus `explanation` from the simulated agent. Without `PGHOST`, the stub still returns the in-memory replan.
 
 **Alternate rush PO (script B):** same body with `"po": "1002174855"` (must exist in queue).
 
@@ -62,7 +51,7 @@ Content-Type: application/json
 }
 ```
 
-**Response (database connected):** the JSON from `gold.event_response` (`eventType` `queue_refresh`, `source` `etl_refresh`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
+**Response (database connected):** the JSON from `gold.event_response` (`eventType` `queue_refresh`, `source` `etl_refresh`, `planVersion`, `queue`, `diff`) plus `explanation` from the simulated agent. Without `PGHOST`, the stub still returns the in-memory replan.
 
 ---
 
@@ -84,7 +73,7 @@ Content-Type: application/json
 }
 ```
 
-**Response (database connected):** the JSON from `gold.ingest_pass_fail` (`eventType` `qa_fail`, `source` `pass_fail_log`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
+**Response (database connected):** the JSON from `gold.ingest_pass_fail` (`eventType` `qa_fail`, `source` `pass_fail_log`, `planVersion`, `queue`, `diff`) plus `explanation` from the simulated agent. Without `PGHOST`, the stub still returns the in-memory replan.
 
 **Alternate QA (script B — Discolored):**
 
@@ -113,12 +102,6 @@ Content-Type: application/json
 ```
 
 Optional: `planVersion` (must match the latest plan) and `comment`. Response: `{ "acceptedAt", "lineId", "planVersion" }`.
-
----
-
-## Legacy (avoid for live demo narrative)
-
-`POST /demo/plant/events` with `{ "type": "rush" | "qa_fail" }` remains for backward compatibility; prefer **ingest** routes above.
 
 ---
 

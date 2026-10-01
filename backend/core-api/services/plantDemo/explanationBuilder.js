@@ -3,7 +3,7 @@ import { customerMetaForPo } from './customerOrderMeta.js';
 /**
  * Stub Agent explain-replan — grounded in diff + ingest context (swap for David API when live).
  * @param {'en' | 'es'} loc
- * @param {'rush' | 'qa_fail'} eventType
+ * @param {'rush' | 'qa_fail' | 'queue_refresh'} eventType
  * @param {object} ctx
  */
 export function buildExplainReplan(loc, eventType, ctx) {
@@ -20,11 +20,12 @@ export function buildExplainReplan(loc, eventType, ctx) {
   const po = focusPo ?? moves[0]?.po ?? '—';
   const aheadPo = queue.find((r) => r.status === 'PLANNED' && r.po !== po)?.po;
   const customer = customerMetaForPo(po);
-  const isRefresh = trigger === 'sap_queue_refresh';
+  const isRefresh = trigger === 'sap_queue_refresh' || eventType === 'queue_refresh';
+  const isQa = eventType === 'qa_fail';
   const failLabel = failedFor ?? 'Dent';
 
   if (loc === 'es') {
-    if (eventType === 'rush') {
+    if (!isQa) {
       const banner = isRefresh
         ? 'Refresh SAP COISPI — nuevo PO activo en Línea 1; cola replanificada.'
         : 'Actualización de prioridad SAP — ventana de cliente en riesgo; línea reprogramada.';
@@ -58,7 +59,7 @@ export function buildExplainReplan(loc, eventType, ctx) {
     };
   }
 
-  if (eventType === 'rush') {
+  if (!isQa) {
     const banner = isRefresh
       ? 'SAP COISPI refresh — new active PO on Line 1; queue replanned.'
       : 'SAP priority update — customer window at risk; line replanned.';

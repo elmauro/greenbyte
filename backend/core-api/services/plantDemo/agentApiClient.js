@@ -50,8 +50,8 @@ export async function postExplainReplan(params) {
 }
 
 /**
- * David · POST /batches/explain — sales / CS batch Q&A (tools → Data API in production).
- * Stub: `logic.explainBatch` on current demo state.
+ * David · POST /batches/explain — sales batch Q&A (nice-to-have).
+ * Stub: `logic.explainBatch` on the current demo queue until AGENT_API_BASE_URL is set.
  */
 export async function postBatchExplain(params) {
   const { state, po, question, locale } = params;

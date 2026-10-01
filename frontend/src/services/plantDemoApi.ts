@@ -7,7 +7,6 @@ import type {
   PlantAcceptResponse,
   PlantBatchExplainResponse,
   PlantEventResponse,
-  PlantEventType,
   PlantIngestPassFailRequest,
   PlantIngestSapPriorityRequest,
   PlantIngestSapQueueRefreshRequest,
@@ -23,22 +22,13 @@ const useLiveBff = getApiConnectionMode() === 'bff';
 /** True when HTTP goes through axios (MSW or live BFF). */
 const useHttp = getApiConnectionMode() !== 'in-process';
 
-async function getQueue(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueueResponse> {
-  if (!useHttp) return plantDemoServer.getQueue(lineId);
-  const { data } = await axiosApp.get<PlantQueueResponse>(`/demo/plant/lines/${lineId}/queue`);
-  return data;
-}
-
-async function postEvent(
-  type: PlantEventType,
-  locale: Locale,
+async function getQueue(
   lineId: string = PLANT_DEMO_LINE_ID,
-): Promise<PlantEventResponse> {
-  if (!useHttp) return plantDemoServer.applyEvent(lineId, type, locale);
-  const { data } = await axiosApp.post<PlantEventResponse>(`/demo/plant/events`, {
-    type,
-    lineId,
-    locale,
+  locale?: Locale,
+): Promise<PlantQueueResponse> {
+  if (!useHttp) return plantDemoServer.getQueue(lineId);
+  const { data } = await axiosApp.get<PlantQueueResponse>(`/demo/plant/lines/${lineId}/queue`, {
+    params: locale ? { locale } : undefined,
   });
   return data;
 }
@@ -46,15 +36,6 @@ async function postEvent(
 async function postAccept(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantAcceptResponse> {
   if (!useHttp) return plantDemoServer.accept(lineId);
   const { data } = await axiosApp.post<PlantAcceptResponse>(`/demo/plant/schedule/accept`, { lineId });
-  return data;
-}
-
-async function resetDemo(lineId: string = PLANT_DEMO_LINE_ID): Promise<PlantQueueResponse> {
-  if (!useHttp) {
-    plantDemoServer.reset();
-    return plantDemoServer.getQueue(lineId);
-  }
-  const { data } = await axiosApp.post<PlantQueueResponse>(`/demo/plant/reset`, { lineId });
   return data;
 }
 
@@ -168,13 +149,10 @@ async function postBatchExplain(
 
 export const plantDemoApi = {
   getQueue,
-  /** Legacy demo inject — prefer ingest routes; not exposed in scheduler UI. */
-  postEvent,
   postIngestPassFailLog,
   postIngestSapPriorityChange,
   postIngestSapQueueRefresh,
   postAccept,
-  resetDemo,
   postBatchExplain,
   /** @deprecated use connectionMode === 'bff' */
   useRemoteBff: useLiveBff,

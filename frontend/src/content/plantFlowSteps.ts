@@ -32,6 +32,7 @@ export type PlantFlowResponseKeys = {
   rush: true;
   refresh: true;
   qa: true;
+  poll: true;
   accept: true;
   explain: true;
 };
@@ -54,7 +55,9 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
       { jsonPath: 'queue[].status', ui: 'Status badge' },
       { jsonPath: 'queue[].reasonShort', ui: 'Reason column' },
       { jsonPath: 'queue[].customerOrderId', ui: 'Customer order (demo proxy)' },
-      { jsonPath: 'pendingExplanation', ui: 'Copilot (when replan pending on poll)' },
+      { jsonPath: 'lastEvent', ui: 'null on this calm sample; rush or qa_fail while a plan is PROPOSED' },
+      { jsonPath: 'pendingDiff', ui: 'null here; moves for the Gantt while PROPOSED (see step 05)' },
+      { jsonPath: 'pendingExplanation', ui: 'null here; copilot summary while PROPOSED (see step 05)' },
     ],
   },
   {
@@ -115,6 +118,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
       { jsonPath: 'eventType', ui: 'queue_refresh — new open PO, then a proposed plan' },
       { jsonPath: 'queue[]', ui: 'Recommended order for the line (not only the new PO at the head)' },
       { jsonPath: 'diff', ui: 'Moves and reasons for each position' },
+      { jsonPath: 'explanation.summary', ui: 'Copilot lead (simulated explain-replan)' },
+      { jsonPath: 'explanation.bullets[]', ui: 'Bullet list' },
       { jsonPath: 'source', ui: 'etl_refresh' },
     ],
   },
@@ -146,7 +151,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's04',
     preview: 'copilot',
     method: 'POST',
-    path: 'Ingest → BFF → Data replan → Agent POST /explain-replan',
+    path: 'Simulated inside the BFF · Agent POST /explain-replan (after replan; not a browser route)',
     responseKey: 'rush',
     mapping: [
       { jsonPath: 'explanation.summary', ui: 'Copilot lead' },
@@ -161,10 +166,14 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'timeline',
     method: 'GET',
     path: '/demo/plant/lines/{lineId}/queue (poll ~5s after ingest)',
-    responseKey: 'rush',
+    responseKey: 'poll',
     mapping: [
+      { jsonPath: 'queue[]', ui: 'Proposed order while the plan is PROPOSED' },
       { jsonPath: 'queue[].finish', ui: 'Timeline bar position' },
-      { jsonPath: 'queue[].species', ui: 'Bar color (SWCO/CORN)' },
+      { jsonPath: 'queue[].reasonShort', ui: 'Reason on each batch' },
+      { jsonPath: 'lastEvent', ui: 'rush or qa_fail — opens Scheduling' },
+      { jsonPath: 'pendingDiff', ui: 'Moves that highlight the Gantt' },
+      { jsonPath: 'pendingExplanation', ui: 'Copilot summary from simulated explain-replan' },
     ],
   },
   {

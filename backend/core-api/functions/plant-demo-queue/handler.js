@@ -1,7 +1,8 @@
 import { jsonResponse } from '../../lib/httpResponse.js';
-import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
 import { getQueueResponse } from '../../services/plantDemo/logic.js';
-import { fetchOpenQueue, isOpenQueueDbConfigured } from '../../services/plantDemo/openQueueDb.js';
+import { isOpenQueueDbConfigured } from '../../services/plantDemo/openQueueDb.js';
+import { localeOf } from '../../services/plantDemo/planExplanation.js';
+import { fetchSchedulerQueue } from '../../services/plantDemo/sapIngestDb.js';
 import { loadState } from '../../services/plantDemo/stateRepository.js';
 
 export async function handler(event) {
@@ -12,24 +13,9 @@ export async function handler(event) {
 
   try {
     if (isOpenQueueDbConfigured()) {
-      const queue = await fetchOpenQueue(lineId);
-      if (lineId === PLANT_DEMO_LINE_ID) {
-        const state = await loadState(lineId);
-        const current = getQueueResponse(state, lineId);
-        if (current.lastEvent) {
-          return jsonResponse(200, current);
-        }
-        return jsonResponse(200, { ...current, queue });
-      }
-      return jsonResponse(200, {
-        lineId,
-        queue,
-        planVersion: 1,
-        lastEvent: null,
-        acceptedPlanVersion: null,
-        pendingExplanation: null,
-        pendingDiff: null,
-      });
+      const locale = localeOf(event.queryStringParameters?.locale);
+      const response = await fetchSchedulerQueue(lineId, locale);
+      return jsonResponse(200, response);
     }
 
     const state = await loadState(lineId);

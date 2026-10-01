@@ -53,10 +53,7 @@ export function dataReplanRequestFromPassFailIngest(body) {
   };
 }
 
-/**
- * Legacy `POST /demo/plant/events` — same replan contract, minimal ingest metadata.
- */
-/** Syngenta “surprise rush” — new PO on SAP COISPI refresh (demo script C). */
+/** Syngenta surprise rush — new PO on a COISPI refresh. */
 export function dataReplanRequestFromSapQueueRefresh(body) {
   const lineId = typeof body.lineId === 'string' ? body.lineId : PLANT_DEMO_LINE_ID;
   const po = typeof body.po === 'string' ? body.po : '1002408120';
@@ -79,15 +76,3 @@ export function dataReplanRequestFromSapQueueRefresh(body) {
   };
 }
 
-export function dataReplanRequestFromLegacyEvent(body) {
-  const lineId = typeof body.lineId === 'string' ? body.lineId : PLANT_DEMO_LINE_ID;
-  const type = body.type === 'qa_fail' ? 'qa_fail' : 'rush';
-  return {
-    type,
-    lineId,
-    locale: parseLocale(body.locale),
-    focusPo: undefined,
-    trigger: 'legacy_inject',
-    ingest: { source: 'demo_inject_legacy', type },
-  };
-}

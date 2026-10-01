@@ -25,6 +25,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
   const [pendingDiff, setPendingDiff] = useState<PlantPlanDiff | null>(null);
   const [eventHighlightPo, setEventHighlightPo] = useState<string | undefined>(undefined);
   const [accepted, setAccepted] = useState(false);
+  const [acceptNoticeLine, setAcceptNoticeLine] = useState<string | null>(null);
   const [planVersion, setPlanVersion] = useState(1);
   const [ackPlanVersion, setAckPlanVersion] = useState<number | null>(() => readAckPlanVersion(lineId));
   const [loading, setLoading] = useState(true);
@@ -98,7 +99,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     if (shellReadyRef.current) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await plantDemoApi.getQueue(requestedLineId);
+      const res = await plantDemoApi.getQueue(requestedLineId, locale);
       if (lineIdRef.current !== requestedLineId) return;
       applyQueueSnapshot(res);
       shellReadyRef.current = true;
@@ -112,21 +113,21 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
         setRefreshing(false);
       }
     }
-  }, [applyQueueSnapshot, lineId]);
+  }, [applyQueueSnapshot, lineId, locale]);
 
   const pollQueue = useCallback(async () => {
     if (!pollsRemoteQueue || busy) return;
     const epochAtStart = acceptEpochRef.current;
     const requestedLineId = lineId;
     try {
-      const res = await plantDemoApi.getQueue(requestedLineId);
+      const res = await plantDemoApi.getQueue(requestedLineId, locale);
       if (epochAtStart !== acceptEpochRef.current) return;
       if (lineIdRef.current !== requestedLineId) return;
       applyQueueSnapshot(res);
     } catch {
       /* ignore transient poll errors */
     }
-  }, [applyQueueSnapshot, busy, lineId, pollsRemoteQueue]);
+  }, [applyQueueSnapshot, busy, lineId, locale, pollsRemoteQueue]);
 
   useEffect(() => {
     void loadQueue();
@@ -152,6 +153,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
       acceptEpochRef.current += 1;
       syncAckPlanVersion(res.planVersion);
       setAccepted(true);
+      setAcceptNoticeLine(lineId);
       setEventType(null);
       setExplanation(null);
       setPendingDiff(null);
@@ -171,6 +173,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     pendingDiff,
     eventHighlightPo,
     accepted,
+    acceptNotice: acceptNoticeLine === lineId,
     planVersion,
     ackPlanVersion,
     planAcknowledged,

@@ -58,12 +58,12 @@ flowchart LR
 | # | User action (UX) | When (moment) | Frontend calls BFF | BFF orchestration (target) | Backend response → UI binding |
 | --- | --- | --- | --- | --- | --- |
 | 1 | Open `/demo/plant` | Page load | `GET /demo/plant/lines/line-1/queue` | Proxy Data `GET /lines/line-1/queue` | **`queue[]`**, `planVersion` → table rows, status badges, “calm” state |
-| 2 | Operator posts **SAP priority** ingest (not a UI button) | Live demo | `POST /demo/plant/ingest/sap-priority-change` | Data replan → Agent explain (target) | UI **polls** GET queue → **`PlantEventResponse`** shape via pending `lastEvent` / local apply on ingest response |
+| 2 | Operator posts **SAP priority** ingest (not a UI button) | Live demo | `POST /demo/plant/ingest/sap-priority-change` | Data replan → simulated Agent explain | UI **polls** GET queue → proposed `queue`, `pendingDiff`, `pendingExplanation` |
 | 3 | Operator posts **pass/fail Fail** ingest | Live demo | `POST /demo/plant/ingest/pass-fail-log` | Hold + resequence rules | Same; HOLD status, copilot QA copy |
-| 4 | Click **Accept schedule** | After event | `POST /demo/plant/schedule/accept` `{ lineId }` | Log acceptance (BFF or Data audit table) | **`acceptedAt`**, `planVersion` → disabled accept button + confirmation note |
-| 5 | **Reset queue** (operator) | Repeat demo | `POST /demo/plant/reset` `{ lineId }` | Reset demo state / reload baseline seed | Fresh **`queue[]`**, clear copilot & timeline |
-| 6 | Sales: pick PO + **Ask** | Anytime (nice-to-have) | `POST /demo/plant/batches/explain` `{ po, question, locale }` | Agent (+ Data tools for batch/queue context) | **`answer`**, **`citations[]`** → chat panel (no queue change) |
-| — | UI **poll** (BFF or MSW) | Every ~5s while `/demo/plant` open | `GET /demo/plant/lines/line-1/queue` | Read shared state | `lastEvent`, `queue[]`, `acceptedPlanVersion` → badges & replan UI |
+| 4 | Click **Accept schedule** | After event | `POST /demo/plant/schedule/accept` `{ lineId }` | `gold.accept_plan` | **`acceptedAt`**, `planVersion` → confirmation note. No SAP write. |
+| 5 | **What changed** | Scheduling picture after a scripted replan | No browser call | Agent `POST /explain-replan` (simulated) | **`explanation`** bullets on the copilot panel |
+| 6 | Sales: pick PO + **Ask** | Anytime (nice-to-have) | `POST /demo/plant/batches/explain` `{ po, question, locale }` | Agent answers from the current queue | **`answer`**, **`citations[]`** → chat panel (no queue change) |
+| — | UI **poll** (BFF or MSW) | Every ~5s while `/demo/plant` open | `GET /demo/plant/lines/{lineId}/queue?locale=` | While a plan is **PROPOSED**: `gold.event_response` plus simulated `POST /explain-replan`. Otherwise `gold.v_open_queue`. | `queue[]`, `reasonShort`, `pendingDiff`, `pendingExplanation` |
 
 **Tour (`/demo/plant/tour`):** read-only **same React components**; no live HTTP (uses `plantFlowSnapshots`).  
 **Backend owners per step:** see `/demo/plant/flow` → **Likely backend owners** (Mauricio · BFF, Camilo · Data API, David · Agent API).
@@ -115,9 +115,7 @@ sequenceDiagram
   end
 ```
 
-**Important:** The scheduler UI **never** calls ingest or legacy `POST /events`. The Agent must not invent POs or dates; it paraphrases **`moves`** and **`reasons`** from Data (and optional tool JSON).
-
-**Legacy (tests only):** `POST /demo/plant/events` `{ type: rush | qa_fail }` — same **`PlantEventResponse`** shape.
+**Important:** The scheduler UI calls ingest only through the operator API, not from a rush button. The Agent must not invent POs or dates; it paraphrases **`moves`** and **`reasons`** from Data (and optional tool JSON).
 
 ---
 
@@ -186,38 +184,14 @@ Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`, optional `lastEve
 
 **Errors (ingest):** `400` wrong PO or `passFail` not `Fail` · `404` `{ "message": "Unknown line" }`.
 
-### `POST /demo/plant/events` → `PlantEventResponse` (legacy)
-
-**Request (rush):** `{ "type": "rush", "lineId": "line-1", "locale": "en" }`  
-**Request (QA):** `{ "type": "qa_fail", "lineId": "line-1", "locale": "en" }`
-
-Prefer **ingest** routes for live demo. **Errors:** `400` `{ "message": "Invalid event type" }`.
-
 ### `POST /demo/plant/batches/explain` → `PlantBatchExplainResponse`
 
-**Request:**
-
-```json
-{
-  "po": "1002307551",
-  "question": "When does it ship?",
-  "locale": "en"
-}
-```
-
-**Response (200)** — includes `answer`, `citations[]`, optional `suggestedFollowUps[]`. Separate HOLD example after QA in JSON file.
-
-**Errors:** `400` `{ "message": "po and question required" }` · `404` `{ "message": "Unknown batch" }`.
+Sales nice-to-have. **Request:** `{ "po", "question", "locale" }`. **Response:** `{ "po", "answer", "citations[]" }`. Does not change the queue. UI: `/demo/plant/flow?step=07`.
 
 ### `POST /demo/plant/schedule/accept` → `PlantAcceptResponse`
 
 **Request:** `{ "lineId": "line-1" }`  
-**Response:** `{ "acceptedAt": "<ISO-8601>", "lineId": "line-1", "planVersion": 2 }` (example timestamp in JSON file).
-
-### `POST /demo/plant/reset` → `PlantQueueResponse`
-
-**Request:** `{ "lineId": "line-1" }`  
-**Response:** baseline queue, `planVersion: 1` (same as GET after reset).
+**Response:** `{ "acceptedAt": "<ISO-8601>", "lineId": "line-1", "planVersion": 2 }` (example timestamp in JSON file). With the database connected, this calls `gold.accept_plan`.
 
 ### Internal (BFF only — not browser)
 

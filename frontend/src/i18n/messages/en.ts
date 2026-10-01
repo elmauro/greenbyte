@@ -97,8 +97,8 @@ export const en = {
       },
       {
         title: '5. Scheduling + copilot',
-        plainLine: 'The ingest response is the new recommended order, with a reason on each position.',
-        body: 'GET /demo/plant/lines/{lineId}/queue keeps reading the open list (gold.v_open_queue). It does not replace that list with the proposed plan.',
+        plainLine: 'After a replan, the scheduler sees the proposed order, a reason on each batch, and the simulated copilot summary.',
+        body: 'GET /demo/plant/lines/{lineId}/queue returns that proposed plan while it waits for acceptance. The browser does not call the agent. The BFF writes the summary from the plan.',
         highlight: '/demo/plant/flow?step=04 · Poll: step=05',
       },
       {
@@ -113,11 +113,11 @@ export const en = {
     eyebrow: 'UC1 integration map',
     title: 'UI controls ↔ BFF ↔ JSON (live components)',
     subtitle:
-      'Left: the same React widgets as the plant screen. Right: the HTTP contract. The live queue is gold.v_open_queue; these pictures use the scripted snapshot so rush and QA stay on one story.',
-    componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue from gold.v_open_queue.',
+      'Left: the same React widgets as the plant screen. Right: the HTTP contract. While a plan is PROPOSED, GET queue returns that plan and the copilot summary; otherwise it reads gold.v_open_queue. These pictures use the scripted snapshot so rush and QA stay on one story.',
+    componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue returns the proposed plan while it is PROPOSED, otherwise gold.v_open_queue.',
     previewHeading: 'UI preview',
     previewNote:
-      'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2) and the BFF reads gold.v_open_queue.',
+      'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
     liveDemoCta: 'Try the live plant demo',
     tourLink: '6-step story',
     stepNavLabel: 'Flow steps',
@@ -125,7 +125,7 @@ export const en = {
     next: 'Next',
     backendOwnersLabel: 'Likely backend owners (hackathon)',
     backendOwners: {
-      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue on PostgreSQL (line-1 = LSVLN1, line-2 = LSVLN2).',
+      s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue. This sample is the calm open queue (gold.v_open_queue; lastEvent and pendingExplanation are null). While a plan is PROPOSED the same GET returns that order, its reasons, and the copilot summary — see step 05.',
       s02: 'Same as step 01 — no extra service; Camilo · Data API (queue fields).',
       s03:
         'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change calls gold.ingest_sap_priority_change: priority or finish on an existing PO, then a proposed plan.',
@@ -133,11 +133,11 @@ export const en = {
         'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh inserts the new PO on the line and calls gold.replan (event queue_refresh).',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log calls gold.ingest_pass_fail: Fail row in silver.quality_test, then a proposed plan with that batch on hold.',
-      s04: 'David · Agent API (explain-replan). Mauricio · BFF merges explanation into event response.',
-      s05: 'Camilo · Data API (queue[] in replan response). Mauricio · BFF — no separate timeline endpoint.',
+      s04: 'David · Agent POST /explain-replan stays simulated inside the BFF. After each ingest, that call turns the plan diff into the copilot summary. GET queue returns it while the plan is PROPOSED.',
+      s05: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue while the plan is PROPOSED. Same route as step 01. The sample is the poll body: lastEvent, pendingDiff, pendingExplanation — not the ingest POST body.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept calls gold.accept_plan: plan_decision ACCEPT and schedule_plan → ACCEPTED. No SAP write.',
       s07:
-        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (batch Q&A) · tools on Camilo · Data API.',
+        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (batch Q&A, nice-to-have) · tools on Camilo · Data API.',
     },
     triggers: {
       s01: 'User opens /demo/plant and picks a line — plantDemoApi.getQueue(lineId).',
@@ -145,10 +145,10 @@ export const en = {
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operator posts a new COISPI PO — POST /demo/plant/ingest/sap-queue-refresh (insert + replan).',
       s03b: 'Operator posts a Fail row — POST /demo/plant/ingest/pass-fail-log (open PO, Equipment ID, failedFor).',
-      s04: 'Copilot from explanation (ingest response + GET pendingExplanation on poll).',
-      s05: 'Gantt from GET queue after poll — queue[] + eventHighlightPo from pendingDiff.',
+      s04: 'Copilot reads the simulated explain-replan summary returned on GET queue after a replan.',
+      s05: 'Screen polls GET queue. While PROPOSED the response carries the proposed order, pendingDiff, and pendingExplanation.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
-      s07: 'User asks in sales panel — POST /demo/plant/batches/explain.',
+      s07: 'Sales asks about one batch — POST /demo/plant/batches/explain.',
     },
     slideTitles: {
       s01: 'Queue table — page load',
@@ -512,7 +512,7 @@ export const en = {
         owner: 'Mauricio / GreenByte',
         responsibility: 'Single API contract to React; CORS; MSW mocks; override persistence',
         useCases:
-          'UC1: /demo/plant/* queue, events, accept, reset, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
+          'UC1: /demo/plant/* queue, ingest, accept, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
       },
       {
         role: 'Data API',
@@ -537,8 +537,8 @@ export const en = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain · POST .../reset',
-        purpose: 'Syngenta triggers via ingest + explain batch + accept + demo reset',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
+        purpose: 'Syngenta triggers via ingest, human accept, and sales batch Q&A',
       },
       {
         layer: 'Data API',
