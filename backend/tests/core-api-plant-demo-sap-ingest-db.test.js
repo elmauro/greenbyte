@@ -1,4 +1,4 @@
-import { parseNewPo, parsePassFail, parsePriorityChange, SapIngestError } from '../core-api/services/plantDemo/sapIngestDb.js';
+import { parseAccept, parseNewPo, parsePassFail, parsePriorityChange, SapIngestError } from '../core-api/services/plantDemo/sapIngestDb.js';
 
 describe('sap ingest body', () => {
   it('accepts a priority or a finish date on an existing PO', () => {
@@ -46,5 +46,18 @@ describe('sap ingest body', () => {
 
   it('requires species for a new PO', () => {
     expect(() => parseNewPo({ po: '1002408120' })).toThrow(/species/);
+  });
+
+  it('parses a human accept with an optional version and comment', () => {
+    expect(parseAccept({ lineId: 'line-2', planVersion: 3, comment: ' ok ' })).toMatchObject({
+      lineId: 'line-2',
+      planVersion: 3,
+      comment: 'ok',
+    });
+    expect(parseAccept({})).toMatchObject({ lineId: 'line-1', planVersion: null, comment: null });
+  });
+
+  it('rejects a non-integer plan version', () => {
+    expect(() => parseAccept({ planVersion: 1.5 })).toThrow(/planVersion/);
   });
 });

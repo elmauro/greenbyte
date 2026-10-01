@@ -81,8 +81,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     request: {
       po: '1002307551',
       priority: 2,
-      scheduledFinish: '2026-07-06 09:00',
-      lineId: 'line-1',
+      scheduledFinish: '2026-10-29',
+      lineId: 'line-2',
       locale: 'en|es',
     },
     responseKey: 'rush',
@@ -112,10 +112,10 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     },
     responseKey: 'refresh',
     mapping: [
-      { jsonPath: 'queue[0].po', ui: 'New PO at head after COISPI refresh' },
-      { jsonPath: 'diff.reasons[]', ui: 'sap_coispi_refresh, rush_new_po, customer_order' },
-      { jsonPath: 'explanation.summary', ui: 'Copilot — surprise batch narrative' },
-      { jsonPath: 'source', ui: 'sap_queue_refresh' },
+      { jsonPath: 'eventType', ui: 'queue_refresh — new open PO, then a proposed plan' },
+      { jsonPath: 'queue[]', ui: 'Recommended order for the line (not only the new PO at the head)' },
+      { jsonPath: 'diff', ui: 'Moves and reasons for each position' },
+      { jsonPath: 'source', ui: 'etl_refresh' },
     ],
   },
   {
@@ -125,7 +125,14 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'qa',
     method: 'POST',
     path: '/demo/plant/ingest/pass-fail-log',
-    request: { po: '1001884747', passFail: 'Fail', failedFor: 'Dent', lineId: 'line-1', locale: 'en|es' },
+    request: {
+      po: '1002266350',
+      passFail: 'Fail',
+      failedFor: 'Dent',
+      equipmentId: 'Line 1',
+      lineId: 'line-1',
+      locale: 'en|es',
+    },
     responseKey: 'qa',
     mapping: [
       { jsonPath: 'queue[].status=HOLD', ui: 'QA HOLD badge' },

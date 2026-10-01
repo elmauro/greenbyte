@@ -51,7 +51,7 @@ export const en = {
         'SAP priority changes — an existing PO moves up (ingest, not a UI button).',
         'A failed pass/fail test puts a batch on HOLD and re-sequences the line.',
         'Scheduling + copilot show the new order and plain-language reasons.',
-        'The planner accepts — demo audit only, no ERP write.',
+        'The planner accepts the proposed plan. That sign-off is stored and does not write to SAP.',
       ],
       tagline:
         'In one line: “What runs next when a rush order or a failed test hits the line — and why?”',
@@ -60,11 +60,11 @@ export const en = {
     tourLinePreviewNote:
       'This picture stays the scripted Line 1 snapshot. On /demo/plant, Line 2 loads the open queue for LSVLN2.',
     tourInjectNoteRush:
-      'Read-only preview after POST /demo/plant/ingest/sap-priority-change (operator / Data API). Live demo polls GET queue ~every 5s.',
+      'Picture after POST /demo/plant/ingest/sap-priority-change. Live call writes the new priority or finish and builds a proposed plan. The screen polls GET queue ~every 5s.',
     tourInjectNoteQa:
-      'Read-only preview after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Alternate PO: 1001883359 / Discolored (see operator doc).',
+      'Picture after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Live call needs an open PO (example 1002266350, Dent, Equipment ID Line 1).',
     tourSapRefreshHint:
-      'Syngenta “surprise batch”: POST /demo/plant/ingest/sap-queue-refresh adds PO 1002408120 — map: /demo/plant/flow?step=03c',
+      'Surprise batch: POST /demo/plant/ingest/sap-queue-refresh inserts a new PO and replans that line — map: /demo/plant/flow?step=03c',
     steps: [
       {
         title: '1. The normal queue',
@@ -82,28 +82,29 @@ export const en = {
       {
         title: '3. Rush — priority on an existing PO',
         plainLine:
-          'Operators post SAP priority / finish signals to BFF ingest; the scheduler UI has no rush button — it reacts when the queue poll shows a pending replan.',
+          'An operator posts a priority or finish change for a lot already on the line. The scheduler UI has no rush button.',
         body:
-          'In gold.v_open_queue, PO 1002307551 sits on Line 2 (LSVLN2). The scripted preview still shows a priority move and cites the customer window (CO-44821 proxy) and changeover — not a black-box solver.',
-        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · Also: sap-queue-refresh (step 03c) for a new PO on COISPI refresh.',
+          'The live call writes that change and builds a proposed plan with a reason per position. PO 1002307551 is on Line 2 (LSVLN2), so the example uses line-2. This picture stays the scripted Line 1 move.',
+        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · New PO on COISPI refresh: sap-queue-refresh (step 03c), which also replans.',
       },
       {
         title: '4. QA fail — pass/fail log',
-        plainLine: 'A Fail row (Dent on PO 1001884747 in Pasco extracts) triggers HOLD and downstream re-sequence.',
+        plainLine:
+          'A Fail row on a lot already in process — PO, line (Equipment ID), and reason (Dent, Discolored, …) — puts that batch on hold and re-sequences the line.',
         body:
-          'Same human loop: copilot bullets name the PO and fail reason; planner accepts on Scheduling. Script B: PO 1001883359 / Discolored.',
+          'The live call stores the test and builds a proposed plan. The picture stays the scripted Dent story. Use an open PO on the selected line, for example 1002266350 on Line 1.',
         highlight: 'Map: /demo/plant/flow?step=03b',
       },
       {
         title: '5. Scheduling + copilot',
-        plainLine: 'Gantt and copilot read explanation + diff from the BFF (Agent when live; dynamic stub today).',
-        body: 'GET queue while pending exposes pendingExplanation and pendingDiff so the live app matches this preview after ingest.',
+        plainLine: 'The ingest response is the new recommended order, with a reason on each position.',
+        body: 'GET /demo/plant/lines/{lineId}/queue keeps reading the open list (gold.v_open_queue). It does not replace that list with the proposed plan.',
         highlight: '/demo/plant/flow?step=04 · Poll: step=05',
       },
       {
         title: '6. You sign off',
-        plainLine: 'Accept schedule logs demo audit only — no SAP write.',
-        body: 'Camilo/David plug in behind the same BFF paths when Data and Agent URLs are set; the React app unchanged.',
+        plainLine: 'Accept schedule records the human sign-off on the proposed plan — no SAP write.',
+        body: 'Accept records the human decision. It does not write back to SAP. The proposed plan is already stored when the ingest ran.',
         highlight: 'Architecture: /demo/architecture · Operator curl: docs/hackathon/uc1-demo-operator-ingest.md',
       },
     ],
@@ -127,14 +128,14 @@ export const en = {
       s01: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue on PostgreSQL (line-1 = LSVLN1, line-2 = LSVLN2).',
       s02: 'Same as step 01 — no extra service; Camilo · Data API (queue fields).',
       s03:
-        'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change → Camilo · POST /schedule/replan → David · POST /explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/sap-priority-change calls gold.ingest_sap_priority_change: priority or finish on an existing PO, then a proposed plan.',
       s03c:
-        'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh → Camilo · POST /schedule/refresh-from-sap (target) → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh inserts the new PO on the line and calls gold.replan (event queue_refresh).',
       s03b:
-        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log → Camilo · replan + hold rules → David · explain-replan.',
+        'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log calls gold.ingest_pass_fail: Fail row in silver.quality_test, then a proposed plan with that batch on hold.',
       s04: 'David · Agent API (explain-replan). Mauricio · BFF merges explanation into event response.',
       s05: 'Camilo · Data API (queue[] in replan response). Mauricio · BFF — no separate timeline endpoint.',
-      s06: 'Mauricio · BFF POST /demo/plant/schedule/accept (demo audit; optional Camilo persist).',
+      s06: 'Mauricio · BFF POST /demo/plant/schedule/accept calls gold.accept_plan: plan_decision ACCEPT and schedule_plan → ACCEPTED. No SAP write.',
       s07:
         'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (batch Q&A) · tools on Camilo · Data API.',
     },
@@ -142,8 +143,8 @@ export const en = {
       s01: 'User opens /demo/plant and picks a line — plantDemoApi.getQueue(lineId).',
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
-      s03c: 'Operator simulates COISPI refresh — POST /demo/plant/ingest/sap-queue-refresh (new PO 1002408120).',
-      s03b: 'Operator posts pass/fail Fail row — POST /demo/plant/ingest/pass-fail-log.',
+      s03c: 'Operator posts a new COISPI PO — POST /demo/plant/ingest/sap-queue-refresh (insert + replan).',
+      s03b: 'Operator posts a Fail row — POST /demo/plant/ingest/pass-fail-log (open PO, Equipment ID, failedFor).',
       s04: 'Copilot from explanation (ingest response + GET pendingExplanation on poll).',
       s05: 'Gantt from GET queue after poll — queue[] + eventHighlightPo from pendingDiff.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
@@ -290,7 +291,7 @@ export const en = {
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
-    acceptedNote: 'Human acceptance logged (demo). No live ERP update.',
+    acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
     apiNoteMsw:
       'Dev mocks: HTTP → MSW → same BFF paths as production. Set VITE_USE_MSW=false and VITE_API_BASE_APP when Mauricio’s core-api is live.',
     apiNoteLocal:

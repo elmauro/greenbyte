@@ -90,6 +90,30 @@ export function parsePassFail(body) {
   };
 }
 
+export function parseAccept(body) {
+  const rawVersion = body.planVersion;
+  let planVersion = null;
+  if (rawVersion !== undefined && rawVersion !== null && rawVersion !== '') {
+    const n = Number(rawVersion);
+    if (!Number.isInteger(n) || n < 1) {
+      throw new SapIngestError(400, 'planVersion must be a positive integer');
+    }
+    planVersion = n;
+  }
+  let comment = null;
+  if (body.comment !== undefined && body.comment !== null && body.comment !== '') {
+    if (typeof body.comment !== 'string') {
+      throw new SapIngestError(400, 'comment must be text');
+    }
+    comment = body.comment.trim() || null;
+  }
+  return {
+    lineId: lineIdOf(body.lineId),
+    planVersion,
+    comment,
+  };
+}
+
 export function parseNewPo(body) {
   return {
     lineId: lineIdOf(body.lineId),
@@ -104,6 +128,7 @@ export function parseNewPo(body) {
 function mapPgError(err) {
   if (err instanceof SapIngestError) return err;
   if (err.code === '23505') return new SapIngestError(409, 'PO already exists');
+  if (err.code === '40001') return new SapIngestError(409, err.message);
   if (err.code === 'P0002') return new SapIngestError(404, err.message);
   if (err.code === '22023' || err.code === '23514' || err.code === '22P02') {
     return new SapIngestError(400, err.message);
@@ -118,6 +143,41 @@ export async function recordPassFail(body) {
     const { rows } = await queryOpenQueue(
       'SELECT gold.ingest_pass_fail($1, $2, $3, $4, $5, NULL, CURRENT_USER) AS result',
       [parsed.lineId, parsed.po, parsed.passFail, parsed.failedFor, parsed.equipmentId],
+    );
+    return rows[0].result;
+  } catch (err) {
+    throw mapPgError(err);
+  }
+}
+
+/**
+ * Human sign-off on the latest proposed plan for a line.
+ * Calls gold.accept_plan: inserts gold.plan_decision (ACCEPT) and sets gold.schedule_plan to ACCEPTED.
+ * Does not write SAP, raw extracts, or silver rows.
+ */
+export async function acceptProposedPlan(body) {
+  const parsed = parseAccept(body);
+  try {
+    const latest = await queryOpenQueue(
+      `SELECT sp.status, sp.plan_version
+       FROM silver.work_center wc
+       LEFT JOIN gold.v_latest_plan sp ON sp.work_center_id = wc.work_center_id
+       WHERE wc.demo_line_id = $1`,
+      [parsed.lineId],
+    );
+    if (!latest.rowCount) {
+      throw new SapIngestError(404, `Unknown line ${parsed.lineId}`);
+    }
+    const row = latest.rows[0];
+    if (row.plan_version == null) {
+      throw new SapIngestError(404, `No plan for ${parsed.lineId}`);
+    }
+    if (row.status !== 'PROPOSED') {
+      throw new SapIngestError(409, 'No proposed plan to accept');
+    }
+    const { rows } = await queryOpenQueue(
+      'SELECT gold.accept_plan($1, $2, CURRENT_USER, $3) AS result',
+      [parsed.lineId, parsed.planVersion ?? row.plan_version, parsed.comment],
     );
     return rows[0].result;
   } catch (err) {

@@ -14,7 +14,7 @@ Routes mirror MSW / `plantDemoHandlers.ts`. Demo queue state is stored in Dynamo
 | POST | `/demo/plant/ingest/pass-fail-log` | QA fail on an existing PO. With `PGHOST` set, calls `gold.ingest_pass_fail` (writes `raw.ingest_event` + `silver.quality_test`, then replans). |
 | POST | `/demo/plant/events` | Legacy inject (`rush` \| `qa_fail`) |
 | POST | `/demo/plant/reset` | Demo reset |
-| POST | `/demo/plant/schedule/accept` | Human sign-off |
+| POST | `/demo/plant/schedule/accept` | Human sign-off. With `PGHOST` set, calls `gold.accept_plan`: inserts `gold.plan_decision` (`ACCEPT`) and sets the latest `gold.schedule_plan` to `ACCEPTED`. No SAP write. |
 | POST | `/demo/plant/batches/explain` | Sales Q&A |
 
 Orchestration (not browser-facing): BFF ingest → **Data** `POST /schedule/replan` → **Agent** `POST /explain-replan` (stubbed in Lambda until `DATA_API_BASE_URL` / `AGENT_API_BASE_URL` are set). See [uc1-bff-data-agent-route-map.md](../../docs/hackathon/uc1-bff-data-agent-route-map.md).

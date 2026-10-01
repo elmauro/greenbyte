@@ -15,7 +15,7 @@ Implementation: `backend/core-api/services/plantDemo/dataApiClient.js`, `agentAp
 | SAP COISPI refresh / new PO | `POST /demo/plant/ingest/sap-queue-refresh` | **`POST /schedule/refresh-from-sap`** (same replan response shape) | **`POST /explain-replan`** |
 | Pass/fail Fail lands | `POST /demo/plant/ingest/pass-fail-log` | **`POST /schedule/replan`** with `trigger: pass_fail_log`, `ingest: { po, passFail, … }` | **`POST /explain-replan`** |
 | Sales “explain my batch” | `POST /demo/plant/batches/explain` | Tools: **`GET /batches/{po}`** (target; stub reads demo state) | **`POST /batches/explain`** |
-| Planner accept | `POST /demo/plant/schedule/accept` | BFF audit only (optional persist later) | — |
+| Planner accept | `POST /demo/plant/schedule/accept` | `gold.accept_plan` — `gold.plan_decision` + `schedule_plan` → `ACCEPTED` (no SAP write) | — |
 | Reset demo | `POST /demo/plant/reset` | BFF restores baseline (not a Data route) | — |
 | Tests only | `POST /demo/plant/events` | Same **`POST /schedule/replan`** shape (`trigger: legacy_inject`) | **`POST /explain-replan`** |
 

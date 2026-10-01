@@ -125,6 +125,14 @@ functions:
 
   plantDemoAccept:
     handler: functions/plant-demo-accept/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: POST

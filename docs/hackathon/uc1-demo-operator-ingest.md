@@ -103,12 +103,16 @@ Content-Type: application/json
 
 ## Accept (scheduler UI or API)
 
+Human sign-off on the latest **proposed** plan for that line. With `PGHOST` set, the handler calls `gold.accept_plan`. That inserts `gold.plan_decision` (`ACCEPT`) and sets `gold.schedule_plan.status` to `ACCEPTED`. It does not write SAP, raw extracts, or silver rows. A second accept on the same plan returns `409`.
+
 ```http
 POST /demo/plant/schedule/accept
 Content-Type: application/json
 
 { "lineId": "line-1" }
 ```
+
+Optional: `planVersion` (must match the latest plan) and `comment`. Response: `{ "acceptedAt", "lineId", "planVersion" }`.
 
 ---
 
