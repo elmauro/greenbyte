@@ -18,11 +18,21 @@ type PlantProgramGanttProps = {
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
 const GANTT_SCROLL_MAX_CLASS = 'max-h-[min(28rem,58vh)]';
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+const ZOOM_STEPS = [
+  { label: '1W', ms: 7 * DAY_MS },
+  { label: '1D', ms: DAY_MS },
+  { label: '6H', ms: 6 * HOUR_MS },
+  { label: '1H', ms: HOUR_MS },
+] as const;
 
 function parseFinish(finish: string): number | null {
-  const match = finish.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const match = finish.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
   if (!match) return null;
-  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const hour = match[4] != null ? Number(match[4]) : 12;
+  const minute = match[5] != null ? Number(match[5]) : 0;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, minute);
 }
 
 function formatDay(ms: number, locale: Locale) {
@@ -33,22 +43,37 @@ function formatDay(ms: number, locale: Locale) {
   });
 }
 
-function dateScale(rows: QueueRow[]) {
+function dateScale(rows: QueueRow[], stepMs: number) {
   const times = rows
     .map((row) => parseFinish(row.finish))
     .filter((value): value is number => value != null);
   if (!times.length) return null;
-  const min = Math.min(...times);
-  const max = Math.max(...times);
-  const span = Math.max(max - min, DAY_MS);
-  const start = min - span * 0.06;
-  const end = max + span * 0.06;
-  const tickCount = 6;
-  const ticks = Array.from({ length: tickCount }, (_, index) => {
-    const ratio = index / (tickCount - 1);
-    return { pct: ratio * 100, at: start + (end - start) * ratio };
-  });
-  return { start, end, ticks };
+  const start = Math.floor(Math.min(...times) / stepMs) * stepMs;
+  const end = Math.max(Math.ceil(Math.max(...times) / stepMs) * stepMs, start + stepMs);
+  const ticks: { pct: number; at: number }[] = [];
+  for (let at = start; at <= end; at += stepMs) {
+    ticks.push({ at, pct: ((at - start) / (end - start)) * 100 });
+  }
+  return { start, end, ticks, stepMs };
+}
+
+function formatTick(ms: number, stepMs: number, locale: Locale) {
+  if (stepMs >= DAY_MS) return formatDay(ms, locale);
+  const date = new Date(ms);
+  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0) return formatDay(ms, locale);
+  const hh = String(date.getUTCHours()).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+function formatBarWhen(finish: string, stepMs: number, locale: Locale) {
+  const at = parseFinish(finish);
+  if (at == null) return finish;
+  if (stepMs >= DAY_MS) return formatDay(at, locale);
+  const date = new Date(at);
+  const hh = String(date.getUTCHours()).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${formatDay(at, locale)} ${hh}:${mm}`;
 }
 
 function moveNote(
@@ -93,8 +118,19 @@ function buildApproval(rows: QueueRow[]) {
     (item) => item.row.status !== 'HOLD' && parseFinish(item.row.finish) != null,
   );
   const times = runnable.map((item) => parseFinish(item.row.finish) as number);
-  const startDay = times.length ? Math.min(...times) : Date.UTC(2026, 8, 29);
-  const endDay = times.length ? Math.max(...times) : startDay;
+  const startDay = times.length
+    ? Date.UTC(
+        new Date(Math.min(...times)).getUTCFullYear(),
+        new Date(Math.min(...times)).getUTCMonth(),
+        new Date(Math.min(...times)).getUTCDate(),
+      )
+    : Date.UTC(2026, 8, 29);
+  const endStamp = times.length ? Math.max(...times) : startDay;
+  const endDay = Date.UTC(
+    new Date(endStamp).getUTCFullYear(),
+    new Date(endStamp).getUTCMonth(),
+    new Date(endStamp).getUTCDate(),
+  );
   const dayCount = Math.max(1, Math.round((endDay - startDay) / DAY_MS) + 1);
   const days = Array.from({ length: dayCount }, (_, index) => startDay + index * DAY_MS);
   const span = dayCount * DAY_MS;
@@ -125,9 +161,9 @@ function buildApproval(rows: QueueRow[]) {
 function barPlacement(finish: string, scale: NonNullable<ReturnType<typeof dateScale>>) {
   const at = parseFinish(finish);
   if (at == null) return { left: 2, width: 16 };
-  const oneDay = (DAY_MS / (scale.end - scale.start)) * 100;
-  const width = Math.min(22, Math.max(10, oneDay * 1.6));
-  const center = ((at - scale.start) / (scale.end - scale.start)) * 100;
+  const span = scale.end - scale.start;
+  const width = Math.min(28, Math.max(3.5, (scale.stepMs / span) * 100 * 0.9));
+  const center = ((at - scale.start) / span) * 100;
   const left = Math.min(Math.max(center - width / 2, 0), 100 - width);
   return { left, width };
 }
@@ -143,7 +179,11 @@ export function PlantProgramGantt({
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
   const [expanded, setExpanded] = useState(false);
-  const scale = dateScale(rows);
+  const [zoomIndex, setZoomIndex] = useState(1);
+  const zoom = ZOOM_STEPS[zoomIndex];
+  const scale = dateScale(rows, zoom.ms);
+  const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
+  const chartMinPx = Math.max(640, (scale?.ticks.length ?? 1) * tickPx);
   const lineNo = lineNumber(lineId);
 
   useEffect(() => {
@@ -260,11 +300,25 @@ export function PlantProgramGantt({
               />
             </div>
           )}
-          {layout !== 'approval' && (
+          {layout === 'vertical' && (
             <>
-              <span className="rounded border border-gray-200 px-2 py-0.5">{s.zoom1h}</span>
-              <ToolbarBtn label="Zoom in">+</ToolbarBtn>
-              <ToolbarBtn label="Zoom out">−</ToolbarBtn>
+              <span className="rounded border border-gray-200 px-2 py-0.5 font-semibold text-gray-700" title={s.zoomHint}>
+                {zoom.label}
+              </span>
+              <ToolbarBtn
+                label={s.zoomIn}
+                disabled={zoomIndex >= ZOOM_STEPS.length - 1}
+                onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
+              >
+                +
+              </ToolbarBtn>
+              <ToolbarBtn
+                label={s.zoomOut}
+                disabled={zoomIndex <= 0}
+                onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
+              >
+                −
+              </ToolbarBtn>
             </>
           )}
           <ToolbarBtn
@@ -284,7 +338,7 @@ export function PlantProgramGantt({
           role="region"
           aria-label={s.ganttScrollRegionVertical}
         >
-          <div className="min-w-[640px]">
+          <div style={{ minWidth: chartMinPx }}>
             <div className="sticky top-0 z-10 mb-1 grid grid-cols-[14rem_1fr] gap-2 bg-white pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
               <span />
               <div className="relative h-4">
@@ -298,7 +352,7 @@ export function PlantProgramGantt({
                         tick.pct < 8 ? 'none' : tick.pct > 92 ? 'translateX(-100%)' : 'translateX(-50%)',
                     }}
                   >
-                    {formatDay(tick.at, locale)}
+                    {formatTick(tick.at, zoom.ms, locale)}
                   </span>
                 ))}
               </div>
@@ -335,11 +389,7 @@ export function PlantProgramGantt({
                         title={isHold ? s.holdShort : row.finish}
                       >
                         {isRush && !isHold && <span className="mr-1">✦</span>}
-                        {isHold
-                          ? s.holdShort
-                          : parseFinish(row.finish) != null
-                            ? formatDay(parseFinish(row.finish) as number, locale)
-                            : row.finish}
+                        {isHold ? s.holdShort : formatBarWhen(row.finish, zoom.ms, locale)}
                       </div>
                       {note && (
                         <span
@@ -543,11 +593,13 @@ function ToolbarBtn({
   children,
   label,
   pressed,
+  disabled,
   onClick,
 }: {
   children: ReactNode;
   label: string;
   pressed?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -555,8 +607,9 @@ function ToolbarBtn({
       type="button"
       aria-label={label}
       aria-pressed={pressed}
+      disabled={disabled}
       onClick={onClick}
-      className={`rounded border border-gray-200 px-1.5 py-0.5 hover:bg-gray-50 ${
+      className={`rounded border border-gray-200 px-1.5 py-0.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 ${
         pressed ? 'bg-brand-green text-white' : ''
       }`}
     >
