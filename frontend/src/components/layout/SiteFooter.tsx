@@ -1,7 +1,11 @@
+import { useLocation } from 'react-router-dom';
 import { useLocale } from '../../i18n';
+import { isWideDemoPath } from '../../routes/paths';
 
 export function SiteFooter() {
   const { messages: m } = useLocale();
+  const { pathname } = useLocation();
+  const frame = isWideDemoPath(pathname) ? 'site-container-demo' : 'site-container';
 
   const footerLinks = [
     { label: m.footer.about, href: '#' },
@@ -11,7 +15,7 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-gray-200 bg-gray-50">
-      <div className="site-container grid gap-10 py-12 md:grid-cols-3">
+      <div className={`${frame} grid gap-10 py-12 md:grid-cols-3`}>
         <div>
           <p className="text-lg font-semibold text-brand-blue">GreenByte</p>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-gray-600">{m.footer.blurb}</p>
@@ -39,7 +43,7 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-gray-200 bg-white">
-        <div className="site-container flex flex-col gap-2 py-6 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`${frame} flex flex-col gap-2 py-6 text-xs text-gray-500 sm:flex-row sm:items-center sm:justify-between`}>
           <p>
             © {new Date().getFullYear()} {m.footer.copyright}
           </p>

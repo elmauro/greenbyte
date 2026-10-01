@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { PlantFlowApiPanel } from '../../components/plant/flow/PlantFlowApiPanel';
 import { PlantFlowStepPreview } from '../../components/plant/flow/PlantFlowStepPreview';
+import { DemoPageBody, DemoPageIntro } from '../../components/layout/DemoPageIntro';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { PLANT_FLOW_STEPS } from '../../content/plantFlowSteps';
 import { buildPlantFlowSnapshots } from '../../demo/plant/plantFlowSnapshots';
 import { useLocale } from '../../i18n';
-import { paths } from '../../routes/paths';
 
 export function PlantUc1FlowGallery() {
   const { locale, messages: m } = useLocale();
@@ -39,26 +39,10 @@ export function PlantUc1FlowGallery() {
 
   return (
     <SiteLayout>
-      <section className="border-b border-gray-100 bg-gradient-to-br from-brand-blue/5 via-white to-brand-green/5 py-8">
-        <div className="site-container max-w-[100rem] px-4 lg:px-6">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{copy.eyebrow}</p>
-          <h1 className="mt-2 text-2xl font-bold text-brand-blue sm:text-3xl">{copy.title}</h1>
-          <p className="mt-2 max-w-4xl text-sm text-gray-600 sm:text-base">{copy.subtitle}</p>
-          <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
-            <Link
-              to={paths.demoPlant}
-              className="rounded-full bg-brand-green px-4 py-2 text-white hover:bg-brand-green-dark"
-            >
-              {copy.liveDemoCta} →
-            </Link>
-            <Link to={paths.demoPlantTour} className="inline-flex items-center text-brand-blue hover:underline">
-              {copy.tourLink} →
-            </Link>
-          </div>
-        </div>
-      </section>
+      <div className="pb-16">
+      <DemoPageIntro eyebrow={copy.eyebrow} title={copy.title} subtitle={copy.subtitle} />
 
-      <div className="site-container max-w-[100rem] px-4 py-6 lg:px-6">
+      <DemoPageBody>
         <nav
           className="flex items-center gap-2 overflow-x-auto border-b border-gray-200 pb-3 [-ms-overflow-style:none] [scrollbar-width:thin]"
           aria-label={copy.stepNavLabel}
@@ -106,7 +90,7 @@ export function PlantUc1FlowGallery() {
         </nav>
 
         <div className="mt-4 min-w-0">
-          <h2 className="text-lg font-semibold text-brand-blue sm:text-xl">{title}</h2>
+          <h2 className="text-xl font-semibold text-brand-blue">{title}</h2>
           <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">{copy.previewHeading}</p>
 
           <div className="mt-4 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-stretch">
@@ -128,6 +112,7 @@ export function PlantUc1FlowGallery() {
             </div>
           </div>
         </div>
+      </DemoPageBody>
       </div>
     </SiteLayout>
   );

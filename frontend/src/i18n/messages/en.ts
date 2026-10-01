@@ -116,8 +116,6 @@ export const en = {
     previewHeading: 'UI preview',
     previewNote:
       'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
-    liveDemoCta: 'Try the live plant demo',
-    tourLink: '6-step story',
     stepNavLabel: 'Flow steps',
     prev: 'Previous',
     next: 'Next',
@@ -162,7 +160,7 @@ export const en = {
   },
   plantMvp: {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
-    title: 'Pasco conditioning — Line 1',
+    title: 'Pasco conditioning',
     subtitle:
       'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
@@ -173,6 +171,7 @@ export const en = {
       flowSlides: 'UI ↔ API flow (live map)',
       backMvp: 'Back to Line 1 demo',
     },
+    lineScheduleHeading: 'Line Schedule',
     lineSelectLabel: 'Conditioning line',
     lineNames: {
       'line-1': 'Line 1',
@@ -315,10 +314,9 @@ export const en = {
       'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
       badge: 'UX preview',
-      title: 'Pasco conditioning — UX preview',
+      title: 'Pasco conditioning',
       subtitle:
-        'Same BFF queue and accept flow as the classic demo. Compare navigation, help, and notifications side-by-side.',
-      classicLink: 'Open classic Line 1 demo',
+        'A rush priority or a failed quality check proposes a new order for the line. Review each batch and its reason, then accept. The decision is not written back to SAP.',
       previewLink: 'Try Demo',
       signedInAs: 'Signed in as {user}',
       signOut: 'Sign out',
@@ -458,11 +456,6 @@ export const en = {
       'The demo that runs is UC1. React calls only the BFF. The BFF reads and writes PostgreSQL. The agent narrates the plan the rules already built.',
     scopeNote: 'UC1 is the live demo. No live Syngenta systems.',
     docNote: 'Document version 1.3 · No live Syngenta production connections.',
-    links: {
-      plant: 'UC1 MVP (Line 1)',
-      tour: 'UC1 guided tour',
-      flow: 'UC1 UI ↔ API map',
-    },
     useCasesTitle: 'Syngenta briefs',
     genAiRoleLabel: 'GenAI role',
     useCaseCards: [
