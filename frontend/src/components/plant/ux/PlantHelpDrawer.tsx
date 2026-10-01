@@ -1,5 +1,11 @@
 import type { Locale } from '../../../i18n/LocaleContext';
 
+export const PLANT_HELP_OPEN_EVENT = 'greenbyte-plant-help-open';
+
+export function openPlantHelp() {
+  window.dispatchEvent(new Event(PLANT_HELP_OPEN_EVENT));
+}
+
 type PlantHelpDrawerProps = {
   open: boolean;
   onClose: () => void;

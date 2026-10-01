@@ -17,14 +17,6 @@ export const hackathonArchitectureImages = {
     src: '/demo/architecture/uc1-sequence.png',
     alt: 'UC1 sequence — queue, rush event, explain',
   },
-  uc4Flow: {
-    src: '/demo/architecture/uc4-flow.png',
-    alt: 'UC4 breeding data unification flow',
-  },
-  sequenceUc4: {
-    src: '/demo/architecture/uc4-sequence.png',
-    alt: 'UC4 sequence — ask, tools, override',
-  },
 } as const;
 
 export type HackathonArchitectureImageKey = keyof typeof hackathonArchitectureImages;

@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { DemoSessionGuard } from '../components/demo/DemoSessionGuard';
-import { BreedingDemo } from '../pages/demo/BreedingDemo';
 import { DemoSignInPage } from '../pages/demo/DemoSignInPage';
 import { HackathonArchitecturePage } from '../pages/demo/HackathonArchitecturePage';
 import { PlantCapacityDemo } from '../pages/demo/PlantCapacityDemo';
@@ -47,7 +46,6 @@ export function AppRoutes() {
           </DemoSessionGuard>
         }
       />
-      <Route path={paths.demoBreeding} element={<BreedingDemo />} />
       <Route
         path={paths.demoArchitecture}
         element={

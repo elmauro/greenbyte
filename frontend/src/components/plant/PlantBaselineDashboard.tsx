@@ -17,7 +17,7 @@ import { useListPagination, type PlantPageSize } from '../../hooks/useListPagina
 import { PlantListPagination } from './PlantListPagination';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
-import { PlantHelpDrawer } from './ux/PlantHelpDrawer';
+import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
 import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
 import { PlantUxHistoryDrawer } from './ux/PlantUxHistoryDrawer';
 
@@ -165,6 +165,15 @@ export function PlantBaselineDashboard({
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isUx || compact) return;
+    function openHelp() {
+      setHelpOpen(true);
+    }
+    window.addEventListener(PLANT_HELP_OPEN_EVENT, openHelp);
+    return () => window.removeEventListener(PLANT_HELP_OPEN_EVENT, openHelp);
+  }, [isUx, compact]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [queueFilter, setQueueFilter] = useState<PlantQueueFilter>('all');
   const [selectedPo, setSelectedPo] = useState<string[]>([]);
@@ -726,6 +735,7 @@ export function PlantBaselineDashboard({
                     layout={ganttLayout}
                     onLayoutChange={setGanttLayout}
                     lineId={selectedLineId}
+                    showMoves={eventPendingReview}
                   />
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
@@ -737,6 +747,7 @@ export function PlantBaselineDashboard({
                   layout={ganttLayout}
                   onLayoutChange={setGanttLayout}
                   lineId={selectedLineId}
+                  showMoves={eventPendingReview}
                 />
               )}
             </div>
@@ -764,28 +775,18 @@ export function PlantBaselineDashboard({
             </div>
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
             {isUx && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setHelpOpen(true)}
-                  className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  <span aria-hidden>?</span>
-                  {ux.navHelp}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHistoryOpen(true)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  <span>{ux.menuHistory}</span>
-                  {uxApprovalHistory.length > 0 && (
-                    <span className="rounded-full bg-brand-blue/10 px-1.5 text-[11px] font-semibold text-brand-blue">
-                      {uxApprovalHistory.length}
-                    </span>
-                  )}
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setHistoryOpen(true)}
+                className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
+              >
+                <span>{ux.menuHistory}</span>
+                {uxApprovalHistory.length > 0 && (
+                  <span className="rounded-full bg-brand-blue/10 px-1.5 text-[11px] font-semibold text-brand-blue">
+                    {uxApprovalHistory.length}
+                  </span>
+                )}
+              </button>
             )}
             <p className="mt-8 px-2 text-[10px] text-gray-500">
               <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
@@ -945,7 +946,11 @@ export function PlantBaselineDashboard({
                       className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-600 shadow-lg"
                     >
                       <p className="font-medium text-gray-900">{b.notificationsEmpty}</p>
-                      {isUx && <p className="mt-1 text-xs text-gray-500">{ux.notifEmptySub}</p>}
+                      {isUx && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          {ux.notifEmptySub.replace('{line}', copy.lineNames[selectedLine.id])}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1014,8 +1019,8 @@ export function PlantBaselineDashboard({
       )}
 
       {isUx && eventPendingReview && onAccept && (
-        <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur lg:bottom-0 lg:static lg:mt-0 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-3 sm:max-w-none sm:justify-end">
+        <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 sm:justify-between">
             <p className="hidden flex-1 text-sm text-gray-600 sm:block">{ux.footerAction}</p>
             <button
               type="button"

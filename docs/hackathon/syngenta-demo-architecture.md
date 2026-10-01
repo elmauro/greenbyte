@@ -114,7 +114,7 @@ This document describes the **integration architecture** for the Syngenta use-ca
 | --- | --- | --- | --- |
 | **Product UI + BFF** | Mauricio / GreenByte frontend | Single API contract to React; CORS; MSW mocks; optional override persistence | UC1: `/demo/plant/*` · UC4: `/demo/breeding/*` |
 | **Data API** | Camilo | ETL, schema, read-only query/tools endpoints, data quality | UC1: queue, replan, batch · UC4: trial, material, obs, lab, ops |
-| **Agent API** | David | Chat, triage, explain, tool-use calling Data API URLs | UC1: explain-replan · UC4: chat + triage |
+| **Agent API** | David | Narrate a plan the rules already computed. UC1 body is `diff` + `queueSnapshot`. He does not reorder and does not read the database. | UC1: `POST /explain-replan`, `POST /batches/explain` (template in the BFF until `AGENT_API_BASE_URL` is set). UC4 chat and triage are not built. |
 
 The **React app must not call Data or Agent APIs directly** in the demo environment (only the BFF), to simplify CORS, secrets, and fallback to MSW.
 
@@ -180,21 +180,24 @@ The **React app must not call Data or Agent APIs directly** in the demo environm
 
 1. Scheduler views **line queue** (batches, priority, due dates).
 2. **Upstream data** lands (SAP signal or pass/fail row) → replan.
-3. **Replan** updates order (heuristics in Data API or BFF).
-4. **Agent** explains what changed in plain language.
+3. **Replan** (`gold.replan` in PostgreSQL) updates order and writes a reason per position. The agent does not rank.
+4. **Agent** narrates that diff. It does not read the database.
 5. Human **accepts** the recommendation (no auto-write to ERP).
 
 ### 7.2 Architecture flow
 
 ```text
-Excel Pasco ──► ETL seed ──► PostgreSQL demo
+Excel Pasco ──► ETL seed ──► PostgreSQL
+                              gold.replan        order + reason per position
+                              gold.accept_plan   human sign-off, no SAP write
 
-React Plant Demo ──► BFF (core-api)
-                         ├──► Data API ──► PG (queue, logs, SAP orders, pass/fail)
-                         └──► Agent API ──► Data API (context)
-                                              └──► explain / optional suggest (validated)
+React /demo/plant ──► BFF (core-api) ──► PostgreSQL
+                         └──► Agent POST /explain-replan
+                               body: diff + queueSnapshot
+                               (template inside the BFF while AGENT_API_BASE_URL is empty)
 
-Operator/Data ── ingest ──► BFF ──► Data API (replan) ──► Agent (explain) ──► UI polls queue
+Operator ingest ──► BFF ──► gold.replan ──► explain ──► UI polls GET queue
+Accept ──► BFF ──► gold.accept_plan
 ```
 
 ### 7.3 BFF endpoints (frontend contract — implemented in MSW + `plantDemoApi`)
@@ -224,8 +227,8 @@ Operator/Data ── ingest ──► BFF ──► Data API (replan) ──► 
 
 | Method | Path | Description |
 | --- | --- | --- |
-| POST | `/explain-replan` | Natural-language diff given structured payload |
-| POST | `/suggest-rank` | Optional; BFF validates against rules |
+| POST | `/explain-replan` | Narrates the plan. Body is `diff` plus `queueSnapshot` (the plan queue, renamed). Does not reorder. |
+| POST | `/batches/explain` | Sales question. Read-only. Same switch: empty `AGENT_API_BASE_URL` keeps the BFF template. |
 
 ### 7.4 Data sources (repo)
 
@@ -236,6 +239,8 @@ Key sheets: line schedules, SAP orders, conditioning logs, pass/fail logs.
 ---
 
 ## 8. Use Case 4 — R&D Data Source Unification
+
+Reference only. `/demo/breeding` is a five-step story. This demo does not serve ask, dossier, chat, triage, or override routes.
 
 ### 8.1 Business flow
 

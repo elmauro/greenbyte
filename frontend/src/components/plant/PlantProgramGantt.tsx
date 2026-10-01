@@ -13,6 +13,8 @@ type PlantProgramGanttProps = {
   layout?: ScheduleGanttLayout;
   onLayoutChange?: (layout: ScheduleGanttLayout) => void;
   lineId?: string;
+  /** Move callouts belong to a plan still waiting for acceptance. */
+  showMoves?: boolean;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -84,9 +86,9 @@ function moveNote(
   const previous = row.previousPosition;
   const current = index + 1;
   if (previous == null || previous === current) return null;
-  const text =
-    row.status === 'HOLD' ? labels.heldWas : previous > current ? labels.movedUp : labels.movedDown;
-  return text.replace('{n}', String(previous));
+  if (row.status === 'HOLD') return labels.heldWas.replace('{n}', String(previous));
+  if (previous > current) return labels.movedUp.replace('{n}', String(previous));
+  return null;
 }
 
 function lineNumber(lineId?: string) {
@@ -111,7 +113,7 @@ type ApprovalLabels = {
   holdShort: string;
 };
 
-function buildApproval(rows: QueueRow[]) {
+function buildApproval(rows: QueueRow[], showMoves: boolean) {
   const indexed = rows.map((row, index) => ({ row, index }));
   const held = indexed.filter((item) => item.row.status === 'HOLD');
   const runnable = indexed.filter(
@@ -151,7 +153,7 @@ function buildApproval(rows: QueueRow[]) {
       }
       const previous = item.row.previousPosition;
       const current = item.index + 1;
-      const kind = previous != null && previous > current ? 'up' : 'quiet';
+      const kind = showMoves && previous != null && previous > current ? 'up' : 'quiet';
       const left = ((at - startDay) / span) * 100;
       return { ...item, at, lane, kind, left: Math.min(Math.max(left, 0), 92) };
     });
@@ -175,6 +177,7 @@ export function PlantProgramGantt({
   layout = 'vertical',
   onLayoutChange,
   lineId,
+  showMoves = true,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
@@ -199,6 +202,9 @@ export function PlantProgramGantt({
     .replace('{runtime}', s.demoRuntime);
 
   function renderRowMeta(row: QueueRow, index: number, isRush: boolean, isHold: boolean) {
+    const previous = row.previousPosition;
+    const moved = previous != null && previous !== index + 1;
+    const reason = showMoves || isHold || !moved ? row.reasonShort : undefined;
     const meta = PLANT_SCHEDULE_META[row.po] ?? {
       client: 'Demo customer',
       productCode: `${row.species} batch`,
@@ -218,10 +224,10 @@ export function PlantProgramGantt({
           )}
         </p>
         <p className="text-[10px] text-gray-500">
-          {row.reasonShort ? `${row.species} · ${row.kg} kg` : meta.productCode}
+          {reason ? `${row.species} · ${row.kg} kg` : meta.productCode}
         </p>
         <p className="mt-0.5 text-[9px] leading-snug text-gray-600">
-          {row.reasonShort ?? `${row.species === 'CORN' ? '🌽' : '🌿'} ${meta.client}`}
+          {reason ?? `${row.species === 'CORN' ? '🌽' : '🌿'} ${meta.client}`}
         </p>
       </>
     );
@@ -230,7 +236,7 @@ export function PlantProgramGantt({
   function barTone(row: QueueRow, index: number): 'hold' | 'up' | 'quiet' {
     if (row.status === 'HOLD') return 'hold';
     const previous = row.previousPosition;
-    if (previous != null && previous > index + 1) return 'up';
+    if (showMoves && previous != null && previous > index + 1) return 'up';
     return 'quiet';
   }
 
@@ -365,7 +371,7 @@ export function PlantProgramGantt({
                 const tone = barTone(row, index);
                 const place = scale ? barPlacement(row.finish, scale) : { left: 2, width: 16 };
                 const color = toneTrack(tone);
-                const note = moveNote(row, index, s);
+                const note = showMoves ? moveNote(row, index, s) : null;
                 const noteOnLeft = place.left + place.width > 58;
 
                 return (
@@ -422,7 +428,7 @@ export function PlantProgramGantt({
               const isRush = row.po === rushPo;
               const isHold = row.status === 'HOLD';
               const tone = barTone(row, index);
-              const note = moveNote(row, index, s);
+              const note = showMoves ? moveNote(row, index, s) : null;
 
               return (
                 <article
@@ -455,6 +461,7 @@ export function PlantProgramGantt({
           rows={rows}
           locale={locale}
           labels={s}
+          showMoves={showMoves}
           className={
             expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
           }
@@ -476,13 +483,15 @@ function ApprovalTimeline({
   locale,
   labels,
   className,
+  showMoves,
 }: {
   rows: QueueRow[];
   locale: Locale;
   labels: ApprovalLabels;
   className: string;
+  showMoves: boolean;
 }) {
-  const model = buildApproval(rows);
+  const model = buildApproval(rows, showMoves);
   const dayWidth = 4.75;
   return (
     <div className={className} role="region" aria-label={labels.holdArea}>

@@ -30,6 +30,7 @@ export function PlantUc1FlowGallery() {
   const title = copy.slideTitles[step.titleKey];
   const trigger = copy.triggers[step.titleKey];
   const response = snapshots[step.responseKey];
+  const request = step.requestKey ? snapshots[step.requestKey] : step.request;
 
   function goTo(index: number) {
     setActive(index);
@@ -119,7 +120,7 @@ export function PlantUc1FlowGallery() {
                 backendOwnersLabel={copy.backendOwnersLabel}
                 method={step.method}
                 path={step.path}
-                request={step.request}
+                request={request}
                 response={response}
                 mapping={step.mapping}
                 compact

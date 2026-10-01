@@ -15,9 +15,8 @@ export const es: Messages = {
     sustainability: 'Sostenibilidad',
     news: 'Noticias',
     demoPlant: 'UC1 Pasco',
-    demoPlantUx: 'UC1 Pasco (UX)',
+    demoPlantUx: 'UC1 Pasco (Demo)',
     demoPlantFlow: 'UC1 UI↔API',
-    demoBreeding: 'Demo: Breeding',
     demoArchitecture: 'Arquitectura',
   },
   demoCommon: {
@@ -30,24 +29,21 @@ export const es: Messages = {
       restart: 'Reiniciar recorrido',
     },
     viewPlant: 'Ver recorrido UC1 — capacidad de planta',
-    viewBreeding: 'Ver recorrido UC4 — inteligencia de breeding',
     viewArchitecture: 'Ver diagramas de arquitectura',
   },
   demoArchitecture: {
     eyebrow: 'Hackathon Syngenta · Base técnica',
     title: 'Arquitectura del demo',
     subtitle:
-      'Una plataforma compartida (React + BFF + Data + Agent) con dos briefs Syngenta mapeados abajo: UC1 capacidad de planta y UC4 unificación R&D.',
-    scopeNote:
-      'Documento v1.3 · Contrato BFF UC1 alineado a /demo/plant/flow · Solo datos demo · Diagramas técnicos en inglés.',
+      'El demo que corre es UC1. React solo llama al BFF. El BFF lee y escribe PostgreSQL. El agente narra el plan que ya armaron las reglas.',
+    scopeNote: 'UC1 es el demo en vivo. Sin sistemas Syngenta en vivo.',
     docNote: 'Documento v1.3 · Sin conexión a sistemas productivos Syngenta.',
     links: {
       plant: 'MVP UC1 (Línea 1)',
       tour: 'Tour guiado UC1',
       flow: 'Mapa UI ↔ API UC1',
-      breeding: 'Recorrido UC4',
     },
-    useCasesTitle: 'Casos de uso Syngenta que cubre esta arquitectura',
+    useCasesTitle: 'Briefs de Syngenta',
     genAiRoleLabel: 'Rol GenAI',
     useCaseCards: [
       {
@@ -56,15 +52,7 @@ export const es: Messages = {
         problem:
           'Las líneas de acondicionamiento compiten por lotes; pedidos urgentes y fallos de QA obligan a replanear a mano sin explicación clara.',
         genAiRole:
-          'Tras rush o QA: explicar el diff en lenguaje natural. Opcional: Q&A «Explicar mi lote» (sin cambiar cola). Aceptación humana — sin ERP.',
-      },
-      {
-        id: 'UC4',
-        name: 'Unificación de fuentes R&D',
-        problem:
-          'Las cuatro familias de fuentes mock de Syngenta (ensayos, operaciones, lab, germplasm/pedigree) están en archivos distintos; el breeder necesita una respuesta con evidencia.',
-        genAiRole:
-          'Chat NL + triage R/A/G anclado a tools del Data API; override del breeder con auditoría.',
+          'PostgreSQL reordena la línea y escribe una razón en cada posición. El agente solo narra ese plan. Una persona acepta. No se escribe en SAP.',
       },
     ],
     fieldLabels: {
@@ -74,58 +62,53 @@ export const es: Messages = {
     },
     groups: {
       shared: {
-        title: 'Plataforma compartida (ambos casos)',
+        title: 'Lo que corre este demo',
         intro:
-          'Todo flujo empieza igual: React solo llama al BFF; ETL carga Excel o CSV a PostgreSQL; el Agent no lee archivos crudos en runtime — solo SQL vía Data API.',
+          'Un solo camino. El navegador no llama a la base ni al agente. El Data API de Camilo y el Agent API de David son servicios aparte. Mientras sus URLs base estén vacías, el BFF ejecuta el SQL y una plantilla de texto.',
       },
       uc1: {
-        title: 'UC1 — Arquitectura capacidad de planta',
+        title: 'UC1 — Capacidad de planta',
         intro:
-          'UI de cola → evento (rush o QA) → replan Data API → Agent explica el diff → aceptación humana.',
-        syngentaGoal: 'Recomendaciones con explicación; validación humana; sin SAP en vivo.',
+          'Un operador publica un cambio SAP, una orden nueva de COISPI o un Fail. PostgreSQL reordena la línea. El agente explica ese diff. El programador acepta. Accept no escribe en SAP.',
+        syngentaGoal: 'Las reglas proponen el orden y la razón. Una persona valida. Sin conexión SAP en vivo.',
         dataSource:
-          'Excel Pasco LSV/SSV (schedules, órdenes SAP, logs de acondicionamiento, pass/fail).',
-      },
-      uc4: {
-        title: 'UC4 — Arquitectura unificación R&D',
-        intro:
-          'Pregunta en NL → BFF reenvía al Agent → tools de solo lectura en Data API → triage + citas → override opcional auditado en BFF.',
-        syngentaGoal: 'Vista unificada; GenAI central; humano en el loop con auditoría de override.',
-        dataSource:
-          'Cuatro familias de fuentes Syngenta (ensayos incl. obs campo, operaciones, lab, germplasm/pedigree) — cinco CSV UC4 en el pack del hackathon, con TRIAL_GUID / MATERIAL_GUID.',
+          'Excel de acondicionamiento Pasco LSV/SSV (programas, órdenes SAP, logs de acondicionamiento, pass/fail), cargado en PostgreSQL.',
       },
     },
     teamTitle: 'Responsabilidades del equipo',
     teamIntro:
-      'La propiedad es por capa; UC1 vs UC4 cambia sobre todo qué rutas BFF y endpoints Agent implementas — no la forma del contenedor.',
+      'Tres responsables. El camino que corre es el BFF más PostgreSQL. Camilo y David se conectan cuando sus URLs base están definidas en core-api.',
     teamTable: {
       role: 'Rol',
       owner: 'Responsable',
       responsibility: 'Alcance',
-      useCases: 'Enfoque UC1 / UC4',
+      useCases: 'Qué cubre aquí',
     },
     teamRows: [
       {
         role: 'UI + BFF',
         owner: 'Mauricio / GreenByte',
-        responsibility: 'Contrato único al React; CORS; MSW; persistencia de override',
+        responsibility: 'Un contrato para el navegador. El BFF llama a PostgreSQL y, después de un replan, al agente.',
         useCases:
-          'UC1: /demo/plant/* cola, ingest, accept, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
+          'GET /demo/plant/lines/{lineId}/queue · POST ingest (prioridad, refresh COISPI, pass/fail) · POST /schedule/accept · POST /batches/explain',
       },
       {
-        role: 'Data API',
+        role: 'Datos en PostgreSQL',
         owner: 'Camilo',
-        responsibility: 'ETL, esquema, tools de solo lectura, calidad de datos',
-        useCases: 'UC1: cola, replan, GET /batches/{po} (tools Agent) · UC4: trial, material, obs, lab, ops',
+        responsibility:
+          'ETL, esquema y calidad de datos. Su Data API HTTP es el contrato cuando DATA_API_BASE_URL tiene valor. Este demo no lo llama mientras esa URL está vacía.',
+        useCases: 'gold.replan escribe el orden. gold.accept_plan registra la decisión humana. No es una ruta del navegador.',
       },
       {
         role: 'Agent API',
         owner: 'David',
-        responsibility: 'Chat, triage, explain; llamadas tools al Data API',
-        useCases: 'UC1: explain-replan + explain batch (tools) · UC4: /chat, /triage con tools',
+        responsibility:
+          'Narra el plan. No reordena la línea y no lee la base. El BFF le envía el diff y queueSnapshot.',
+        useCases:
+          'POST /explain-replan · POST /batches/explain. Una plantilla dentro del BFF hasta que AGENT_API_BASE_URL tenga valor.',
       },
     ],
-    endpointsTitle: 'Endpoints ilustrativos (contrato BFF según UC elegido)',
+    endpointsTitle: 'Contratos UC1',
     endpointTable: {
       layer: 'Capa',
       examples: 'Ejemplos',
@@ -136,73 +119,89 @@ export const es: Messages = {
         layer: 'BFF',
         examples:
           'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
-        purpose: 'Triggers Syngenta vía ingest, visto bueno humano y pregunta de ventas',
+        purpose: 'Ingest del operador, el poll de la cola, el visto bueno humano y la pregunta de ventas',
       },
       {
-        layer: 'Data API',
-        examples: 'GET /lines/{id}/queue · POST /schedule/replan · GET /batches/{po}',
-        purpose: 'Datos Pasco, reorden heurístico, contexto de lote',
-      },
-      {
-        layer: 'Agent API',
-        examples: 'POST /explain-replan · POST /suggest-rank (opcional)',
-        purpose: 'Explicación NL del diff; sugerencia de ranking validada por BFF',
-      },
-    ],
-    uc4Endpoints: [
-      {
-        layer: 'BFF',
-        examples: 'POST /demo/breeding/ask · GET /demo/breeding/materials/{guid}/dossier · POST .../override',
-        purpose: 'Pregunta NL, dossier agregado, auditoría de override',
-      },
-      {
-        layer: 'Data API',
-        examples: 'GET /trials/{guid} · GET /materials/{guid}/pedigree · GET .../observations · GET .../operations',
-        purpose: 'Tools de solo lectura que llama el Agent (MCP vía HTTP)',
+        layer: 'PostgreSQL',
+        examples: 'gold.replan · gold.accept_plan · gold.v_open_queue',
+        purpose: 'Las reglas escriben el orden y una razón por posición. Accept guarda la decisión. Sin escritura SAP.',
       },
       {
         layer: 'Agent API',
-        examples: 'POST /chat · POST /triage',
-        purpose: 'Orquestación de tools, R/A/G con razones ancladas al JSON recuperado',
+        examples: 'POST /explain-replan · POST /batches/explain',
+        purpose: 'Resumen en lenguaje claro de un plan que las reglas ya calcularon. La pregunta de ventas es de solo lectura.',
       },
     ],
-    rulesTitle: 'Reglas de integración (día 1)',
+    rulesTitle: 'Cómo encajan las piezas',
     rules: [
-      'Contrato primero: OpenAPI o JSON compartido BFF ↔ front y BFF ↔ Data/Agent.',
-      'Mocks en paralelo: MSW refleja respuestas del BFF para demo offline.',
-      'Tools de solo lectura en Data API con límites y filtros permitidos.',
-      'Grounding del agente: contexto LLM solo desde JSON del Data API; citar IDs estables.',
-      'Timeouts y fallback en BFF si el Agent no responde.',
+      'El navegador solo llama a /demo/plant/*.',
+      'El orden y las razones salen de gold.replan. El agente no rankea la línea.',
+      'El agente recibe el diff y queueSnapshot. queueSnapshot es la cola del plan, con otro nombre. No debe inventar órdenes ni fechas.',
+      'Si AGENT_API_BASE_URL está vacío, sigue la plantilla dentro del BFF. Si la llamada al agente falla, el plan se entrega igual.',
+      'Accept registra la decisión humana. No escribe en SAP.',
     ],
+    diagrams: {
+      shared: `React  /demo/plant
+        |
+        |  solo este salto
+        v
+core-api  BFF
+        |
+        +-- PostgreSQL
+        |     gold.replan        orden + razón por posición
+        |     gold.accept_plan   visto bueno humano, sin escritura SAP
+        |
+        +-- Agente
+              POST /explain-replan     diff + queueSnapshot
+              POST /batches/explain    pregunta de ventas, solo lectura
+              plantilla dentro del BFF mientras AGENT_API_BASE_URL está vacío`,
+      uc1Flow: `Excel Pasco -- ETL --> PostgreSQL
+
+Operador
+  POST /demo/plant/ingest/sap-priority-change
+  POST /demo/plant/ingest/sap-queue-refresh
+  POST /demo/plant/ingest/pass-fail-log
+        |
+        v
+core-api BFF -- gold.replan --> plan propuesto
+        |
+        +-- POST /explain-replan --> texto del copiloto
+                    queueSnapshot = la cola del plan
+
+React consulta GET /demo/plant/lines/{lineId}/queue
+El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
+      uc1Sequence: `Operador     React          BFF            PostgreSQL       Agente
+   |           |              |                 |              |
+   |-- ingest --------------->|                 |              |
+   |           |              |-- gold.replan ->|              |
+   |           |              |<- cola + diff --|              |
+   |           |              |-- explain-replan ------------->|
+   |           |              |<- resumen ---------------------|
+   |           |-- GET cola -->|                 |              |
+   |           |<- plan + por -|                 |              |
+   |           |-- accept ---->|-- accept_plan ->|              |`,
+    },
     sections: {
       container: {
-        title: 'Diagrama de contenedores común',
-        description: 'El front solo habla con el BFF; el Agent llama al Data API (estilo MCP vía HTTP).',
+        title: 'Camino en ejecución',
+        description: 'El navegador se queda en el BFF. Las reglas viven en PostgreSQL. El agente solo recibe el plan.',
       },
       teamStack: {
-        title: 'Stack del equipo (quién hace qué)',
-        description: 'Frontend y BFF en GreenByte; APIs Data y Agent como servicios hermanos detrás del BFF.',
+        title: 'Stack del equipo',
+        description: 'Está en la tabla de arriba.',
       },
       uc1Flow: {
-        title: 'UC1 — Flujo capacidad de planta',
-        description: 'Pasco: cola, eventos, replan, explicación, aceptación humana.',
+        title: 'UC1 — Del ingest a la aceptación',
+        description: 'La pantalla del programador no publica el evento SAP ni el de QA. Lo publica un ingest de operador. La pantalla consulta la cola.',
       },
       uc1Sequence: {
-        title: 'UC1 — Secuencia (evento + replan + explain)',
-        description: 'Orden de llamadas ante lote rush o fallo de QA.',
-      },
-      uc4Flow: {
-        title: 'UC4 — Flujo unificación R&D',
-        description: 'CSVs unificados, pregunta NL, tools, triage, auditoría de override.',
-      },
-      uc4Sequence: {
-        title: 'UC4 — Secuencia (ask + tools)',
-        description: 'BFF reenvía chat; Agent recupera hechos antes de responder.',
+        title: 'UC1 — Orden de llamadas',
+        description: 'El replan termina antes del explain. Accept no llama al agente.',
       },
     },
-    monolithTitle: 'Monolito vs distribuido',
+    monolithTitle: 'Qué está desplegado de verdad',
     monolithBody:
-      'Para jurado puede bastar la historia “copiloto”. El equipo implementa tres servicios + BFF. Diagramas de una sola caja (todo en core-api) son vista lógica; el despliegue físico sigue el diagrama de contenedores.',
+      'Este demo despliega la app React, core-api y PostgreSQL. El Data API y el Agent API son contratos. Siguen dentro del BFF hasta que Camilo y David publiquen sus URLs base.',
   },
   demoPlant: {
     eyebrow: 'Syngenta UC1 · Capacidad de planta',
@@ -306,11 +305,11 @@ export const es: Messages = {
         'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh inserta el PO nuevo en la línea y llama gold.replan (evento queue_refresh).',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log llama gold.ingest_pass_fail: fila Fail en silver.quality_test, y luego un plan propuesto con ese lote en hold.',
-      s04: 'David · Agent POST /explain-replan sigue simulado dentro del BFF. Después de cada ingest, esa llamada convierte el diff del plan en el resumen del copiloto. GET queue lo devuelve mientras el plan está PROPOSED.',
+      s04: 'David · POST /explain-replan. El navegador no lo llama. El BFF envía este cuerpo después de cada ingest. Mientras AGENT_API_BASE_URL está vacío, una plantilla dentro del BFF escribe el texto. Define esa URL base (sin barra final) y vuelve a desplegar core-api para usar su servicio. Él devuelve solo alertBanner, summary, bullets e impact. El BFF lo guarda en explanation del ingest y en pendingExplanation del GET mientras el plan está PROPOSED.',
       s05: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue mientras el plan está PROPOSED. La misma ruta que el paso 01. El ejemplo es el cuerpo del poll: lastEvent, pendingDiff, pendingExplanation — no el cuerpo del POST de ingest.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept llama gold.accept_plan: plan_decision ACCEPT y schedule_plan → ACCEPTED. Sin escritura SAP.',
       s07:
-        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (pregunta de ventas, nice-to-have) · tools sobre Camilo · Data API.',
+        'Mauricio · BFF POST /demo/plant/batches/explain. El panel muestra el cuerpo del navegador. El BFF llama a David POST /batches/explain con po, question, locale, lineId y planVersion. Él devuelve po, answer, citations y suggestedFollowUps. Sigue simulado dentro del BFF hasta que AGENT_API_BASE_URL tenga valor.',
     },
     triggers: {
       s01: 'Usuario abre /demo/plant y elige línea — plantDemoApi.getQueue(lineId).',
@@ -318,7 +317,7 @@ export const es: Messages = {
       s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operador publica un PO nuevo de COISPI — POST /demo/plant/ingest/sap-queue-refresh (inserta y replanifica).',
       s03b: 'Operador publica una fila Fail — POST /demo/plant/ingest/pass-fail-log (PO abierto, Equipment ID, failedFor).',
-      s04: 'El copiloto lee el resumen simulado de explain-replan que devuelve GET queue después de un recálculo.',
+      s04: 'Llamada privada después de cada ingest. Este ejemplo es el plan rush del paso 03. queueSnapshot es la queue de esa respuesta, con otro nombre. Un PO nuevo de COISPI va como eventType rush y el PO en diff.added. Un Fail va como eventType qa_fail y el PO en diff.held.',
       s05: 'La pantalla consulta GET cola. Mientras está PROPOSED la respuesta trae el orden propuesto, pendingDiff y pendingExplanation.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
       s07: 'Ventas pregunta por un lote — POST /demo/plant/batches/explain.',
@@ -494,7 +493,7 @@ export const es: Messages = {
       subtitle:
         'Mismo flujo BFF de cola y aceptación que el demo clásico. Compare navegación, ayuda y notificaciones.',
       classicLink: 'Abrir demo clásico Línea 1',
-      previewLink: 'Probar vista UX (iniciar sesión)',
+      previewLink: 'Probar demo',
       signedInAs: 'Sesión: {user}',
       signOut: 'Cerrar sesión',
     },
@@ -527,7 +526,7 @@ export const es: Messages = {
       nextCalm: 'Todo según plan. Revise la Cola para ver fechas de fin.',
       nextApproved: 'Abra la Cola para confirmar el nuevo orden.',
       notifTitle: 'Notificaciones',
-      notifEmptySub: 'Está al día en Línea 1',
+      notifEmptySub: 'Está al día en {line}',
       reviewUpdated: 'Revisar programa actualizado',
       pBell: 'Cambio de prioridad en Línea 1 — ventana de cliente',
       qBell: 'Fallo de calidad — lote en retención',
@@ -626,66 +625,7 @@ export const es: Messages = {
         'Demo con reglas sobre hechos de cola. David: sustituir por Agent + tools al Data API (batch + cola).',
     },
   },
-  demoBreeding: {
-    eyebrow: 'Syngenta UC4 · Unificación R&D',
-    title: 'Investigación de variedades — demo guiada',
-    subtitle:
-      'Recorre cómo un fitomejorador pregunta en lenguaje natural sobre las cuatro fuentes mock unificadas de Syngenta (ensayos incl. campo, operaciones, lab, germplasm/pedigree) — y conserva la última palabra. Solo CSVs de demo.',
-    plainLanguage: {
-      sectionTitle: 'La idea, en palabras simples',
-      problemHeading: '¿Qué problema resolvemos?',
-      problem:
-        'Antes de lanzar una variedad nueva, se prueban muchos candidatos durante años. Las notas están en Excel distintos, informes de lab y correos. Juntar una foto completa puede tardar semanas y frena todo el pipeline.',
-      analogyHeading: 'Piénsalo como…',
-      analogy:
-        'Un médico con el historial repartido en cuatro carpetas (visitas, analíticas, antecedentes, notas de cuidado). Preguntas «¿funciona el tratamiento?» y quieres hechos — no una suposición.',
-      walkthroughHeading: 'Lo que verás en los cinco pasos de abajo',
-      walkthroughSteps: [
-        'Un workspace conectado a las cuatro familias de fuentes Syngenta (cinco CSV en el pack del hackathon).',
-        'Haces una pregunta normal en el chat.',
-        'El asistente busca hechos en cada fuente (no inventa cifras).',
-        'Ves una recomendación tipo semáforo con motivo breve y evidencias.',
-        'Aceptas o corriges — queda registrado lo que decidiste.',
-      ],
-      tagline: 'En una frase: «¿Esta línea sigue adelante — con todos los papeles en un solo sitio?»',
-    },
-    steps: [
-      {
-        title: '1. Un solo punto de partida',
-        plainLine:
-          'En lugar de perseguir cuatro tipos de fuente desconectados, imagina un escritorio con todo enlazado.',
-        body:
-          'Ensayos (incl. observaciones de campo), operaciones en parcela, resultados de lab y germplasm/pedigree — las mismas cuatro familias del brief Syngenta, cargadas desde el set CSV UC4.',
-        imageSrc: '/demo/es/uc4-breeding-baseline.png',
-        imageAlt: 'Workspace unificado antes de la pregunta',
-      },
-      {
-        title: '2. Preguntas como persona, no como base de datos',
-        plainLine: 'Escribes como le hablarías a un colega en la mesa.',
-        body: 'En esta historia no necesitas memorizar códigos internos: el asistente traduce tu pregunta en consultas.',
-        highlight: 'Ejemplo: «¿Qué líneas rindieron bien, se mantuvieron sanas y comparten los mismos padres?»',
-      },
-      {
-        title: '3. Buscar primero, responder después',
-        plainLine: 'La IA trae filas de la base demo y solo entonces redacta la respuesta.',
-        body: 'Así evitamos “alucinaciones”: si un número no salió de los datos, no debería aparecer en el texto.',
-        highlight: 'Deberías ver de dónde salió cada dato.',
-      },
-      {
-        title: '4. Recomendación que puedes cuestionar',
-        plainLine: 'Verde, ámbar o rojo — más una frase del porqué — y la evidencia al lado.',
-        body: 'Notas de campo, lab y pedigrí juntos para que revises la historia antes de confiar.',
-        imageSrc: '/demo/es/uc4-rd-unification-wow.png',
-        imageAlt: 'Dossier con triage y citas en el chat',
-      },
-      {
-        title: '5. La última palabra es tuya',
-        plainLine: 'Aceptas, ajustas o cambias la recomendación. El sistema anota tu decisión.',
-        body: 'En mejoramiento vegetal manda el experto. La IA es asistente de investigación, no jefe.',
-        highlight: 'Próximo paso del build: servicios de datos e IA en vivo (página Arquitectura).',
-      },
-    ],
-  },
+
   lang: {
     switchLabel: 'Idioma',
     en: 'EN',
@@ -699,7 +639,6 @@ export const es: Messages = {
     ctaDiscover: 'Descubrir GreenByte',
     ctaPrecision: 'Agricultura de precisión',
     ctaDemoPlant: 'Demo UC1 Pasco',
-    ctaDemoBreeding: 'Demo UC4 breeding',
     ctaArchitecture: 'Arquitectura',
   },
   intro: {

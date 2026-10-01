@@ -51,7 +51,7 @@ export function PlantFlowApiPanel({
       {request != null && (
         <>
           <p className="mt-4 text-xs font-semibold uppercase text-slate-400">Request</p>
-          <pre className="mt-1 max-h-40 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300">
+          <pre className="mt-1 max-h-56 overflow-auto rounded-lg bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300">
             {json(request)}
           </pre>
         </>
