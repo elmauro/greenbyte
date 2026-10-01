@@ -32,7 +32,7 @@ export function HackathonArchitecturePage() {
   return (
     <SiteLayout>
       <div className="pb-16">
-        <DemoPageIntro eyebrow={a.eyebrow} title={a.title} subtitle={a.subtitle} note={a.scopeNote} />
+        <DemoPageIntro eyebrow={a.eyebrow} title={a.title} subtitle={a.subtitle} />
 
         <DemoPageBody>
           <section className="rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">

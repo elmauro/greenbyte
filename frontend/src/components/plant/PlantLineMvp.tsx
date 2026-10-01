@@ -24,7 +24,6 @@ export function PlantLineMvp() {
     refreshing,
     busy,
     acceptPlan,
-    connectionMode,
     loadError,
   } = usePlantDemoQueue(locale, line.id);
 
@@ -112,13 +111,6 @@ export function PlantLineMvp() {
         {accepted && (
           <p className="text-center text-sm font-medium text-brand-green-dark">{copy.acceptedNote}</p>
         )}
-        <p className="text-xs text-gray-500">
-          {connectionMode === 'bff'
-            ? copy.apiNoteBff
-            : connectionMode === 'msw'
-              ? copy.apiNoteMsw
-              : copy.apiNoteLocal}
-        </p>
       </DemoPageBody>
     </div>
   );

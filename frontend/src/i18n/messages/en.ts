@@ -306,17 +306,11 @@ export const en = {
     copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
-    apiNoteMsw:
-      'Dev mocks: HTTP → MSW → same BFF paths as production. Set VITE_USE_MSW=false and VITE_API_BASE_APP when Mauricio’s core-api is live.',
-    apiNoteLocal:
-      'Static demo: in-process plantDemoServer (no HTTP). For local dev with mocks use .env.development (MSW).',
-    apiNoteBff:
-      'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
       badge: 'UX preview',
       title: 'Pasco conditioning',
       subtitle:
-        'A rush priority or a failed quality check proposes a new order for the line. Review each batch and its reason, then accept. The decision is not written back to SAP.',
+        'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
       previewLink: 'Try Demo',
       signedInAs: 'Signed in as {user}',
       signOut: 'Sign out',
@@ -436,7 +430,7 @@ export const en = {
         'Schedule changes are triggered via BFF ingest (SAP priority / pass-fail log), not from the scheduler UI. See docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
-      eyebrow: 'Syngenta nice-to-have',
+      eyebrow: 'When a customer asks about a batch',
       title: 'Explain my batch (sales / customer service)',
       subtitle:
         'Ask why a PO is waiting, when it ships, or what would move it up — answers grounded in the current Line 1 queue (Agent API when live).',
@@ -445,8 +439,6 @@ export const en = {
       inputPlaceholder: 'Ask about this batch…',
       askButton: 'Ask',
       citationsLabel: 'Sources',
-      agentNote:
-        'Demo uses rule-based answers from queue facts. David: replace with Agent tool calls to Data API batch + queue context.',
     },
   },
   demoArchitecture: {
@@ -454,7 +446,6 @@ export const en = {
     title: 'Demo architecture',
     subtitle:
       'The demo that runs is UC1. React calls only the BFF. The BFF reads and writes PostgreSQL. The agent narrates the plan the rules already built.',
-    scopeNote: 'UC1 is the live demo. No live Syngenta systems.',
     docNote: 'Document version 1.3 · No live Syngenta production connections.',
     useCasesTitle: 'Syngenta briefs',
     genAiRoleLabel: 'GenAI role',

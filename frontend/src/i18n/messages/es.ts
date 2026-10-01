@@ -36,7 +36,6 @@ export const es: Messages = {
     title: 'Arquitectura del demo',
     subtitle:
       'El demo que corre es UC1. React solo llama al BFF. El BFF lee y escribe PostgreSQL. El agente narra el plan que ya armaron las reglas.',
-    scopeNote: 'UC1 es el demo en vivo. Sin sistemas Syngenta en vivo.',
     docNote: 'Documento v1.3 · Sin conexión a sistemas productivos Syngenta.',
     useCasesTitle: 'Briefs de Syngenta',
     genAiRoleLabel: 'Rol GenAI',
@@ -475,17 +474,11 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
     copilotIdle: 'Cuando llegue un replan desde datos upstream, abre Programación para revisar orden y explicación.',
     footerStats: '{count} lotes activos en cola (POs estilo Pasco).',
     acceptedNote: 'Aceptación humana registrada en el plan propuesto. Sin escritura en SAP.',
-    apiNoteMsw:
-      'Mocks dev: HTTP → MSW → mismas rutas BFF que producción. Cuando core-api esté listo: VITE_USE_MSW=false y VITE_API_BASE_APP.',
-    apiNoteLocal:
-      'Demo estática: plantDemoServer en memoria (sin HTTP). En local con mocks usa .env.development (MSW).',
-    apiNoteBff:
-      'BFF en vivo (VITE_API_BASE_APP). Camilo Data + David Agent detrás del core-api — sin cambiar el frontend.',
     uxCompare: {
       badge: 'Vista previa UX',
       title: 'Pasco acondicionamiento',
       subtitle:
-        'Una prioridad urgente o un fallo de calidad propone un nuevo orden para la línea. Revise cada lote y su razón, y luego acepte. La decisión no se escribe en SAP.',
+        'Un pedido urgente o un control de calidad fallido reordena la línea. Mire cada lote y por qué se movió, y acepte el plan si está de acuerdo. No se envía nada a SAP.',
       previewLink: 'Probar demo',
       signedInAs: 'Sesión: {user}',
       signOut: 'Cerrar sesión',
@@ -605,7 +598,7 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
         'Los cambios de programa se disparan vía ingest del BFF (prioridad SAP / log pass-fail), no desde la UI del planificador. Ver docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
-      eyebrow: 'Nice-to-have Syngenta',
+      eyebrow: 'Cuando un cliente pregunta por un lote',
       title: 'Explicar mi lote (ventas / servicio al cliente)',
       subtitle:
         'Pregunta por qué un PO espera, cuándo sale o qué haría falta para subirlo — respuestas ancladas a la cola actual (Agent API en vivo).',
@@ -614,8 +607,6 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
       inputPlaceholder: 'Pregunta sobre este lote…',
       askButton: 'Preguntar',
       citationsLabel: 'Fuentes',
-      agentNote:
-        'Demo con reglas sobre hechos de cola. David: sustituir por Agent + tools al Data API (batch + cola).',
     },
   },
 

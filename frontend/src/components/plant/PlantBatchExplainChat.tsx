@@ -106,7 +106,6 @@ export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExp
           )}
         </div>
       )}
-      <p className="mt-3 text-xs text-gray-500">{copy.agentNote}</p>
     </section>
   );
 }
