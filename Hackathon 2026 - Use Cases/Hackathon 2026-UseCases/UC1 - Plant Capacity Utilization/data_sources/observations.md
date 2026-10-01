@@ -640,6 +640,8 @@ ops.line_schedule_item      ops.conditioning_run           ops.quality_test     
 
 ## 10. Open questions (for Syngenta)
 
+> Consolidated with evidence in [uc1-open-questions.md](../../../../backend/data-model/uc1-open-questions.md) (Q-n → SQ-nn cross-references there).
+
 | ID | Question |
 | --- | --- |
 | Q-1 | Meaning of the material state tokens (`RDY`, `RDX`, `RDF`, `RDH`, `CLX`, `CLD`, `PMD`) and type tokens (`CRS`, `CRN`, `CRT`, `SDD`, `SDL`, `SNP`, …) |
