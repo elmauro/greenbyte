@@ -29,8 +29,8 @@ This file summarizes what was built to move the Pasco conditioning extracts into
  └───────────────────┘ (cells)  │ observations.md         │ (md5)    │ raw.load_file            │
         images ─────transcribed─►└────────────────────────┘          │ raw.column_map           │
                                                                       └────────────┬─────────────┘
-                                                                                   │ next: SQL transforms
-                                                                      ref / ops / plan  (uc1-data-model.md)
+                                                                                   │ SQL transforms (build_model.py)
+                                                                      silver → gold  (uc1-data-model.md)
 ```
 
 ---
@@ -139,8 +139,8 @@ To add a new CSV: put it in `data_sources/`, register it in `FILES` with its pro
 | Blank header / grid layout | `col_<excel letter>` | `raw.lsv_gravity.col_a`, `raw.packaging_rates.col_a…col_s` |
 | Collisions / leading digit | suffix `_<letter>` / prefix `c_` | none occurred in load 1 |
 | Metadata columns | prefixed with `_` so they can never collide with a source header | `_source_row_number`, `_load_id` |
-| Source typos | **kept in raw** (verbatim names), fixed in `ops` | `equiment_id`, `specie`, `original_scheduled_finish_date` |
-| Target layers (`ref`/`ops`/`plan`) | snake_case singular tables; `<table>_id` PK; suffixes `_code`, `_number`, `_kg`, `_qty` + `uom_code`, `_h`, `_fraction`, `_date`, `_at`, `is_`, `_raw` | `ops.conditioning_run.run_h`, `quality_test.raw_germ_fraction` |
+| Source typos | **kept in raw** (verbatim names), fixed in `silver` | `equiment_id`, `specie`, `original_scheduled_finish_date` |
+| Target layers (`silver`/`gold`) | snake_case singular tables; `<table>_id` PK; suffixes `_code`, `_number`, `_kg`, `_qty` + `uom_code`, `_h`, `_fraction`, `_date`, `_at`, `is_`, `_raw` | `silver.conditioning_run.run_h`, `quality_test.raw_germ_fraction` |
 
 Identifiers are unquoted-safe (lower case, `[a-z0-9_]`, ≤ 38 characters, well under Postgres's 63).
 
@@ -158,7 +158,7 @@ Identifiers are unquoted-safe (lower case, `[a-z0-9_]`, ≤ 38 characters, well 
 | Rates / hours | error text, malformed numbers | `#DIVIDE BY ZERO`, `14..5`, `..42` |
 | Germ / vigor | text markers | `NA`, `None` |
 
-**Typed layers (`ops`), target types:**
+**Typed layers (`silver`, `gold`), types:**
 
 | Kind | PostgreSQL type | Rule |
 | --- | --- | --- |
@@ -171,7 +171,7 @@ Identifiers are unquoted-safe (lower case, `[a-z0-9_]`, ≤ 38 characters, well 
 | Dates | `date` | No source date has a time part |
 | Timestamps | `timestamptz` | `_at` columns (e.g. `data_shuttle_workflow.last_run_at` is ISO text in raw) |
 | Booleans | `boolean` | `TRUE`/`FALSE`, `true`/`false` in raw text |
-| Enumerations | `text` + `CHECK` (or a `ref` table) | status, result, fail reason, size, trait, UOM (observations §6.2) |
+| Enumerations | `text` + `CHECK` (or a reference table) | status, result, fail reason, size, trait, UOM (observations §6.2) |
 
 Cast pattern from raw (never a bare `::numeric`):
 
@@ -183,7 +183,7 @@ CASE WHEN btrim(po_number) ~ '^(100|240)[0-9]{7}$|^(300|120)[0-9]{6}$|^100[0-9]{
 
 ### 4.3 NULLs and empty values
 
-| Situation | In CSV | In `raw` | In `ops` |
+| Situation | In CSV | In `raw` | In `silver` |
 | --- | --- | --- | --- |
 | Empty Excel cell | empty field | `NULL` | `NULL` |
 | Formula whose stored result is `""` (SAP `Hours`/`Capacity`) | empty field | `NULL` | not migrated |
@@ -195,12 +195,12 @@ CASE WHEN btrim(po_number) ~ '^(100|240)[0-9]{7}$|^(300|120)[0-9]{6}$|^100[0-9]{
 | Placeholder PO (`Off System`, `BAYER n`) | kept | kept | `po_number NULL`, `is_off_system = true`, `po_number_raw` kept |
 | Header-only / empty tabs | header / 0 bytes | table with 0 rows (or no data columns) | — |
 
-**Rule of thumb:** `raw` never changes a value. The only transformation is empty → `NULL`. Every interpretation happens in SQL on the way to `ops`, where it's visible and testable.
+**Rule of thumb:** `raw` never changes a value. The only transformation is empty → `NULL`. Every interpretation happens in SQL on the way to `silver`, where it's visible and testable.
 
 ### 4.4 Keys and lineage
 
 - `raw`: PK = `_source_row_number` (unique per table, since each run recreates the tables); `_load_id` → `raw.load_batch`.
-- `ops`: surrogate PK + `UNIQUE` business key + lineage columns (`source_csv`, `source_row_number`, `source_file_sha256`, `load_id`, `dq_flags`). Any `ops` row can be traced to its raw row, its CSV record and its Excel cell.
+- `silver`: surrogate PK + `UNIQUE` business key + lineage columns (`source_csv`, `source_row_number`, `source_file_sha256`, `load_id`, `dq_flags`). Any `silver` fact row can be traced to its raw row, its CSV record and its Excel cell.
 - Tested key findings (observations §5.4):
   - Unique: `Prod. Order` (SAP), `Work Center` (Resource Info), `Process Order` (Components), `PO Number` (Gravity, Colorsort, Line 2 excluding placeholders).
   - **No natural key** in the conditioning logs and pass/fail log.
@@ -210,7 +210,7 @@ CASE WHEN btrim(po_number) ~ '^(100|240)[0-9]{7}$|^(300|120)[0-9]{6}$|^100[0-9]{
 ## 5. Important takeaways
 
 1. **Keep `raw` dumb.** All text, one table per file, verbatim names, and only empty → NULL. This made the load fail-proof and keeps the Excel row as the audit trail.
-2. **The PO number is the join key, not the primary key.** It holds placeholders, lot numbers, leading zeros and typos, so `ops` uses surrogate keys, a normalized `po_number`, and `po_number_raw`.
+2. **The PO number is the join key, not the primary key.** It holds placeholders, lot numbers, leading zeros and typos, so `silver` uses surrogate keys, a normalized `po_number`, and `po_number_raw`.
 3. **Some POs appear on several lines**, so schedule rows (`line_schedule_item`, PO × work center) are separate from `process_order`.
 4. **Logs have no natural key**, not even the full row (15 exact duplicates). Their identity is the lineage.
 5. **Don't trust derived Excel columns.** Rates, loss %, week and delay are recomputed in views. They hold all 26 error-text cells.
@@ -298,12 +298,12 @@ select load_id, status, started_at, finished_at, source_workbooks from raw.load_
 
 | Topic | Decision | Alternative (not taken) and why |
 | --- | --- | --- |
-| Raw granularity | One raw table per CSV (40) | Union the 7 schedules into `schedule_history` and the SAP slices into `sap_backlog` in raw: good ideas, but for **`ops`**. Doing it in raw would break the one-table-per-file link to Excel |
+| Raw granularity | One raw table per CSV (40) | Union the 7 schedules into `schedule_history` and the SAP slices into `sap_backlog` in raw: good ideas, but for **`silver`**. Doing it in raw would break the one-table-per-file link to Excel |
 | Which files to load | All 40, including empty, header-only and layout tabs | Skip them: they cost nothing to load and make `raw` a complete mirror |
-| Duplicate `main` vs `excel_sap_data` (byte-identical) | Both loaded | Load one: dedup belongs in `ops` (SAP is loaded once there) |
+| Duplicate `main` vs `excel_sap_data` (byte-identical) | Both loaded | Load one: dedup belongs in `silver` (SAP is loaded once there) |
 | `lsv_gravity` empty column A | Kept as `col_a` | Drop it: keeping it preserves column position = Excel letter |
 | Metadata column names | `_`-prefixed | `source_row_number`: it collides with the transcribed files' own `source_row_number` column |
-| Null handling | Only empty → NULL in raw | Also convert `NA`/`-`/error text in raw: that's interpretation, deferred to `ops` |
+| Null handling | Only empty → NULL in raw | Also convert `NA`/`-`/error text in raw: that's interpretation, deferred to `silver` |
 | Load mechanics | `COPY` in one transaction, verify, then commit | Row inserts / per-table commits: slower, and a partial load would be possible |
 
 ---
@@ -313,7 +313,8 @@ select load_id, status, started_at, finished_at, source_workbooks from raw.load_
 | Item | Status |
 | --- | --- |
 | `raw.load_batch.finished_at` for load 1 shows the start of the final transaction (Postgres `now()` is fixed per transaction) | Fixed in the loader (`clock_timestamp()`); load 1's row is left as recorded |
+| Untracked Finder duplicates (`* 2.csv`) in `data_sources/` make the loader's file guard refuse to run | Remove them before rerunning `load_raw.py` |
 | 8 transcribed files not verified against the images | Plausibility check passed (§2); a visual check against the embedded images is still open |
 | Excel lock file `~$Pasco…xlsx` was committed in `0d7a658` | Remove it from git and add `~$*` to `.gitignore` |
-| `ref` / `ops` / `plan` layers | Next: DDL + SQL transforms per [uc1-data-model.md](./uc1-data-model.md) §5 and observations §6–§7 |
+| `silver` / `gold` layers | ✅ Built and reconciled by `backend/database/etl/build_model.py` ([uc1-data-model.md](./uc1-data-model.md) §5) |
 | Open data questions (Q-1…Q-10) | observations §10; model questions in uc1-data-model §9 |
