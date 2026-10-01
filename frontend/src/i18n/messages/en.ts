@@ -242,8 +242,6 @@ export const en = {
       lastUpdated: 'Last updated: Just now',
       pageTitle: 'Pasco Conditioning — Line 1',
       moodLine: 'Calm · Stable · Ready',
-      systemStable: 'System status Stable',
-      headerDate: 'May 21, 2025 · 09:42 AM',
       queueTitle: 'Line 1 queue',
       orderCount: '{n} orders',
       queueSubtitle: 'Stable state · BEFORE any event · No active alerts',

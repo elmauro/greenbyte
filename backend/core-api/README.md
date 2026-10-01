@@ -9,9 +9,9 @@ Routes mirror MSW / `plantDemoHandlers.ts`. Demo queue state is stored in Dynamo
 | Method | Path | Notes |
 | --- | --- | --- |
 | GET | `/demo/plant/lines/{lineId}/queue` | UI poll. When `PGHOST` or `DATABASE_URL` is set, the queue rows come from `gold.v_open_queue` (direct TLS to public RDS, no RDS Proxy). A pending Line 1 replan still comes from Dynamo until it is accepted. |
-| POST | `/demo/plant/ingest/sap-priority-change` | Rush — priority on existing PO |
-| POST | `/demo/plant/ingest/sap-queue-refresh` | Rush — new PO from SAP COISPI refresh (script C) |
-| POST | `/demo/plant/ingest/pass-fail-log` | Primary demo — QA hold replan |
+| POST | `/demo/plant/ingest/sap-priority-change` | Urgency on an existing PO. With `PGHOST` set, calls `gold.ingest_sap_priority_change` (writes `raw.ingest_event` + `silver.process_order_change`, then replans). |
+| POST | `/demo/plant/ingest/sap-queue-refresh` | New PO from a COISPI refresh. With `PGHOST` set, inserts `silver.process_order` and `silver.line_schedule_item`, then `gold.replan` writes a proposed plan for that line. |
+| POST | `/demo/plant/ingest/pass-fail-log` | QA fail on an existing PO. With `PGHOST` set, calls `gold.ingest_pass_fail` (writes `raw.ingest_event` + `silver.quality_test`, then replans). |
 | POST | `/demo/plant/events` | Legacy inject (`rush` \| `qa_fail`) |
 | POST | `/demo/plant/reset` | Demo reset |
 | POST | `/demo/plant/schedule/accept` | Human sign-off |

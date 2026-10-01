@@ -415,8 +415,6 @@ export const es: Messages = {
       lastUpdated: 'Última actualización: Justo ahora',
       pageTitle: 'Pasco Acondicionamiento — Línea 1',
       moodLine: 'Tranquilo · Estable · Listo',
-      systemStable: 'Estado del sistema Estable',
-      headerDate: '21 de mayo de 2025 · 09:42 AM',
       queueTitle: 'Cola Línea 1',
       orderCount: '{n} órdenes',
       queueSubtitle: 'Estado estable · ANTES de cualquier evento · Sin alertas activas',

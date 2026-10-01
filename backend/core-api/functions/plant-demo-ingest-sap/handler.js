@@ -1,7 +1,9 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
 import { dataReplanRequestFromSapIngest } from '../../services/plantDemo/ingestToDataReplan.js';
+import { isOpenQueueDbConfigured } from '../../services/plantDemo/openQueueDb.js';
 import { runPlantEvent } from '../../services/plantDemo/runEvent.js';
+import { SapIngestError, recordPriorityChange } from '../../services/plantDemo/sapIngestDb.js';
 import { loadState } from '../../services/plantDemo/stateRepository.js';
 
 const DEFAULT_RUSH_PO = '1002307551';
@@ -23,6 +25,11 @@ export async function handler(event) {
   const po = body.po ?? DEFAULT_RUSH_PO;
 
   try {
+    if (isOpenQueueDbConfigured()) {
+      const result = await recordPriorityChange({ ...body, lineId, po });
+      return jsonResponse(200, result);
+    }
+
     const state = await loadState(lineId);
     const inQueue = state.queue.some((r) => r.po === po && r.status !== 'COMPLETE');
     if (!inQueue) {
@@ -35,6 +42,9 @@ export async function handler(event) {
     const response = await runPlantEvent(replanRequest, 'sap_priority_change');
     return jsonResponse(200, response);
   } catch (err) {
+    if (err instanceof SapIngestError) {
+      return jsonResponse(err.status, { message: err.message });
+    }
     if (err.message === 'Unknown line') {
       return jsonResponse(404, { message: 'Unknown line' });
     }

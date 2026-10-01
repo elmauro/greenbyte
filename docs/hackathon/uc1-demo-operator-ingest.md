@@ -20,9 +20,9 @@ Content-Type: application/json
 
 ---
 
-## Rush — SAP priority / schedule signal (stub)
+## Rush — urgency on a lot already in the queue
 
-Simulates a **priority change** on PO `1002307551` (Pasco demo).
+Changes **priority** and/or **scheduled finish** on an open PO. When the API has `PGHOST` set, this calls `gold.ingest_sap_priority_change`. The row stays the same PO. The new rank and date land in `silver.process_order_change`, and `gold.v_open_queue` shows them on the next read. The database function also builds a new plan.
 
 ```http
 POST /demo/plant/ingest/sap-priority-change
@@ -37,15 +37,15 @@ Content-Type: application/json
 }
 ```
 
-**Response:** `PlantEventResponse` with `source: "sap_priority_change"`, `eventType: "rush"`.
+**Response (database connected):** the JSON from `gold.ingest_sap_priority_change` (`eventType`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
 
 **Alternate rush PO (script B):** same body with `"po": "1002174855"` (must exist in queue).
 
 ---
 
-## Rush — SAP COISPI refresh / surprise batch (script C)
+## Rush — new PO on a COISPI refresh
 
-Simulates a **new active PO** landing on Line 1 from SAP refresh, then replanned to head.
+Inserts one **new** open PO and builds a recommended plan for that line. When the API has `PGHOST` set, the row is written to `silver.process_order` and `silver.line_schedule_item`, then `gold.replan` runs with event type `queue_refresh`. `species` is required (4-letter code). A PO that already exists returns 409.
 
 ```http
 POST /demo/plant/ingest/sap-queue-refresh
@@ -62,14 +62,13 @@ Content-Type: application/json
 }
 ```
 
-**Response:** `PlantEventResponse` with `source: "sap_queue_refresh"`, `eventType: "rush"`.  
-**Data API target (Camilo):** `POST /schedule/refresh-from-sap` with the same JSON shape.
+**Response (database connected):** the JSON from `gold.event_response` (`eventType` `queue_refresh`, `source` `etl_refresh`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
 
 ---
 
-## QA fail — LSV pass/fail log row (stub)
+## QA fail — LSV pass/fail log row
 
-Simulates **`Pass/Fail = Fail`** for PO `1001884747` (Pasco Fail / Dent, Line 1).
+Records **`Pass/Fail = Fail`** on a PO already in process. When the API has `PGHOST` set, this calls `gold.ingest_pass_fail`. The row lands in `silver.quality_test` (same table as `lsv_pass_fail_log.csv`). `gold.v_po_quality_status` then shows the fail, and the line gets a new proposed plan. The PO must already be on that line's open queue.
 
 ```http
 POST /demo/plant/ingest/pass-fail-log
@@ -85,7 +84,7 @@ Content-Type: application/json
 }
 ```
 
-**Response:** `PlantEventResponse` with `source: "pass_fail_log"`, `eventType: "qa_fail"`.
+**Response (database connected):** the JSON from `gold.ingest_pass_fail` (`eventType` `qa_fail`, `source` `pass_fail_log`, `planVersion`, `queue`, `diff`). Without `PGHOST`, the stub still returns the in-memory replan.
 
 **Alternate QA (script B — Discolored):**
 

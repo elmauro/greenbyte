@@ -36,6 +36,19 @@ function getPool() {
  *
  * @param {string} lineId
  */
+export async function queryOpenQueue(text, params) {
+  return getPool().query(text, params);
+}
+
+export async function withOpenQueueClient(fn) {
+  const client = await getPool().connect();
+  try {
+    return await fn(client);
+  } finally {
+    client.release();
+  }
+}
+
 export async function fetchOpenQueue(lineId) {
   const { rows } = await getPool().query('SELECT * FROM gold.v_open_queue');
   const queue = mapOpenQueue(rows, lineId);

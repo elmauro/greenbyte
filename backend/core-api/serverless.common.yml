@@ -73,6 +73,14 @@ functions:
 
   plantDemoIngestPassFail:
     handler: functions/plant-demo-ingest-pass-fail/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: POST
@@ -80,6 +88,14 @@ functions:
 
   plantDemoIngestSap:
     handler: functions/plant-demo-ingest-sap/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: POST
@@ -87,6 +103,14 @@ functions:
 
   plantDemoIngestSapRefresh:
     handler: functions/plant-demo-ingest-sap-refresh/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: POST

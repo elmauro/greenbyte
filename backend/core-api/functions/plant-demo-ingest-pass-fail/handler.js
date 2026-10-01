@@ -1,7 +1,9 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { PLANT_DEMO_LINE_ID } from '../../services/plantDemo/constants.js';
 import { dataReplanRequestFromPassFailIngest } from '../../services/plantDemo/ingestToDataReplan.js';
+import { isOpenQueueDbConfigured } from '../../services/plantDemo/openQueueDb.js';
 import { runPlantEvent } from '../../services/plantDemo/runEvent.js';
+import { recordPassFail, SapIngestError } from '../../services/plantDemo/sapIngestDb.js';
 import { loadState } from '../../services/plantDemo/stateRepository.js';
 
 const DEFAULT_FAIL_PO = '1001884747';
@@ -28,6 +30,11 @@ export async function handler(event) {
   }
 
   try {
+    if (isOpenQueueDbConfigured()) {
+      const result = await recordPassFail({ ...body, lineId, po, passFail });
+      return jsonResponse(200, result);
+    }
+
     const state = await loadState(lineId);
     const row = state.queue.find((r) => r.po === po);
     if (!row || row.status === 'COMPLETE') {
@@ -40,6 +47,9 @@ export async function handler(event) {
     const response = await runPlantEvent(replanRequest, 'pass_fail_log');
     return jsonResponse(200, response);
   } catch (err) {
+    if (err instanceof SapIngestError) {
+      return jsonResponse(err.status, { message: err.message });
+    }
     if (err.message === 'Unknown line') {
       return jsonResponse(404, { message: 'Unknown line' });
     }

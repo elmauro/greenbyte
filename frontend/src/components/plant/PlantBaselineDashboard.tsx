@@ -825,13 +825,6 @@ export function PlantBaselineDashboard({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-700">
-                <span className="text-brand-green">🛡</span>
-                {b.systemStable}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-gray-600">
-                📅 {b.headerDate}
-              </span>
               {showProgramTimeline && !staticPreview && (
                 <div className="relative" ref={bellWrapRef}>
                   <button
