@@ -11,13 +11,26 @@ import {
   readAckPlanVersion,
   writeAckPlanVersion,
 } from '../demo/plant/plantDemoAckStorage';
-import { primaryPoFromPending } from '../demo/plant/plantEventUtils';
-import { getPlantEventExplanation, PLANT_DEMO_LINE_ID } from '../demo/plant/plantDemoServer';
+import {
+  explainPoFromQueue,
+  orderPoFromExplanation,
+  primaryPoFromPending,
+  scrubPlaceholderOrder,
+  shouldSurfacePendingNotice,
+} from '../demo/plant/plantEventUtils';
+import { PLANT_DEMO_LINE_ID } from '../demo/plant/plantDemoServer';
 import type { PlantPlanDiff } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n/LocaleContext';
 import { getApiConnectionMode } from '../services/apiConfig';
 import { applyManualOrder, readManualOrder, rememberManualOrder } from '../demo/plant/plantManualOrder';
 import { plantDemoApi } from '../services/plantDemoApi';
+
+function explanationFromQueue(value: PlantExplanation | null | undefined): PlantExplanation | null {
+  if (!value) return null;
+  const lines = [value.alertBanner, value.summary, ...(value.bullets ?? [])];
+  const hasText = lines.some((line) => typeof line === 'string' && line.trim().length > 0);
+  return hasText ? value : null;
+}
 
 export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LINE_ID) {
   const [queue, setQueue] = useState<QueueRow[]>([]);
@@ -64,17 +77,26 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
       setPlanVersion(res.planVersion);
 
       if (res.lastEvent) {
-        syncAckPlanVersion(null);
-        setEventType(res.lastEvent);
         const diff = res.pendingDiff ?? null;
-        setPendingDiff(diff);
-        setExplanation(
-          res.pendingExplanation ?? getPlantEventExplanation(res.lastEvent, locale),
-        );
-        setEventHighlightPo(primaryPoFromPending(res.lastEvent, diff, res.queue));
-        setAccepted(false);
-        return;
+        const pendingExplanation = explanationFromQueue(res.pendingExplanation);
+        if (shouldSurfacePendingNotice(pendingExplanation, diff, res.queue)) {
+          syncAckPlanVersion(null);
+          setEventType(res.lastEvent);
+          setPendingDiff(diff);
+          const orderPo = explainPoFromQueue(diff, res.queue) ?? orderPoFromExplanation(pendingExplanation);
+          setExplanation(
+            pendingExplanation ? scrubPlaceholderOrder(pendingExplanation, orderPo, locale) : null,
+          );
+          setEventHighlightPo(primaryPoFromPending(res.lastEvent, diff, res.queue));
+          setAccepted(false);
+          return;
+        }
       }
+
+      setEventType(null);
+      setExplanation(null);
+      setPendingDiff(null);
+      setEventHighlightPo(undefined);
 
       const mergedAck = mergeAckPlanVersion(acceptedPlanVersionRef.current, res.acceptedPlanVersion);
       if (mergedAck !== acceptedPlanVersionRef.current) {

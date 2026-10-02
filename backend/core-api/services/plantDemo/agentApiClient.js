@@ -47,6 +47,7 @@ export async function postExplainReplan(params) {
     lineId,
     moves: diff?.moves ?? [],
     added: diff?.added ?? [],
+    held: diff?.held ?? [],
     queue: queue ?? [],
   });
 }

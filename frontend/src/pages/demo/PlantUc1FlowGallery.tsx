@@ -8,7 +8,7 @@ import { PLANT_FLOW_STEPS } from '../../content/plantFlowSteps';
 import { buildPlantFlowSnapshots } from '../../demo/plant/plantFlowSnapshots';
 import { useLocale } from '../../i18n';
 
-export function PlantUc1FlowGallery() {
+export function PlantUc1FlowGallery({ embedded = false }: { embedded?: boolean }) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantFlowGallery;
   const snapshots = useMemo(() => buildPlantFlowSnapshots(locale), [locale]);
@@ -34,15 +34,15 @@ export function PlantUc1FlowGallery() {
 
   function goTo(index: number) {
     setActive(index);
-    setSearchParams({ step: PLANT_FLOW_STEPS[index].id }, { replace: true });
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set('step', PLANT_FLOW_STEPS[index].id);
+      return params;
+    }, { replace: true });
   }
 
-  return (
-    <SiteLayout>
-      <div className="pb-16">
-      <DemoPageIntro eyebrow={copy.eyebrow} title={copy.title} subtitle={copy.subtitle} />
-
-      <DemoPageBody>
+  const body = (
+      <DemoPageBody contained={!embedded} className={embedded ? 'py-0' : ''}>
         <nav
           className="flex items-center gap-2 overflow-x-auto border-b border-gray-200 pb-3 [-ms-overflow-style:none] [scrollbar-width:thin]"
           aria-label={copy.stepNavLabel}
@@ -91,28 +91,39 @@ export function PlantUc1FlowGallery() {
 
         <div className="mt-4 min-w-0">
           <h2 className="text-xl font-semibold text-brand-blue">{title}</h2>
-          <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">{copy.previewHeading}</p>
 
-          <div className="mt-4 flex min-w-0 flex-col gap-4 lg:flex-row lg:items-stretch">
-            <div className="min-w-0 flex-[1.55] overflow-x-auto lg:overflow-y-auto lg:max-h-[calc(100vh-12rem)]">
-              <PlantFlowStepPreview step={step} snapshots={snapshots} />
-            </div>
-            <div className="min-w-0 flex-1 lg:max-w-[22rem] xl:max-w-md shrink-0">
-              <PlantFlowApiPanel
-                trigger={trigger}
-                backendOwners={copy.backendOwners[step.backendOwnerKey]}
-                backendOwnersLabel={copy.backendOwnersLabel}
-                method={step.method}
-                path={step.path}
-                request={request}
-                response={response}
-                mapping={step.mapping}
-                compact
-              />
+          <div className="mt-4 space-y-4">
+            <PlantFlowApiPanel
+              trigger={trigger}
+              backendOwners={copy.backendOwners[step.backendOwnerKey]}
+              backendOwnersLabel={copy.backendOwnersLabel}
+              method={step.method}
+              path={step.path}
+              request={request}
+              response={response}
+              mapping={step.mapping}
+              requestHeading={copy.requestHeading}
+              responseHeading={copy.responseHeading}
+              noBody={copy.noBody}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-700">{copy.previewHeading}</p>
+              <div className="mt-3 min-w-0 overflow-x-auto">
+                <PlantFlowStepPreview step={step} snapshots={snapshots} />
+              </div>
             </div>
           </div>
         </div>
       </DemoPageBody>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <SiteLayout>
+      <div className="pb-16">
+        <DemoPageIntro eyebrow={copy.eyebrow} title={copy.title} subtitle={copy.subtitle} />
+        {body}
       </div>
     </SiteLayout>
   );

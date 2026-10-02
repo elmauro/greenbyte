@@ -16,6 +16,7 @@ export const en = {
     demoPlantUx: 'Program Timeline',
     demoPlantFlow: 'UC1 UI↔API',
     demoArchitecture: 'Architecture',
+    howItWorks: 'How it works',
   },
   demoCommon: {
     labels: {
@@ -28,6 +29,11 @@ export const en = {
     },
     viewPlant: 'View UC1 plant capacity walkthrough',
     viewArchitecture: 'View architecture diagrams',
+  },
+  howItWorks: {
+    navLabel: 'How it works',
+    architecture: 'Architecture',
+    api: 'UI and API',
   },
   demoPlant: {
     eyebrow: 'Syngenta UC1 · Plant Capacity',
@@ -111,7 +117,10 @@ export const en = {
     eyebrow: 'UC1 integration map',
     title: 'UI controls ↔ BFF ↔ JSON (live components)',
     subtitle:
-      'Left: the same React widgets as the plant screen. Right: the HTTP contract. While a plan is PROPOSED, GET queue returns that plan and the copilot summary; otherwise it reads gold.v_open_queue. These pictures use the scripted snapshot so rush and QA stay on one story.',
+      'Each step starts with the call: method, path, the example request, and the JSON that comes back. The screen preview sits under that contract. While a plan is PROPOSED, GET queue returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
+    requestHeading: 'Request',
+    responseHeading: 'Response',
+    noBody: 'No request body. Use line-1 or line-2 in the path. locale is en or es.',
     componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue returns the proposed plan while it is PROPOSED, otherwise gold.v_open_queue.',
     previewHeading: 'UI preview',
     previewNote:

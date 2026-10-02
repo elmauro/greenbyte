@@ -18,7 +18,7 @@ GreenByte prepares **two** hackathon candidates with **one** physical architectu
 
 **UC1 backend handoff (3 triggers + JSON):** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md) · [uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json) · UI map: `/demo/plant/flow`.
 
-**Web page:** Sections mirror this table — shared platform, then UC1 block (flow + sequence + endpoints), then UC4 block. Live: [demo/architecture](https://greenbyte-ag.com/demo/architecture).
+**Web page:** Sections mirror this table — shared platform, then UC1 block (flow + sequence + endpoints), then UC4 block. Live: [How it works](https://greenbyte-ag.com/demo/how-it-works) (`/demo/architecture` redirects).
 
 ---
 
@@ -375,7 +375,7 @@ Live page structure (aligned with Sections 0, 7, and 8):
 4. **UC1 section** — Pasco goal, data path, flow + sequence PNGs, endpoint table (Section 7.3).
 5. **UC4 section** — R&D goal, CSV sources, flow + sequence PNGs, endpoint table (Section 8.3).
 
-URL: [https://greenbyte-ag.com/demo/architecture](https://greenbyte-ag.com/demo/architecture). Assets: `frontend/public/demo/architecture/`. This markdown keeps ASCII copies for PDF and offline reference.
+URL: [https://greenbyte-ag.com/demo/how-it-works](https://greenbyte-ag.com/demo/how-it-works). `/demo/architecture` redirects there. Assets: `frontend/public/demo/architecture/`. This markdown keeps ASCII copies for PDF and offline reference.
 
 ---
 

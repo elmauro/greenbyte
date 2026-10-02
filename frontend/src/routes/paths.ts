@@ -7,6 +7,7 @@ export const paths = {
   demoPlantTour: '/demo/plant/tour',
   demoPlantFlow: '/demo/plant/flow',
   demoArchitecture: '/demo/architecture',
+  demoHowItWorks: '/demo/how-it-works',
 } as const;
 
 /** Post-login landing when sign-in has no valid `returnTo` query. */

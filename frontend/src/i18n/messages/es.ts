@@ -18,6 +18,7 @@ export const es: Messages = {
     demoPlantUx: 'Línea de tiempo del programa',
     demoPlantFlow: 'UC1 UI↔API',
     demoArchitecture: 'Arquitectura',
+    howItWorks: 'Cómo funciona',
   },
   demoCommon: {
     labels: {
@@ -30,6 +31,11 @@ export const es: Messages = {
     },
     viewPlant: 'Ver recorrido UC1 — capacidad de planta',
     viewArchitecture: 'Ver diagramas de arquitectura',
+  },
+  howItWorks: {
+    navLabel: 'Cómo funciona',
+    architecture: 'Arquitectura',
+    api: 'UI y API',
   },
   demoArchitecture: {
     eyebrow: 'Hackathon Syngenta · Base técnica',
@@ -279,7 +285,10 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
     eyebrow: 'Mapa de integración UC1',
     title: 'Controles UI ↔ BFF ↔ JSON (componentes en vivo)',
     subtitle:
-      'Izquierda: los mismos widgets que la pantalla de planta. Derecha: el contrato HTTP. Mientras un plan está PROPOSED, GET cola devuelve ese plan y el resumen del copiloto; si no, lee gold.v_open_queue. Estas imágenes usan el snapshot del guion para que rush y QA sigan una sola historia.',
+      'Cada paso empieza por la llamada: método, ruta, el ejemplo de petición y el JSON de respuesta. La vista previa de la pantalla queda debajo de ese contrato. Mientras un plan está PROPOSED, GET cola devuelve ese plan y el resumen del copiloto; si no, lee gold.v_open_queue.',
+    requestHeading: 'Petición',
+    responseHeading: 'Respuesta',
+    noBody: 'Sin cuerpo. Use line-1 o line-2 en la ruta. locale es en o es.',
     componentNote: 'Snapshot de la vista previa: plantDemoServer. /demo/plant en vivo: GET cola devuelve el plan propuesto mientras está PROPOSED; si no, gold.v_open_queue.',
     previewHeading: 'Vista previa UI',
     previewNote:
