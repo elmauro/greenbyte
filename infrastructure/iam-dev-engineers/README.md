@@ -49,10 +49,22 @@ Developers should **not** share keys; rotate if leaked.
 | Attachment | Purpose |
 | --- | --- |
 | AWS managed **`PowerUserAccess`** | Full access to AWS services **except** IAM/user/org admin (AWS-maintained baseline). |
-| **`greenbyte-dev-deny-iam-admin`** | Explicit **Deny** on IAM identity changes (users, groups, roles, policies, access keys for *other* users). |
+| **`greenbyte-dev-deny-iam-admin`** | Explicit **Deny** on IAM **identity** admin (users, groups, customer-managed policies). **Does not** block Lambda execution roles — see **`greenbyte-dev-allow-serverless-iam`**. |
 | **`greenbyte-dev-cost-guardrails`** | **Deny** selected expensive actions / SKUs (EC2/RDS instance sizes, other regions, etc.). |
+| **`greenbyte-dev-allow-serverless-iam`** | **Allow** `iam:CreateRole`, `PassRole`, etc. on `greenbyte-*` roles only (PowerUser excludes most `iam:*`). |
 
-`PowerUserAccess` still allows **`iam:PassRole`** for deploying Lambda/Serverless — required for Camilo/David stacks. It does **not** allow creating IAM users.
+**PowerUserAccess** plus the deny policy above allows **Serverless / Lambda deploy** (execution roles, `iam:PassRole`, CloudFormation stacks). It does **not** allow creating IAM users or attaching admin policies.
+
+### Deploy Lambdas (Serverless)
+
+From repo root, with CLI profile for your IAM user (`us-east-1`):
+
+```powershell
+cd backend
+./deploy-backend.sh dev
+```
+
+Details: [`backend/core-api/README.md`](../../backend/core-api/README.md). Optional env vars (`DATABASE_URL`, etc.) are documented there.
 
 ## Limits (honest)
 

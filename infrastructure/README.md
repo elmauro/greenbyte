@@ -16,6 +16,7 @@ infrastructure/
 ├─ proxydb/
 ├─ ses/
 ├─ web/
+├─ iam-dev-engineers/   # HatchWorks dev IAM (Lambda/Serverless deploy)
 └─ scripts/
 ```
 

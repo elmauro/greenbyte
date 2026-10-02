@@ -71,6 +71,19 @@ resource "aws_iam_group_policy_attachment" "cost_guardrails" {
   policy_arn = aws_iam_policy.cost_guardrails.arn
 }
 
+resource "aws_iam_policy" "serverless_deploy_iam" {
+  name        = "${var.project_prefix}-dev-allow-serverless-iam"
+  description = "IAM role lifecycle for greenbyte-* Lambda execution roles (Serverless Framework)."
+  policy = templatefile("${path.module}/policies/allow-serverless-deploy-iam.json.tpl", {
+    account_id = data.aws_caller_identity.current.account_id
+  })
+}
+
+resource "aws_iam_group_policy_attachment" "serverless_deploy_iam" {
+  group      = aws_iam_group.dev_engineers.name
+  policy_arn = aws_iam_policy.serverless_deploy_iam.arn
+}
+
 resource "aws_iam_user_login_profile" "dev_engineer" {
   for_each = var.create_console_login ? aws_iam_user.dev_engineer : {}
 
