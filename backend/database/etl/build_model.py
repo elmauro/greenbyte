@@ -18,6 +18,10 @@ Usage:
   python build_model.py --checks-only      # run the reconciliation against the current build (read-only)
   python build_model.py --scenario         # run tests/demo_scenario.sql and roll it back
   python build_model.py --reset-demo line-1  # void the line's ingest events and restore the baseline plan
+  python build_model.py --validate         # grain / relation / constraint report (read-only, tests/gold_v4_validation.sql)
+  python build_model.py --upgrade-gold-v4  # live DB: keep raw/silver, rename changed gold tables to *_legacy,
+                                           # create gold v4 and regenerate the plans (etl/gold-model/)
+  python build_model.py --upgrade-gold-planner-v2  # live DB: gold planner v2 in place (additive), plans kept
 """
 
 import argparse
@@ -26,15 +30,18 @@ import time
 from pathlib import Path
 
 DB = Path(__file__).resolve().parents[1]
-BUILDER_VERSION = "1.0.0"
+BUILDER_VERSION = "1.1.0"
 
 # Order respects the FKs (observations.md §9.3).
 STEPS = [
     "migrations/001_schemas.sql",
     "migrations/002_raw_ingest_event.sql",
+    "migrations/006_raw_note_curation.sql",
     "migrations/003_silver_reference.sql",
     "migrations/004_silver_facts.sql",
     "migrations/005_gold_runtime.sql",
+    "migrations/007_gold_v4_runtime.sql",
+    "migrations/008_gold_planner_v2.sql",
     "etl/transforms/silver/00_rules.sql",
     "etl/transforms/silver/05_staging.sql",
     "etl/transforms/silver/10_reference.sql",
@@ -42,16 +49,52 @@ STEPS = [
     "etl/transforms/silver/20_process_order.sql",
     "etl/transforms/silver/30_facts.sql",
     "etl/transforms/silver/40_ingest.sql",
-    "etl/transforms/gold/10_views.sql",
     "seeds/gold_reason_code.sql",
+    "seeds/gold_policy.sql",
+    "seeds/gold_planner_reference.sql",
+    "etl/transforms/gold/05_semantic.sql",
+    "etl/transforms/gold/10_views.sql",
     "seeds/gold_changeover_rule.sql",
     "seeds/silver_customer_order.sql",
     "etl/transforms/gold/20_replan.sql",
     "etl/transforms/gold/30_api.sql",
     "etl/transforms/gold/40_baseline.sql",
 ]
+# Gold v4 in place (team decision 2026-10-01): raw/silver untouched, changed gold tables kept as *_legacy,
+# gold.config / gold.changeover_rule reused, gold code recreated, plans regenerated (baseline + ingest replay).
+UPGRADE_GOLD_V4 = [  # v3 -> v4 + planner v2 (008 is needed by the current policy seed)
+    "migrations/006_raw_note_curation.sql",
+    "upgrades/2026-10-01_gold_v4_legacy.sql",
+    "migrations/007_gold_v4_runtime.sql",
+    "migrations/008_gold_planner_v2.sql",
+    "seeds/gold_reason_code.sql",
+    "seeds/gold_policy.sql",
+    "seeds/gold_planner_reference.sql",
+    "etl/transforms/gold/05_semantic.sql",
+    "etl/transforms/gold/10_views.sql",
+    "etl/transforms/gold/20_replan.sql",
+    "etl/transforms/gold/30_api.sql",
+    "etl/transforms/gold/40_baseline.sql",
+]
+# Gold planner v2 in place (decision Q9a, 2026-10-02): ALTER the gold tables (additive), add the planner tables,
+# recreate gold code; plans and all rows are kept.
+UPGRADE_GOLD_PLANNER_V2 = [
+    "upgrades/2026-10-02_gold_planner_v2.sql",
+    "migrations/008_gold_planner_v2.sql",
+    "seeds/gold_reason_code.sql",
+    "seeds/gold_policy.sql",
+    "seeds/gold_planner_reference.sql",
+    "etl/transforms/gold/05_semantic.sql",
+    "etl/transforms/gold/10_views.sql",
+    "etl/transforms/gold/20_replan.sql",
+    "etl/transforms/gold/30_api.sql",
+    "upgrades/2026-10-02_gold_planner_v2_backfill.sql",
+]
 RECONCILIATION = "tests/reconciliation.sql"
+GOLD_V4_CHECKS = "tests/gold_v4_checks.sql"
+VALIDATION = "tests/gold_v4_validation.sql"
 SCENARIO = "tests/demo_scenario.sql"
+PLANNER_SCENARIO = "tests/planner_scenario.sql"
 
 SUMMARY_SQL = """
 SELECT 'silver.' || t, n FROM (VALUES
@@ -66,6 +109,12 @@ SELECT 'silver.' || t, n FROM (VALUES
     ('customer_order (synthetic)', (SELECT count(*) FROM silver.customer_order))) v(t, n)
 UNION ALL
 SELECT 'gold.schedule_plan', count(*) FROM gold.schedule_plan
+UNION ALL
+SELECT 'gold.source_note', count(*) FROM gold.source_note
+UNION ALL
+SELECT 'gold.semantic_fact (trusted)', count(*) FROM gold.v_trusted_fact
+UNION ALL
+SELECT 'raw.note_reading', count(*) FROM raw.note_reading
 UNION ALL
 SELECT 'raw.ingest_event (active)', count(*) FROM raw.ingest_event WHERE voided_at IS NULL
 """
@@ -82,6 +131,13 @@ def run_checks(cur):
     return cur.fetchone()[0]
 
 
+def run_v4_checks(cur):
+    """Run the gold v4 checks (raises on any mismatch); return the number of checks."""
+    cur.execute(read(GOLD_V4_CHECKS))
+    cur.execute("SELECT count(*) FROM _check_v4")
+    return cur.fetchone()[0]
+
+
 def main():
     ap = argparse.ArgumentParser()
     mode = ap.add_mutually_exclusive_group()
@@ -89,16 +145,27 @@ def main():
     mode.add_argument("--checks-only", action="store_true")
     mode.add_argument("--scenario", action="store_true")
     mode.add_argument("--reset-demo", metavar="LINE")
+    mode.add_argument("--upgrade-gold-v4", action="store_true")
+    mode.add_argument("--validate", action="store_true")
+    mode.add_argument("--upgrade-gold-planner-v2", action="store_true")
     args = ap.parse_args()
 
-    missing = [s for s in STEPS + [RECONCILIATION, SCENARIO] if not (DB / s).is_file()]
+    missing = [s for s in STEPS + UPGRADE_GOLD_V4 + UPGRADE_GOLD_PLANNER_V2 + [RECONCILIATION, GOLD_V4_CHECKS, VALIDATION, SCENARIO, PLANNER_SCENARIO] if not (DB / s).is_file()]
     if missing:
         sys.exit(f"Missing SQL files: {missing}")
 
     if args.dry_run:
         for i, s in enumerate(STEPS, 1):
             print(f"{i:>2}. {s}")
-        print(f"    then {RECONCILIATION} (same transaction)")
+        print(f"    then {RECONCILIATION} + {GOLD_V4_CHECKS} (same transaction)")
+        print("--upgrade-gold-v4:")
+        for i, s in enumerate(UPGRADE_GOLD_V4, 1):
+            print(f"{i:>2}. {s}")
+        print(f"    then {GOLD_V4_CHECKS} (same transaction)")
+        print("--upgrade-gold-planner-v2:")
+        for i, s in enumerate(UPGRADE_GOLD_PLANNER_V2, 1):
+            print(f"{i:>2}. {s}")
+        print(f"    then {GOLD_V4_CHECKS} (same transaction)")
         return
 
     import psycopg
@@ -108,14 +175,58 @@ def main():
         conn.add_notice_handler(lambda d: notices.append(f"{d.severity}: {d.message_primary}"))
         with conn.cursor() as cur:
             if args.checks_only:
+                failed = False
+                for name, fn in (("reconciliation", run_checks), ("gold v4", run_v4_checks)):
+                    try:
+                        with conn.transaction(force_rollback=True):
+                            print(f"{name}: {fn(cur)} checks passed")
+                    except psycopg.Error as e:
+                        failed = True
+                        print(f"{name}: FAILED: {e.diag.message_primary}")
+                if failed:
+                    sys.exit(1)
+                return
+
+            if args.validate:
                 with conn.transaction(force_rollback=True):
-                    n = run_checks(cur)
-                print(f"reconciliation: {n} checks passed")
+                    cur.execute("SET TRANSACTION READ ONLY")
+                    cur.execute(read(VALIDATION))
+                    rows = cur.fetchall()
+                counts = {}
+                for r in rows:
+                    counts[r[8]] = counts.get(r[8], 0) + 1
+                    if r[8] != "PASS":
+                        gap = f" [{r[5]}]" if r[5] else ""
+                        print(f"{r[8]:4} {r[0]}.{r[1]:26} {r[2]:11} {r[3]}{gap}: {r[7]} (expected {r[6]})"
+                              + (f" e.g. {r[9]}" if r[9] else ""))
+                print(f"validation: {len(rows)} checks — " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+                if counts.get("FAIL"):
+                    sys.exit(1)
+                return
+
+            if args.upgrade_gold_v4 or args.upgrade_gold_planner_v2:
+                started = time.monotonic()
+                steps = UPGRADE_GOLD_V4 if args.upgrade_gold_v4 else UPGRADE_GOLD_PLANNER_V2
+                with conn.transaction():
+                    for i, s in enumerate(steps, 1):
+                        t0 = time.monotonic()
+                        cur.execute(read(s))
+                        print(f"{i:>2}. {s:48} {time.monotonic() - t0:6.1f}s")
+                    print(f"gold v4: {run_v4_checks(cur)} checks passed")
+                    cur.execute(SUMMARY_SQL)
+                    summary = cur.fetchall()
+                for w in (x for x in notices if x.startswith("WARNING")):
+                    print(w)
+                for name, n in summary:
+                    print(f"{name:34} {n:>7}")
+                print(f"{'gold v4' if args.upgrade_gold_v4 else 'gold planner v2'} upgrade committed in "
+                      f"{time.monotonic() - started:.1f}s")
                 return
 
             if args.scenario:
                 with conn.transaction(force_rollback=True):
                     cur.execute(read(SCENARIO))
+                    cur.execute(read(PLANNER_SCENARIO))
                 print("\n".join(x for x in notices if "scenario" in x) or "scenario ran")
                 print("demo scenario passed (rolled back)")
                 return
@@ -134,6 +245,7 @@ def main():
                     print(f"{i:>2}. {s:48} {time.monotonic() - t0:6.1f}s")
                 n = run_checks(cur)
                 print(f"reconciliation: {n} checks passed")
+                print(f"gold v4: {run_v4_checks(cur)} checks passed")
                 cur.execute(SUMMARY_SQL)
                 summary = cur.fetchall()
 

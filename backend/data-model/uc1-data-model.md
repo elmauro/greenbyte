@@ -511,6 +511,8 @@ Scope order: Line 1 (`LSVLN1`) end to end first, then Line 2 / Gravity / Colorso
 
 ## 9. Open questions for Syngenta
 
+> **Consolidated list:** [uc1-open-questions.md](./uc1-open-questions.md) (SQ-01…SQ-34) supersedes this section and observations §10. It adds the questions found while building the model (fumigation, due date, seed in plant, QA fail → rework PO, calendar, frozen statuses).
+
 Model-level questions (data-level questions Q-1…Q-10 are in observations §10):
 
 1. Is the variety-change cost (about +1.75 h cleandown on Line 1) consistent with plant practice? Does moving between Excelis, GMO and Fresh require a full cleanout (`PSL Cleanout`)?

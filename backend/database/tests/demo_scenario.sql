@@ -5,6 +5,8 @@
 -- Demo anchors (real open Line 1 POs in the extract):
 --   rush    PO 1002295402  SWCO EA SUNGLOW, NEW, priority 9, last in the baseline -> SAP-style priority 2
 --   qa_fail PO 1002307552  SWCO GH4927-C,   NEW, priority 5                       -> Fail / Dent on Line 1
+--   not ready (gold v4, rules-v1 reading of the Run Order note): 1002266889 "Needs fumi!!" and 1002266913 "Not fumi"
+--   are HOLD; the running batch 1002267630 is also "Not fumi" but stays first with a warning reason.
 
 DO $$
 DECLARE
@@ -23,6 +25,15 @@ BEGIN
     ASSERT v_q -> 'lastEvent' = 'null'::jsonb, 'calm: no lastEvent';
     ASSERT jsonb_array_length(v_q -> 'queue') = 12, 'baseline has the 12 open LSVLN1 POs';
     ASSERT v_q -> 'queue' -> 0 ->> 'po' = '1002267630', 'ONLINE PO stays first';
+    ASSERT (SELECT count(*) FROM jsonb_array_elements(v_q -> 'queue') r
+            WHERE r ->> 'status' = 'HOLD' AND r ->> 'po' IN ('1002266889', '1002266913')) = 2,
+        'not-fumigated batches are held in the baseline';
+    ASSERT (SELECT count(*) FROM gold.v_plan_queue q
+            WHERE q.line_id = 'line-1' AND q.plan_version = 1 AND q.po_number = '1002266889'
+              AND q.reasons @> '[{"code": "NOT_READY_HOLD"}]') = 1, 'NOT_READY_HOLD reason on Needs fumi!!';
+    ASSERT (SELECT count(*) FROM gold.v_plan_queue q
+            WHERE q.line_id = 'line-1' AND q.plan_version = 1 AND q.po_number = '1002267630'
+              AND q.reasons @> '[{"code": "NOT_READY_WARNING"}]') = 1, 'running Not fumi batch is flagged, not held';
     SELECT position INTO v_pos FROM gold.v_plan_queue WHERE line_id = 'line-1' AND plan_version = 1 AND po_number = '1002295402';
     ASSERT v_pos > 2, 'rush anchor starts low in the baseline';
 
@@ -46,14 +57,17 @@ BEGIN
     ASSERT (SELECT count(*) FROM gold.v_plan_queue q
             WHERE q.line_id = 'line-1' AND q.plan_version = 3 AND q.po_number = '1002307552'
               AND q.reasons @> '[{"code": "QA_HOLD"}]') = 1, 'QA_HOLD reason cites the test';
-    ASSERT (SELECT count(*) FROM jsonb_array_elements(v_ev -> 'queue') r WHERE r ->> 'status' = 'PLANNED') = 11,
-        'the rest of the line keeps moving';
+    ASSERT (SELECT count(*) FROM jsonb_array_elements(v_ev -> 'queue') r WHERE r ->> 'status' = 'PLANNED') = 9,
+        'the rest of the line keeps moving (12 - QA fail - 2 not ready)';
 
     -- Act 3: facts-only package for the Agent
     SELECT schedule_plan_id INTO v_plan FROM gold.v_plan_queue WHERE line_id = 'line-1' AND plan_version = 3 LIMIT 1;
     v_ctx := gold.agent_context(v_plan);
     ASSERT v_ctx -> 'event' ->> 'po' = '1002307552', 'context names the event PO';
     ASSERT jsonb_array_length(v_ctx -> 'citable' -> 'qualityTestIds') = 1, 'context cites the failed test id';
+    ASSERT jsonb_array_length(v_ctx -> 'citable' -> 'factIds') >= 3, 'context cites the fumigation facts';
+    ASSERT (SELECT count(*) FROM jsonb_array_elements(v_ctx -> 'facts') f WHERE f ->> 'note' = 'Needs fumi!!') = 1,
+        'context quotes the note';
     ASSERT NOT EXISTS (
         SELECT 1 FROM jsonb_array_elements_text(v_ctx -> 'citable' -> 'poNumbers') p
         WHERE NOT EXISTS (SELECT 1 FROM silver.process_order po WHERE po.po_number = p)), 'every citable PO exists';
