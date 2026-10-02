@@ -65,7 +65,7 @@ export function PlantDemoLoginGate({ onSignedIn }: PlantDemoLoginGateProps) {
             {copy.submit}
           </button>
         </form>
-        <p className="mt-4 text-xs text-gray-500">{copy.hint}</p>
+        <p className="mt-4 whitespace-pre-line text-xs text-gray-500">{copy.hint}</p>
       </div>
     </div>
   );

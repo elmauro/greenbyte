@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-013` (update when assigning).
+**Next free execution ID:** `GREENBYTE-015` (update when assigning).
 
 ---
 
@@ -31,6 +31,8 @@ Status: **backlog** = FW without execution ID; **active** = feature folder exist
 
 | Execution story | Backlog ID | Feature slug | Feature name | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | P2 | shipped |
+| GREENBYTE-013 | n/a | `nav-pasco-conditioning-label` | Nav label Pasco conditioning | P2 | shipped |
 | GREENBYTE-012 | n/a | `remove-post-accept-queue-bell-notification` | Remove post-accept queue bell notification | P2 | shipped |
 | GREENBYTE-011 | n/a | `copilot-select-order-placeholder` | Copilot order select placeholder (not em dash) | P2 | shipped |
 | GREENBYTE-010 | n/a | `pending-po-highlight` | Pending replan PO highlight (not running slot) | P2 | shipped |
