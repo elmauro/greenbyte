@@ -7,6 +7,12 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-010 — Pending replan PO highlight
+
+- FW: `n/a` · Slug: `pending-po-highlight` · Stack: frontend
+- Change type: `fix` · Branch: `feature/greenbyte-010-pending-po-highlight` · PR: `fix(frontend): highlight moved PO from diff, not running slot`
+- Status: shipped · Shipped: 2026-10-02 · Package: n/a (small fix)
+
 ### GREENBYTE-009 — UC1 scheduler UX test cases
 
 - FW: `n/a` · Slug: `uc1-scheduler-ux-test-cases` · Stack: frontend

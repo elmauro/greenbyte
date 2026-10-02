@@ -4,9 +4,42 @@ import type { PlantEventType, PlantExplanation, PlantPlanDiff, QueueRow } from '
 export const DEFAULT_DEMO_RUSH_PO = '1002307551';
 export const DEFAULT_DEMO_QA_FAIL_PO = '1001884747';
 
+/** Slot-0 batch already on the line — not the Syngenta “rush / new PO” highlight target. */
+export function poAtRunningSlot(queue: QueueRow[]): string | undefined {
+  const head = queue[0];
+  if (!head?.po) return undefined;
+  const reason = head.reasonShort ?? '';
+  if (/already running/i.test(reason)) return head.po;
+  return undefined;
+}
+
+function poFromDiffMoves(
+  diff: PlantPlanDiff | null | undefined,
+  queue: QueueRow[],
+): string | undefined {
+  const running = poAtRunningSlot(queue);
+  for (const move of diff?.moves ?? []) {
+    const po = move?.po?.trim();
+    if (!po || po === running) continue;
+    return po;
+  }
+  return undefined;
+}
+
+function poFromQueueMoveFallback(queue: QueueRow[]): string | undefined {
+  const running = poAtRunningSlot(queue);
+  const moved = queue.find((row, index) => {
+    if (index === 0 || row.po === running) return false;
+    if (row.status !== 'PLANNED') return false;
+    const previous = row.previousPosition;
+    return previous != null && previous !== index + 1;
+  });
+  return moved?.po;
+}
+
 /**
  * PO to highlight on Gantt / scheduling when a replan is pending.
- * Prefer Agent/Data API diff; fall back to HOLD row or first move.
+ * Syngenta: highlight the batch that moved, was added, or went on QA hold — not the running head.
  */
 export function primaryPoFromPending(
   eventType: PlantEventType | null | undefined,
@@ -19,17 +52,17 @@ export function primaryPoFromPending(
     if (diff?.held?.[0]) return diff.held[0];
   }
 
-  if (diff?.added?.[0]) return diff.added[0];
+  const added = diff?.added?.[0]?.trim();
+  if (added) return added;
 
-  const firstMove = diff?.moves?.[0]?.po;
-  if (firstMove) return firstMove;
+  const movePo = poFromDiffMoves(diff, queue);
+  if (movePo) return movePo;
 
   if (eventType === 'rush') {
-    const moved = queue.find((r) => r.previousPosition != null && r.status === 'PLANNED');
-    if (moved) return moved.po;
+    return poFromQueueMoveFallback(queue);
   }
 
-  return undefined;
+  return poFromQueueMoveFallback(queue);
 }
 
 const PLACEHOLDER_ORDER = new Set(['—', '–', '-', 'PO']);
@@ -102,12 +135,13 @@ export function explainPoFromQueue(
   if (added) return added;
   const held = diff?.held?.map(usableOrderPo).find(Boolean);
   if (held) return held;
-  const moved = diff?.moves?.map((row) => usableOrderPo(row.po)).find(Boolean);
-  if (moved) return moved;
-  const rushed = queue.find(
-    (row) => row.previousPosition != null && usableOrderPo(row.po),
-  );
-  if (rushed) return rushed.po;
+  const running = poAtRunningSlot(queue);
+  for (const move of diff?.moves ?? []) {
+    const po = usableOrderPo(move.po);
+    if (po && po !== running) return po;
+  }
+  const rushed = poFromQueueMoveFallback(queue);
+  if (rushed && usableOrderPo(rushed)) return rushed;
   return undefined;
 }
 
