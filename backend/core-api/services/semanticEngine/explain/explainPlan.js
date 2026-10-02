@@ -3,6 +3,7 @@ const DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/g;
 
 function packetText(packet) {
   return JSON.stringify({
+    event: packet.event || null,
     impact: packet.impact || {},
     proposals: packet.proposals || [],
     entries: (packet.entries || []).map((entry) => ({
@@ -20,7 +21,11 @@ function packetText(packet) {
 
 export function citablePos(packet) {
   const fromEntries = (packet.entries || []).map((entry) => String(entry.poNumber || entry.po || '')).filter(Boolean);
-  const fromImpact = [...(packet.impact?.newlyLate || []), ...(packet.impact?.noLongerLate || [])].map(String);
+  const fromImpact = [
+    ...(packet.impact?.late || []),
+    ...(packet.impact?.newlyLate || []),
+    ...(packet.impact?.noLongerLate || []),
+  ].map(String);
   const fromDiff = [
     ...(packet.diff?.added || []),
     ...(packet.diff?.removed || []),
@@ -28,7 +33,8 @@ export function citablePos(packet) {
     ...(packet.diff?.moves || []).map((move) => move.po),
   ].map((po) => String(po || '')).filter(Boolean);
   const fromProposals = (packet.proposals || []).map((proposal) => String(proposal.parentPo || '')).filter(Boolean);
-  return new Set([...fromEntries, ...fromImpact, ...fromDiff, ...fromProposals, ...(packet.citablePos || [])]);
+  const fromEvent = packet.event?.po ? [String(packet.event.po)] : [];
+  return new Set([...fromEntries, ...fromImpact, ...fromDiff, ...fromProposals, ...fromEvent, ...(packet.citablePos || [])]);
 }
 
 export function explanationGuard(explanation, packet) {
@@ -45,30 +51,66 @@ export function explanationGuard(explanation, packet) {
   return { ok: true };
 }
 
+function listPos(pos, max = 5) {
+  if (pos.length <= max) return pos.join(', ');
+  return `${pos.slice(0, max).join(', ')} and ${pos.length - max} more`;
+}
+
+function lineLabel(lineId) {
+  const number = String(lineId || '').match(/(\d+)$/)?.[1];
+  return number ? `Line ${number}` : 'the line';
+}
+
+function eventHeadline(event, entries, line) {
+  if (!event?.po) return null;
+  if (event.kind === 'qa_fail') {
+    return `QA fail${event.failedFor ? ` (${event.failedFor})` : ''} on ${event.po}: repair proposed for ${line}.`;
+  }
+  if (event.kind === 'rush' || event.kind === 'priority_change') {
+    const entry = (entries || []).find((row) => String(row.poNumber || row.po) === String(event.po));
+    return entry?.position != null
+      ? `Rush ${event.po} placed at position ${entry.position} on ${line}.`
+      : `Rush ${event.po} re-planned on ${line}.`;
+  }
+  return null;
+}
+
 export function templateExplanation(packet) {
-  const late = packet.impact?.newlyLate || [];
+  const newlyLate = packet.impact?.newlyLate || [];
+  const late = packet.impact?.late || newlyLate;
   const proposals = packet.proposals || [];
-  const line = packet.lineId || 'the line';
-  const focus = late[0] || proposals[0]?.parentPo || packet.entries?.[0]?.poNumber || packet.entries?.[0]?.po;
-  const banner = late.length
-    ? `${late.length} order${late.length === 1 ? '' : 's'} now finish after the SAP finish date on ${line}.`
-    : `Plan updated for ${line}.`;
+  const line = lineLabel(packet.lineId);
+  const focus = newlyLate[0] || proposals[0]?.parentPo || packet.entries?.[0]?.poNumber || packet.entries?.[0]?.po;
+  const plural = (n) => `${n} order${n === 1 ? '' : 's'}`;
+  const lateBanner = newlyLate.length
+    ? `${plural(newlyLate.length)} now finish after the SAP finish date on ${line}.`
+    : late.length
+      ? `${plural(late.length)} on ${line} finish after the SAP finish date.`
+      : `Plan updated for ${line}; every order meets its SAP finish date.`;
+  const eventBanner = eventHeadline(packet.event, packet.entries, line);
+  const banner = eventBanner || lateBanner;
   const bullets = [];
-  if (late.length) bullets.push(`Newly late: ${late.join(', ')}.`);
-  for (const proposal of proposals) {
+  if (eventBanner && (newlyLate.length || late.length)) bullets.push(lateBanner);
+  if (newlyLate.length) bullets.push(`Newly late: ${listPos(newlyLate)}.`);
+  else if (late.length) bullets.push(`Late: ${listPos(late)}.`);
+  for (const proposal of proposals.slice(0, 2)) {
     bullets.push(proposal.route
       ? `Repair proposal for ${proposal.parentPo}: ${proposal.route}.`
-      : `Repair proposal for ${proposal.parentPo}: route not mapped.`);
+      : `Repair proposal for ${proposal.parentPo}: route not mapped yet.`);
   }
-  const load = packet.impact?.weeklyLoad?.[0];
-  if (load) bullets.push(`Week ${load.week}: ${load.hoursRequired} h required, ${load.hoursAvailable} h available.`);
-  if (packet.violations?.length) bullets.push(`Needs a look: ${packet.violations.map((item) => item.code).join(', ')}.`);
-  if (!bullets.length) bullets.push('Order follows priority, then species, then SAP finish date.');
+  const overloaded = (packet.impact?.weeklyLoad || []).find((row) => row.hoursRequired > row.hoursAvailable);
+  if (overloaded) {
+    bullets.push(`Week ${overloaded.week}: ${overloaded.hoursRequired} h of work for ${overloaded.hoursAvailable} h of line time.`);
+  }
+  if (packet.violations?.length) bullets.push(`Needs a look: ${[...new Set(packet.violations.map((item) => item.code))].join(', ')}.`);
+  bullets.push('Order follows priority, then species, then SAP finish date. No SAP write.');
   return {
     alertBanner: banner,
-    summary: focus ? `${banner} Focus ${focus}.` : banner,
+    summary: focus ? `${banner} Focus PO ${focus}.` : banner,
     bullets: bullets.slice(0, 4),
-    impact: late.length ? `Newly late: ${late.join(', ')}.` : 'No new SAP-finish misses.',
+    impact: newlyLate.length
+      ? `Newly late: ${listPos(newlyLate)}.`
+      : late.length ? `Late: ${listPos(late)}.` : 'No SAP-finish misses.',
   };
 }
 
@@ -93,7 +135,7 @@ export async function explainPlan(packet, clients = {}) {
 function explainPrompt(packet, rejection) {
   return [
     'Return JSON with alertBanner, summary, bullets (max 4), impact.',
-    'Use only process order numbers and dates from this packet. Lead with orders that miss the SAP finish date.',
+    'Use only process order numbers and dates from this packet. Lead with the triggering event when "event" is set, then orders that miss the SAP finish date.',
     rejection ? `Previous answer was rejected: ${rejection}.` : '',
     packetText(packet),
   ].filter(Boolean).join('\n');

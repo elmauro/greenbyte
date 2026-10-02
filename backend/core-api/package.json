@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "semantic:smoke": "node scripts/semantic-smoke.mjs",
+    "local:bff": "node scripts/local-bff.mjs"
+  },
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.750.0",
     "@aws-sdk/client-dynamodb": "^3.750.0",
     "@aws-sdk/util-dynamodb": "^3.750.0",
     "pg": "^8.16.0"

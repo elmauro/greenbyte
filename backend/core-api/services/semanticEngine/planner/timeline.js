@@ -40,6 +40,13 @@ function reasonsFor(order, meta) {
   if (order.statusCode === 'ONLINE') {
     add('ALREADY_RUNNING', { work_center_code: meta.workCenterCode, status_code: order.statusCode });
   }
+  if (order.rushPlacement) {
+    add('RUSH_PRIORITY', {
+      source: 'scheduler',
+      priority_rank: order.priorityRank ?? 'rush',
+      previous_priority: order.schedulePriorityRank ?? order.priorityRank ?? 'none',
+    });
+  }
   if (order.priorityRank != null && order.statusCode !== 'ONLINE') {
     add('PRIORITY', { priority_rank: order.priorityRank, priority_source: order.prioritySource || 'SAP' });
   }
@@ -73,7 +80,6 @@ function reasonsFor(order, meta) {
   if (order.isHold && order.qualityTestId != null) {
     add('QA_HOLD', { quality_test_id: String(order.qualityTestId), source: 'pass_fail_log' });
   }
-  if (order.rushPlacement) add('RUSH_PRIORITY', { source: 'scheduler' });
   if (order.notReadyFact && order.statusCode === 'ONLINE') {
     add('NOT_READY_WARNING', {
       fact_label: order.notReadyFact.label,
@@ -101,7 +107,7 @@ export function timeSequence(sequence, line, snapshot, eventType, previousByPo) 
     const changeover = order.statusCode === 'ONLINE' ? 0 : changeoverHours(transition, line);
     const rate = order.kgPerHour || line.kgPerHour;
     const runH = rate ? round2(Number(order.inputKg || 0) / rate) : 0;
-    const ready = order.readyBy ? new Date(order.readyBy) : null;
+    const ready = order.readyBy && order.statusCode !== 'ONLINE' ? new Date(order.readyBy) : null;
     const startBase = ready && ready > cursor ? ready : cursor;
     const openStart = addWorkingHours(startBase, 0, calendar, downtime, timeZone);
     const afterChangeover = addWorkingHours(openStart, changeover, calendar, downtime, timeZone);
@@ -183,11 +189,20 @@ export function weeklyLoad(entries, line, snapshot) {
   const downtime = (snapshot.downtime || []).filter((window) => !window.lineId || window.lineId === line.lineId);
   const weeks = new Map();
   for (const entry of entries) {
-    if (!entry.plannedStartAt) continue;
-    const week = isoWeek(new Date(entry.plannedStartAt), timeZone);
-    const bucket = weeks.get(week) || { hoursRequired: 0 };
-    bucket.hoursRequired += Number(entry.estRunH || 0) + Number(entry.estChangeoverH || 0);
-    weeks.set(week, bucket);
+    if (!entry.plannedStartAt || !entry.plannedEndAt) continue;
+    const start = new Date(entry.plannedStartAt);
+    const end = new Date(entry.plannedEndAt);
+    let cursor = start;
+    while (cursor < end) {
+      const week = isoWeek(cursor, timeZone);
+      const { end: weekEnd } = isoWeekBounds(week, timeZone);
+      if (weekEnd <= cursor) throw new Error(`Week ${week} ends before ${cursor.toISOString()}`);
+      const sliceEnd = end < weekEnd ? end : weekEnd;
+      const bucket = weeks.get(week) || { hoursRequired: 0 };
+      bucket.hoursRequired += workingHoursBetween(cursor, sliceEnd, calendar, downtime, timeZone);
+      weeks.set(week, bucket);
+      cursor = sliceEnd;
+    }
   }
   return [...weeks.entries()].map(([week, bucket]) => {
     const { start: monday, end: sunday } = isoWeekBounds(week, timeZone);

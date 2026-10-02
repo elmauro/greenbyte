@@ -34,7 +34,7 @@ export function withReadyBy(facts, asOf) {
   const start = asOf ? new Date(asOf) : new Date();
   return facts.map((fact) => {
     const reason = fact.fact_value?.reason;
-    if (fact.fact_type !== 'NOT_READY' || !reason) return fact;
+    if (fact.fact_type !== 'NOT_READY' || !reason || fact.fact_value.ready_by) return fact;
     const days = reason === 'FUMIGATION' ? 3 : reason === 'RAW_GERM_PENDING' ? 14 : null;
     if (days == null) return fact;
     const ready = new Date(start.getTime() + days * 24 * 3600 * 1000);

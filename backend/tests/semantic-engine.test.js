@@ -1,8 +1,11 @@
 import { handler as explainHandler } from '../core-api/functions/agent-explain-replan/handler.js';
 import { handler as factsHandler } from '../core-api/functions/agent-facts-extract/handler.js';
 import { handler as planHandler } from '../core-api/functions/agent-plan-compute/handler.js';
-import { loadSnapshot, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
+import { jest } from '@jest/globals';
+import { replanWithSemanticEngine, withSemanticPlan } from '../core-api/services/plantDemo/semanticReplan.js';
+import { loadSnapshot, PlannerNotReadyError, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
 import { explainPlan, explanationGuard } from '../core-api/services/semanticEngine/explain/explainPlan.js';
+import { createJevClassifier } from '../core-api/services/semanticEngine/models/clients.js';
 import { extractFacts } from '../core-api/services/semanticEngine/notes/extractFacts.js';
 import { snapshotFromGold } from '../core-api/services/semanticEngine/snapshot/mapSnapshot.js';
 
@@ -13,6 +16,31 @@ function post(body) {
 }
 
 describe('note reader', () => {
+  it('asks JEV through the OpenRouter Decisions API and maps the choice answers', async () => {
+    let request;
+    const fetchImpl = async (url, init) => {
+      request = { url, body: JSON.parse(init.body) };
+      return {
+        ok: true,
+        json: async () => ({
+          model: 'typesafe/jev-1.13-20260917',
+          answers: {
+            fact_type: { type: 'choice', choice: 'NOT_READY', confidence: 0.93 },
+            not_ready_reason: { type: 'choice', choice: 'RAW_GERM_PENDING', confidence: 0.9 },
+          },
+        }),
+      };
+    };
+    const result = await extractFacts([{ po: '1005', text: 'germ pending pls', asOf }], { classify: createJevClassifier(fetchImpl) });
+    expect(request.url).toBe('https://openrouter.ai/api/alpha/decisions');
+    expect(request.body).toMatchObject({ model: 'typesafe/jev-1.13', state: { note: 'germ pending pls' } });
+    expect(Object.keys(request.body.questions)).toEqual(['fact_type', 'not_ready_reason']);
+    const [note] = result.notes;
+    expect(note).toMatchObject({ reader: 'BEDROCK', modelId: 'typesafe/jev-1.13-20260917' });
+    expect(note.facts[0]).toMatchObject({ fact_type: 'NOT_READY', status: 'AUTO', confidence: 0.93 });
+    expect(Date.parse(note.facts[0].fact_value.ready_by)).toBe(Date.parse(asOf) + 14 * 24 * 3600 * 1000);
+  });
+
   it('tags fumigation, hold, and rush without a model', async () => {
     const result = await extractFacts([
       { po: '1001', text: 'Needs fumi!!', asOf },
@@ -90,12 +118,20 @@ describe('gold snapshot', () => {
       throughput: [{ work_center_code: 'LSVLN2', grain: 'WORK_CENTER', median_kg_per_h: 800 }],
       previousPayload: { proposals: [{ parentPo: '999', route: 'COLORSORT', status: 'PROPOSED' }, { parentPo: '998', status: 'LINKED' }] },
     });
-    expect(snapshot.orders.map((order) => order.poNumber)).toEqual(['1002307551', '3001']);
+    expect(snapshot.orders.map((order) => order.poNumber)).toEqual(['1002307551']);
     expect(snapshot.orders[0].readyBy).toBe('2026-10-08T00:00:00Z');
     expect(snapshot.orders[0].sapFinishDate).toBe('2026-10-20');
-    expect(snapshot.orders[1].lineId).toBe('line-2');
     expect(snapshot.lines['line-2'].kgPerHour).toBe(800);
     expect(snapshot.proposals).toHaveLength(1);
+  });
+
+  it('puts repair-table orders on a line only when asked', () => {
+    const rows = [
+      { demo_line_id: null, work_center_code: 'LSVCLSRT', line_schedule_item_id: 8, process_order_id: 11, po_number: '3001', species_code: 'CORN', input_kg: '500', status_code: 'ONLINE', is_hold: false },
+    ];
+    expect(snapshotFromGold({ asOf, rows }).orders).toHaveLength(0);
+    const [repair] = snapshotFromGold({ asOf, rows, repairLineId: 'line-2' }).orders;
+    expect(repair).toMatchObject({ lineId: 'line-2', statusCode: 'RELEASED', sourceStatusCode: 'ONLINE' });
   });
 
   it('loads and saves through a query function', async () => {
@@ -109,19 +145,106 @@ describe('gold snapshot', () => {
       if (text.includes('planner_rules')) return { rows: [{ value: JSON.stringify({ season: 'HARVEST', timeZone: 'America/Los_Angeles', calendar: { LSVLN1: { weekdays: [1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00' }, LSVLN2: { weekdays: [1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00' } }, cleanoutTriggers: [], repairRoutes: {} }) }] };
       if (text.includes('changeover_rule')) return { rows: [] };
       if (text.includes('v_throughput')) return { rows: [] };
+      if (text.includes('pg_get_functiondef')) return { rows: [{ ok: true }] };
       if (text.includes('INSERT INTO gold.plan_event')) return { rows: [{ plan_event_id: 15 }] };
+      if (text.includes('WITH base')) return { rows: [{ po_number: '1001', position: 3, is_at_risk: true }] };
       if (text.includes('planner-v2') && text.includes('DISTINCT ON')) return { rows: [] };
-      if (text.includes('gold.replan')) return { rows: [{ schedule_plan_id: 44 }] };
+      if (text.includes('SELECT gold.replan(')) return { rows: [{ schedule_plan_id: 44 }] };
       return { rows: [] };
     };
     const snapshot = await loadSnapshot(query, { asOf });
     expect(snapshot.orders).toHaveLength(1);
+    expect(snapshot.previousEntries).toEqual([{ poNumber: '1001', position: 3, isAtRisk: true }]);
     const saved = await savePlan(query, {
       eventType: 'rush',
-      payloads: { 'line-2': { entries: [], impact: {}, proposals: [], downtime: [], overrides: [], violations: [] } },
+      payloads: {
+        'line-1': { entries: [] },
+        'line-2': { entries: [{ poNumber: '1001', position: 1, previousPosition: null }], impact: {}, proposals: [], downtime: [], overrides: [], violations: [] },
+      },
     });
     expect(saved).toEqual([{ lineId: 'line-2', planEventId: 15, schedulePlanId: 44 }]);
-    expect(calls.some((call) => call.text.includes('gold.replan') && call.params[0] === 'line-2' && call.params[1] === 15)).toBe(true);
+    const inserted = calls.find((call) => call.text.includes('INSERT INTO gold.plan_event'));
+    expect(inserted.text).toContain("'planner_run'");
+    const stored = JSON.parse(inserted.params[1]);
+    expect(stored.trigger).toBe('rush');
+    expect(stored.entries[0]).not.toHaveProperty('previousPosition');
+    expect(calls.some((call) => call.text.includes('SELECT gold.replan(') && call.params[0] === 'line-2' && call.params[1] === 15)).toBe(true);
+  });
+
+  it('refuses to save before gold.replan reads entries', async () => {
+    const query = async (text) => (text.includes('pg_get_functiondef') ? { rows: [{ ok: false }] } : { rows: [] });
+    await expect(savePlan(query, { payloads: { 'line-2': {} } })).rejects.toBeInstanceOf(PlannerNotReadyError);
+  });
+
+  it('plans a not-ready order after its ready date instead of holding it', () => {
+    const snapshot = snapshotFromGold({
+      asOf,
+      rows: [
+        { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 1, process_order_id: 1, po_number: '1001', species_code: 'PEA', input_kg: 1000, priority_rank: 1, sap_finish_date: new Date(2026, 9, 20), status_code: 'NEW', is_hold: true, hold_reason: 'NOT_READY' },
+        { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 2, process_order_id: 2, po_number: '1002', species_code: 'PEA', input_kg: 1000, priority_rank: 1, sap_finish_date: '2026-10-20', status_code: 'NEW', is_hold: true, hold_reason: 'QA_FAIL', latest_fail_test_id: 77 },
+      ],
+      facts: [{ po_number: '1001', fact_type: 'NOT_READY', status: 'AUTO', semantic_fact_id: 3, note_text: 'Needs fumi!!', fact_value: { reason: 'FUMIGATION' } }],
+    });
+    const [fumigation, failed] = snapshot.orders;
+    expect(fumigation.isHold).toBe(false);
+    expect(fumigation.sapFinishDate).toBe('2026-10-20');
+    expect(Date.parse(fumigation.readyBy)).toBe(Date.parse(asOf) + 3 * 24 * 3600 * 1000);
+    expect(failed).toMatchObject({ isHold: true, qualityTestId: 77 });
+  });
+});
+
+describe('BFF semantic replan', () => {
+  const rules = JSON.stringify({ season: 'HARVEST', timeZone: 'America/Los_Angeles', calendar: { LSVLN1: { weekdays: [1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00' }, LSVLN2: { weekdays: [1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00' } }, cleanoutTriggers: ['SPECIES_CHANGE'], repairRoutes: { DISCOLORED: 'COLORSORT' } });
+
+  function fakeDb({ entriesSupported = true } = {}) {
+    const calls = [];
+    const query = async (text, params) => {
+      calls.push({ text, params });
+      if (text.includes('v_open_queue')) {
+        return { rows: [
+          { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 1, process_order_id: 1, po_number: '1001', species_code: 'PEA', variety_code: 'A', input_kg: 1000, priority_rank: 1, sap_finish_date: '2026-10-20', status_code: 'ONLINE', is_hold: false },
+          { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 2, process_order_id: 2, po_number: '1002', species_code: 'CORN', variety_code: 'C', input_kg: 1000, priority_rank: 2, sap_finish_date: '2026-10-20', status_code: 'NEW', is_hold: false },
+        ] };
+      }
+      if (text.includes('planner_rules')) return { rows: [{ value: rules }] };
+      if (text.includes('plan_start_at')) return { rows: [{ as_of: new Date(asOf) }] };
+      if (text.includes('pg_get_functiondef')) return { rows: [{ ok: entriesSupported }] };
+      if (text.includes('INSERT INTO gold.plan_event')) return { rows: [{ plan_event_id: params[0] === 'line-2' ? 20 : 10 }] };
+      if (text.includes('SELECT gold.replan(')) return { rows: [{ schedule_plan_id: params[0] === 'line-2' ? 200 : 100 }] };
+      if (text.includes('gold.event_response')) {
+        return { rows: [{ result: { lineId: 'line-2', eventType: 'qa_fail', planVersion: 7, queue: [{ po: '1001', species: 'PEA', kg: 1000, finish: '2026-10-05 07:00', status: 'PLANNED' }], diff: { moves: [] } } }] };
+      }
+      return { rows: [] };
+    };
+    return { query, calls };
+  }
+
+  afterEach(() => {
+    delete process.env.SEMANTIC_PLANNER_ENABLED;
+  });
+
+  it('saves both lines, explains the focus line, and stores the explanation', async () => {
+    const { query, calls } = fakeDb();
+    const result = await replanWithSemanticEngine(query, { lineId: 'line-2', kind: 'qa_fail_finished', po: '8888', failedFor: 'Discolored' });
+    expect(result.planVersion).toBe(7);
+    expect(result.proposals).toEqual([expect.objectContaining({ parentPo: '8888', route: 'COLORSORT' })]);
+    expect(result.explanation.bullets.join(' ')).toMatch(/8888: COLORSORT/);
+    expect(result.eventType).toBe('qa_fail');
+    expect(result.explanation.alertBanner).toBe('QA fail (Discolored) on 8888: repair proposed for Line 2.');
+    expect(calls.filter((call) => call.text.includes('SELECT gold.replan(')).map((call) => call.params[0])).toEqual(['line-2']);
+    const insert = calls.find((call) => call.text.includes('INSERT INTO gold.plan_event'));
+    expect(JSON.parse(insert.params[1]).event).toEqual({ kind: 'qa_fail', po: '8888', failedFor: 'Discolored' });
+    const stored = calls.find((call) => call.text.includes('UPDATE gold.plan_event'));
+    expect(stored.params[0]).toBe(20);
+  });
+
+  it('falls back to the heuristic when disabled or when replan cannot read entries', async () => {
+    const fallback = async () => ({ source: 'heuristic' });
+    expect(await withSemanticPlan(fakeDb().query, { lineId: 'line-2', kind: 'rush' }, fallback)).toEqual({ source: 'heuristic' });
+    process.env.SEMANTIC_PLANNER_ENABLED = 'true';
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(await withSemanticPlan(fakeDb({ entriesSupported: false }).query, { lineId: 'line-2', kind: 'rush', po: '1002' }, fallback)).toEqual({ source: 'heuristic' });
+    warn.mockRestore();
   });
 });
 

@@ -57,6 +57,10 @@ export function localDate(date, timeZone) {
   return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
 }
 
+function nextMidnight(parts, timeZone) {
+  return zonedTimeToUtc(parts.year, parts.month, parts.day + 1, 0, 0, timeZone);
+}
+
 function minutesOfDay(clock) {
   if (clock === '24:00') return 24 * 60;
   const [hour, minute] = clock.split(':').map(Number);
@@ -100,8 +104,7 @@ function nextInstant(date, calendar, downtime, timeZone) {
       cursor = zonedTimeToUtc(parts.year, parts.month, parts.day, Math.floor(window.start / 60), window.start % 60, timeZone).getTime();
       continue;
     }
-    const nextDay = zonedTimeToUtc(parts.year, parts.month, parts.day, 0, 0, timeZone).getTime() + 24 * 3600 * 1000;
-    cursor = nextDay;
+    cursor = nextMidnight(parts, timeZone).getTime();
   }
   throw new Error('No open working time in the next 14 days');
 }
@@ -117,9 +120,7 @@ function segmentEnd(date, calendar, downtime, timeZone) {
     window.end % 60,
     timeZone,
   );
-  let end = window.end >= 24 * 60
-    ? zonedTimeToUtc(parts.year, parts.month, parts.day, 0, 0, timeZone).getTime() + 24 * 3600 * 1000
-    : close.getTime();
+  let end = window.end >= 24 * 60 ? nextMidnight(parts, timeZone).getTime() : close.getTime();
   for (const block of downtime || []) {
     const start = Date.parse(block.startsAt);
     if (start > date.getTime() && start < end) end = start;
@@ -158,8 +159,8 @@ export function workingHoursBetween(start, end, calendar, downtime, timeZone) {
       continue;
     }
     const segment = segmentEnd(cursor, calendar, downtime, timeZone).getTime();
-    const slice = Math.min(segment, stop) - cursor.getTime();
-    hours += slice / 3600000;
+    const slice = Math.max(60 * 1000, Math.min(segment, stop) - cursor.getTime());
+    hours += Math.min(slice, stop - cursor.getTime()) / 3600000;
     cursor = new Date(cursor.getTime() + slice);
   }
   return hours;
@@ -169,7 +170,8 @@ export function isoWeekBounds(week, timeZone) {
   const [year, weekNo] = week.split('-W').map(Number);
   const monday = isoWeekMonday(year, weekNo);
   const start = zonedTimeToUtc(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate(), 0, 0, timeZone);
-  return { start, end: new Date(start.getTime() + 7 * 24 * 3600 * 1000) };
+  const end = zonedTimeToUtc(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate() + 7, 0, 0, timeZone);
+  return { start, end };
 }
 
 function isoWeekMonday(year, week) {

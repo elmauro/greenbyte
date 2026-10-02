@@ -72,14 +72,15 @@ export function computePlan(snapshot, options = {}) {
     const held = holdEntries(onLine, planned.length + 1, previousByPo, options.eventType || null);
     const entries = [...planned, ...held];
     const lateNow = new Set(entries.filter((entry) => entry.isAtRisk).map((entry) => entry.poNumber));
-    const hadPrevious = snapshot.previousEntries != null;
-    const newlyLate = [...lateNow].filter((po) => !previousRisk.get(po));
+    const hadPrevious = (snapshot.previousEntries || []).length > 0;
+    const newlyLate = hadPrevious ? [...lateNow].filter((po) => !previousRisk.get(po)) : [];
     const noLongerLate = hadPrevious
       ? [...previousRisk.entries()].filter(([po, was]) => was && !lateNow.has(po) && onLine.some((order) => order.poNumber === po)).map(([po]) => po)
       : [];
     payloads[lineId] = {
       entries,
       impact: {
+        late: [...lateNow],
         newlyLate,
         noLongerLate,
         weeklyLoad: weeklyLoad(entries, { ...line, lineId }, snapshot),

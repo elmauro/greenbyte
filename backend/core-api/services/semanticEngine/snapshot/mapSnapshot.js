@@ -1,8 +1,21 @@
+import { withReadyBy } from '../notes/rules.js';
+
 const REPAIR_CENTERS = new Set(['LSVGRVTY', 'LSVCLSRT']);
 
+function isoDate(value) {
+  if (value == null) return null;
+  if (value instanceof Date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+// gold.replan rejects entries whose schedule row is on another work center, so repair-table
+// rows join a line plan only when the caller opts in with repairLineId.
 function lineIdFor(row, repairLineId) {
   if (row.demo_line_id === 'line-1' || row.demo_line_id === 'line-2') return row.demo_line_id;
-  if (REPAIR_CENTERS.has(row.work_center_code)) return repairLineId;
+  if (repairLineId && REPAIR_CENTERS.has(row.work_center_code)) return repairLineId;
   return null;
 }
 
@@ -23,7 +36,7 @@ function rulesOrDefault(raw) {
 }
 
 export function snapshotFromGold(input) {
-  const repairLineId = input.repairLineId || 'line-2';
+  const repairLineId = input.repairLineId || null;
   const rules = rulesOrDefault(input.rules);
   const previous = input.previousPayload || {};
   const factsByPo = new Map();
@@ -52,9 +65,13 @@ export function snapshotFromGold(input) {
     if (!lineId) continue;
     const po = row.po_number;
     const facts = factsByPo.get(po) || [];
-    const notReady = facts.find((fact) => fact.fact_type === 'NOT_READY' && ['AUTO', 'CONFIRMED'].includes(fact.status));
+    const notReadyRow = facts.find((fact) => fact.fact_type === 'NOT_READY' && ['AUTO', 'CONFIRMED'].includes(fact.status));
+    const notReady = notReadyRow
+      ? withReadyBy([{ fact_type: 'NOT_READY', fact_value: notReadyRow.fact_value || {} }], input.asOf)[0].fact_value
+      : null;
     const gmo = facts.find((fact) => fact.fact_value?.is_gmo === true || fact.fact_value?.reason === 'GMO');
     const certified = facts.find((fact) => fact.fact_value?.is_certified_non_gmo === true);
+    const notReadyHold = row.hold_reason === 'NOT_READY' && Boolean(notReady?.ready_by);
     orders.push({
       lineId,
       lineScheduleItemId: Number(row.line_schedule_item_id),
@@ -65,12 +82,18 @@ export function snapshotFromGold(input) {
       traitFamilyCode: row.trait_family_code,
       inputKg: row.input_kg == null ? 0 : Number(row.input_kg),
       priorityRank: row.priority_rank == null ? null : Number(row.priority_rank),
-      sapFinishDate: row.sap_finish_date ? String(row.sap_finish_date).slice(0, 10) : null,
-      statusCode: row.status_code,
-      isHold: row.is_hold === true,
+      schedulePriorityRank: row.schedule_priority_rank == null ? null : Number(row.schedule_priority_rank),
+      sapFinishDate: isoDate(row.sap_finish_date),
+      statusCode: row.status_code === 'ONLINE' && REPAIR_CENTERS.has(row.work_center_code) ? 'RELEASED' : row.status_code,
+      sourceStatusCode: row.status_code,
+      workCenterCode: row.work_center_code,
+      isHold: row.is_hold === true && !notReadyHold,
+      qualityTestId: row.hold_reason === 'QA_FAIL' ? row.latest_fail_test_id ?? null : null,
       kgPerHour: rateByLineSpecies.get(`${row.work_center_code}:${row.species_code}:SPECIES`) || null,
-      readyBy: notReady?.fact_value?.ready_by || null,
-      notReadyFact: notReady ? { id: Number(notReady.semantic_fact_id), label: notReady.fact_value?.reason || 'NOT_READY', noteText: notReady.note_text || '' } : null,
+      readyBy: notReady?.ready_by || null,
+      notReadyFact: notReadyRow
+        ? { id: Number(notReadyRow.semantic_fact_id), label: notReady.reason || 'NOT_READY', noteText: notReadyRow.note_text || '' }
+        : null,
       isGmo: gmo ? true : null,
       isCertifiedNonGmo: certified ? true : null,
     });

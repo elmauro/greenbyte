@@ -129,7 +129,7 @@ Turns free-text SAP notes into typed facts. Runs on new or changed note text onl
 
 1. **Normalize + hash** the note (trim, collapse whitespace, upper-case). Cache hit on `hash + modelId + promptVersion` → return stored fact.
 2. **Regex pre-pass** for obvious cases (`RUSH`, `FUMI`, `HOLD`, dates). High-confidence hits skip the model.
-3. **JEV classify** (primary): Choice question over fact types; Noul question "does this note block the PO from starting now?" for confidence; Choice over `applies_to` (PO, lot, equipment, line).
+3. **JEV classify** (primary): one call to the OpenRouter Decisions API (`POST https://openrouter.ai/api/alpha/decisions`, not chat completions) with the note as `state` and two Choice questions: `fact_type` (NOT_READY, HOLD, RELEASE, RUSH, DEADLINE, INFO) and `not_ready_reason` (FUMIGATION, RAW_GERM_PENDING, OTHER). The Choice `confidence` is the fact confidence; code turns the reason into `ready_by`. Measured on the 30 live notes: about 250 ms per note.
 4. **Bedrock extract** (secondary): only when a value is needed (dates, kg, ship-by) or JEV is unavailable. Converse API with a JSON schema output; temperature 0.
 5. **Confidence gate:** below the policy floor (default 0.70) → `NEEDS_CONFIRMATION`; the fact is shown in the UI but not applied until a person confirms.
 6. **Return** typed fact with provider, model ID, prompt version and confidence.
@@ -314,6 +314,37 @@ The planner writes one payload per line. `entries` become `schedule_entry` rows.
 - **Golden plans:** fixed snapshots from the RDS extract for Line 2 → expected sequences and late lists, reviewed with the planning SME.
 - **Model contract tests:** fixture notes from the data (fumigation, germ wait, rush, hold) → expected fact type; guard tests with fabricated IDs must fall back.
 - **Integration:** BFF → Data → Agent with stub URLs, then live; MSW and Cypress unchanged because BFF shapes are unchanged.
+
+### 10.1 How to run it
+
+Code lives in `backend/core-api/services/semanticEngine/` (engine) and `backend/core-api/services/plantDemo/semanticReplan.js` (BFF wiring).
+
+**Unit tests** (no database):
+
+```bash
+cd backend && npm test   # tests/agent-api-planner.test.js, tests/semantic-engine.test.js
+```
+
+**Read-only smoke against gold** (from `backend/core-api`, with `PGHOST`/`PGUSER`/`PGPASSWORD`/`PGDATABASE` or `DATABASE_URL` set). Nothing is written unless `--save` is passed.
+
+```bash
+npm run semantic:smoke -- --notes                                   # baseline plan + note reader
+npm run semantic:smoke -- --rush 1002303196 --ship-by 2026-10-02    # rush at the next species boundary
+npm run semantic:smoke -- --qa-fail 9999999 --reason Discolored     # finished order -> COLORSORT proposal
+npm run semantic:smoke -- --line-down line-2 --from 2026-09-29T08:00:00-07:00 --to 2026-09-29T20:00:00-07:00
+npm run semantic:smoke -- --swap 1002303196 --to-line LSVLN1
+npm run semantic:smoke -- --json                                    # full payloads as JSON
+```
+
+Add `BEDROCK_ENABLED=true` (AWS credentials with `bedrock:InvokeModel`) to get the model explanation instead of the template, and `JEV_ENABLED=true OPENROUTER_API_KEY=…` to let JEV read unclear notes.
+
+**Lambdas** (`serverless offline` or deployed): `POST /plan/compute` (`{ "loadFromGold": true, "event": {...}, "save": false }`), `POST /facts/extract` (`{ "notes": [...] }`), `POST /explain-replan` (`{ "payload": {...} }`).
+
+**End to end through the BFF:** set `SEMANTIC_PLANNER_ENABLED=true`. Pass/fail, priority change and new-order ingests then run the planner, save through `gold.replan`, and return the planner explanation. If `gold.replan` cannot read `payload.entries` yet, the BFF logs a warning and keeps the existing heuristic, so the flag is safe to turn on early.
+
+**Gated on the gold handoff** (`uc1-gold-planner-handoff.md`): `--save`, `save: true` and the BFF path need the `replan` entries branch. `planner_rules` and policy v2 are optional for testing because the engine falls back to built-in defaults (Lines 1 and 2, Monday–Saturday, 24 hours).
+
+**Known data behaviour:** repair orders on `LSVGRVTY` and `LSVCLSRT` are planned on Line 2 until their real line is known, and orders that are `ONLINE` there are not treated as running on Line 2. On the current extract, Line 2 is fully booked until early December and 18 orders finish after their SAP date, mostly rework orders (`2400…` and `3001…` POs) whose SAP finish dates are already in the past.
 
 ---
 

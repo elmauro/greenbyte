@@ -13,6 +13,10 @@ provider:
     # Optional — when set, BFF forwards to Camilo/David instead of in-Lambda stubs
     DATA_API_BASE_URL: ${env:DATA_API_BASE_URL, ''}
     AGENT_API_BASE_URL: ${env:AGENT_API_BASE_URL, ''}
+    # Semantic planner after each gold ingest. Needs Camilo's gold.replan entries branch; falls back to the heuristic otherwise.
+    SEMANTIC_PLANNER_ENABLED: ${env:SEMANTIC_PLANNER_ENABLED, 'false'}
+    BEDROCK_ENABLED: ${env:BEDROCK_ENABLED, 'false'}
+    BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'}
   httpApi:
     cors:
       allowedOrigins:
@@ -162,9 +166,6 @@ functions:
 
   agentExplainReplan:
     handler: functions/agent-explain-replan/handler.handler
-    environment:
-      BEDROCK_ENABLED: ${env:BEDROCK_ENABLED, 'false'}
-      BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'}
     events:
       - httpApi:
           method: POST

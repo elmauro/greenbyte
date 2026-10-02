@@ -1,4 +1,4 @@
-import { applyPlannerEvent, computePlan } from '../agent-api/planner/index.js';
+import { applyPlannerEvent, computePlan } from '../core-api/services/semanticEngine/planner/index.js';
 
 const RULES = {
   season: 'HARVEST',
@@ -185,6 +185,28 @@ describe('semantic planner', () => {
       order: order({ poNumber: '1007', priorityRank: 1, speciesCode: 'CORN', varietyCode: 'C', sapFinishDate: '2026-10-07' }),
     });
     expect(pos(added.payloads['line-2'])).toEqual(['1001', '1002', '1003', '1007', '1004', '1005', '1006']);
+  });
+
+  it('crosses the November daylight-saving Sunday', () => {
+    const state = snapshot({
+      asOf: '2026-10-31T20:00:00-07:00',
+      orders: [order({ poNumber: '1001', statusCode: 'ONLINE', inputKg: 6000, sapFinishDate: '2026-11-03' })],
+    });
+    const result = computePlan(state).payloads['line-2'];
+    expect(result.entries[0].plannedEndAt.startsWith('2026-11-02T02:00:00-08:00')).toBe(true);
+    expect(result.impact.weeklyLoad.map(({ week, hoursRequired }) => [week, hoursRequired])).toEqual([
+      ['2026-W44', 4],
+      ['2026-W45', 2],
+    ]);
+  });
+
+  it('keeps a running order running even when a note says it is not ready', () => {
+    const state = snapshot({
+      orders: [order({ poNumber: '1001', statusCode: 'ONLINE', inputKg: 1000, readyBy: '2026-10-05T12:00:00-07:00' })],
+    });
+    const entry = computePlan(state).payloads['line-2'].entries[0];
+    expect(Date.parse(entry.plannedEndAt) - Date.parse(state.asOf)).toBe(3600 * 1000);
+    expect(entry.reasons.map((reason) => reason.code)).toContain('ALREADY_RUNNING');
   });
 
   it('does not start a not-ready order before readyBy', () => {
