@@ -194,7 +194,7 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 - Steps:
   1. Open `/demo/plant/ux`.
   2. Open `/demo/plant` in a fresh session with the same empty key.
-- Expected result: both URLs land on `/demo/sign-in` with a `returnTo` query. The heading is "Sign in to Line 1 UX preview". A wrong password shows "Invalid username or password." This matrix does not print the demo password.
+- Expected result: both URLs land on `/demo/sign-in` with a `returnTo` query. The heading is "Sign in to Pasco line scheduler". A wrong password shows "Invalid username or password." This matrix does not print the demo password.
 - Automated or manual: Automated for the redirect. The wrong-password check is manual so the password stays out of the spec.
 
 ## UX-02 — Calm queue
