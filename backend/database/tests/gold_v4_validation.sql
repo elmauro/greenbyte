@@ -18,6 +18,13 @@
 WITH
 tz AS (SELECT gold.cfg('plant_time_zone') AS tz),
 latest AS (SELECT lp.schedule_plan_id, lp.work_center_id FROM gold.v_latest_plan lp),
+-- planner v2 (Q7c): checks of the heuristic's own logic apply to heuristic plans only; planner plans have their checks
+hse AS (SELECT se.* FROM gold.schedule_entry se JOIN gold.schedule_plan sp USING (schedule_plan_id)
+        WHERE sp.created_by <> 'planner-v2'),
+hlatest AS (SELECT lp.schedule_plan_id, lp.work_center_id FROM gold.v_latest_plan lp WHERE lp.created_by <> 'planner-v2'),
+pse AS (SELECT se.*, sp.work_center_id AS plan_work_center_id, sp.plan_event_id AS plan_plan_event_id
+        FROM gold.schedule_entry se JOIN gold.schedule_plan sp USING (schedule_plan_id)
+        WHERE sp.created_by = 'planner-v2'),
 c (layer, obj, category, check_name, severity, gap, expected, actual, sample) AS (
 
 -- ============================================================================ GRAIN
@@ -390,24 +397,25 @@ SELECT 'gold', 'schedule_plan', 'RELATION', 'policy applies to the line (line ro
 FROM (SELECT sp.schedule_plan_id::text k FROM gold.schedule_plan sp JOIN gold.policy p USING (policy_id)
       WHERE p.work_center_id IS NOT NULL AND p.work_center_id <> sp.work_center_id) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'RELATION', 'schedule row: same PO and same line as the plan', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
+SELECT 'gold', 'schedule_entry', 'RELATION', 'schedule row: same PO and same line as the plan [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM hse se
       JOIN gold.schedule_plan sp USING (schedule_plan_id)
       JOIN silver.line_schedule_item li ON li.line_schedule_item_id = se.line_schedule_item_id
       WHERE li.process_order_id <> se.process_order_id OR li.work_center_id <> sp.work_center_id) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'RELATION', 'latest plan = exactly the open queue of the line (no missing, no extra)', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'RELATION', 'latest plan = exactly the open queue of the line (no missing, no extra) [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
 FROM (SELECT coalesce(q.po_number, po.po_number) || CASE WHEN q.line_schedule_item_id IS NULL THEN ' (extra)' ELSE ' (missing)' END k
-      FROM (SELECT q.* FROM gold.v_open_queue q JOIN latest l USING (work_center_id)) q
-      FULL JOIN (SELECT se.* FROM gold.schedule_entry se JOIN latest l USING (schedule_plan_id)) se
+      FROM (SELECT q.* FROM gold.v_open_queue q JOIN hlatest l USING (work_center_id)
+            WHERE q.swapped_to_work_center_id IS NULL OR q.swapped_to_work_center_id = q.work_center_id) q
+      FULL JOIN (SELECT se.* FROM hse se JOIN hlatest l USING (schedule_plan_id)) se
              ON se.line_schedule_item_id = q.line_schedule_item_id
       LEFT JOIN silver.process_order po ON po.process_order_id = se.process_order_id
       WHERE q.line_schedule_item_id IS NULL OR se.schedule_entry_id IS NULL) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'RELATION', 'previous_position = position of the PO in the parent plan', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'RELATION', 'previous_position = position of the PO in the parent plan [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
+FROM (SELECT se.schedule_entry_id::text k FROM hse se
       JOIN gold.schedule_plan sp USING (schedule_plan_id)
       LEFT JOIN gold.schedule_entry pe ON pe.schedule_plan_id = sp.parent_plan_id AND pe.process_order_id = se.process_order_id
       WHERE se.previous_position IS DISTINCT FROM pe.position) x
@@ -474,32 +482,36 @@ SELECT 'gold', 'schedule_entry', 'CARDINALITY', 'every plan has ≥ 1 entry', 'E
 FROM (SELECT sp.schedule_plan_id::text k FROM gold.schedule_plan sp
       WHERE NOT EXISTS (SELECT 1 FROM gold.schedule_entry se WHERE se.schedule_plan_id = sp.schedule_plan_id)) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'CARDINALITY', 'positions contiguous 1..n; PLANNED first, then HOLD', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'CARDINALITY', 'positions contiguous 1..n; PLANNED first, then HOLD [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT schedule_plan_id::text k FROM gold.schedule_entry GROUP BY schedule_plan_id
+FROM (SELECT schedule_plan_id::text k FROM hse GROUP BY schedule_plan_id
       HAVING min(position) <> 1 OR max(position) <> count(*)
           OR coalesce(max(position) FILTER (WHERE entry_status = 'PLANNED'), 0)
              > coalesce(min(position) FILTER (WHERE entry_status = 'HOLD'), 2147483647)) x
 UNION ALL
-SELECT 'gold', 'entry_reason', 'CARDINALITY', 'every entry has ≥ 1 reason; seq contiguous 1..n', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
+SELECT 'gold', 'entry_reason', 'CARDINALITY', 'every entry has ≥ 1 reason; seq contiguous 1..n [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM hse se
       LEFT JOIN gold.entry_reason er USING (schedule_entry_id)
       GROUP BY se.schedule_entry_id
       HAVING count(er.entry_reason_id) = 0 OR min(er.seq) <> 1 OR max(er.seq) <> count(er.entry_reason_id)) x
 UNION ALL
-SELECT 'gold', 'entry_reason', 'CARDINALITY', 'HOLD entries have exactly one HARD reason, at seq 1', 'ERROR', NULL, 0,
+SELECT 'gold', 'entry_reason', 'CARDINALITY', 'HOLD entries have exactly one HARD reason, at seq 1 [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
+FROM (SELECT se.schedule_entry_id::text k FROM hse se
       JOIN gold.entry_reason er USING (schedule_entry_id) JOIN gold.reason_code rc USING (reason_code_id)
       WHERE se.entry_status = 'HOLD'
       GROUP BY se.schedule_entry_id
       HAVING count(*) <> 1 OR bool_or(er.seq <> 1 OR rc.category <> 'HARD')) x
 UNION ALL
-SELECT 'gold', 'policy', 'CARDINALITY', 'exactly one ACTIVE default policy', 'ERROR', NULL, 1,
-       (SELECT count(*) FROM gold.policy WHERE work_center_id IS NULL AND status = 'ACTIVE'), NULL
+SELECT 'gold', 'policy', 'CARDINALITY', 'exactly one ACTIVE default policy per engine (HEURISTIC, PLANNER)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT e.engine k FROM (VALUES ('HEURISTIC'), ('PLANNER')) e (engine)
+      WHERE (SELECT count(*) FROM gold.policy p
+             WHERE p.work_center_id IS NULL AND p.status = 'ACTIVE' AND p.engine = e.engine) <> 1) x
 UNION ALL
-SELECT 'gold', 'policy', 'CARDINALITY', 'at most one ACTIVE policy per line', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT coalesce(work_center_id::text, 'default') k FROM gold.policy WHERE status = 'ACTIVE' GROUP BY 1 HAVING count(*) > 1) x
+SELECT 'gold', 'policy', 'CARDINALITY', 'at most one ACTIVE policy per line and engine', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT coalesce(work_center_id::text, 'default') || '/' || engine k FROM gold.policy WHERE status = 'ACTIVE'
+      GROUP BY work_center_id, engine HAVING count(*) > 1) x
 UNION ALL
 SELECT 'gold', 'v_plan_status', 'CARDINALITY', 'exactly one is_latest per line', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
 FROM (SELECT work_center_id::text k FROM gold.v_plan_status GROUP BY 1 HAVING count(*) FILTER (WHERE is_latest) <> 1) x
@@ -517,30 +529,30 @@ SELECT 'gold', 'changeover_rule', 'CARDINALITY', 'TRAIT_CHANGE rules exist (Exce
 
 -- ============================================================================ CONSTRAINT
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'PLANNED: start, end, run h, changeover h present; end ≥ start; h ≥ 0', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'PLANNED: start, end, run h, changeover h present; end ≥ start; h ≥ 0 [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT schedule_entry_id::text k FROM gold.schedule_entry
+FROM (SELECT schedule_entry_id::text k FROM hse
       WHERE entry_status = 'PLANNED'
         AND (planned_start_at IS NULL OR planned_end_at IS NULL OR est_run_h IS NULL OR est_changeover_h IS NULL
              OR planned_end_at < planned_start_at OR est_run_h < 0 OR est_changeover_h < 0)) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'HOLD: no planned times, not at risk', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT schedule_entry_id::text k FROM gold.schedule_entry
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'HOLD: no planned times, not at risk [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT schedule_entry_id::text k FROM hse
       WHERE entry_status = 'HOLD' AND (planned_start_at IS NOT NULL OR planned_end_at IS NOT NULL OR is_at_risk)) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'timeline: start = previous end + changeover; first start = horizon', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'timeline: start = previous end + changeover; first start = horizon [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
 FROM (SELECT x.schedule_entry_id::text k FROM (
           SELECT se.*, sp.horizon_start,
                  lag(se.planned_end_at) OVER (PARTITION BY se.schedule_plan_id ORDER BY se.position) AS prev_end
-          FROM gold.schedule_entry se JOIN gold.schedule_plan sp USING (schedule_plan_id)
+          FROM hse se JOIN gold.schedule_plan sp USING (schedule_plan_id)
           WHERE se.entry_status = 'PLANNED') x
       WHERE x.planned_start_at <> coalesce(x.prev_end, x.horizon_start) + x.est_changeover_h * interval '1 hour'
          OR x.planned_end_at <> x.planned_start_at + x.est_run_h * interval '1 hour') x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'slack_days = due_date − planned end date (plant TZ); at risk ⇔ slack < 0', 'ERROR', NULL, 0,
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'slack_days = due_date − planned end date (plant TZ); at risk ⇔ slack < 0 [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se, tz
+FROM (SELECT se.schedule_entry_id::text k FROM hse se, tz
       WHERE se.entry_status = 'PLANNED'
         AND (se.slack_days IS DISTINCT FROM (se.due_date - (se.planned_end_at AT TIME ZONE tz.tz)::date)
              OR se.is_at_risk <> coalesce(se.slack_days < 0, false))) x
@@ -572,10 +584,10 @@ FROM (SELECT sf.semantic_fact_id::text k FROM gold.semantic_fact sf JOIN gold.so
                          ORDER BY (r.po_number IS NULL), r.reviewed_at DESC, r.note_review_id DESC LIMIT 1) rv ON true
       WHERE rv.decision IS DISTINCT FROM CASE WHEN sf.status IN ('CONFIRMED', 'REJECTED') THEN sf.status END) x
 UNION ALL
-SELECT 'gold', 'policy', 'CONSTRAINT', 'ACTIVE policies: LEXICOGRAPHIC and only known criteria codes', 'ERROR', NULL, 0,
+SELECT 'gold', 'policy', 'CONSTRAINT', 'ACTIVE HEURISTIC policies: LEXICOGRAPHIC and only codes policy_order_by knows', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
 FROM (SELECT p.policy_id || ':' || coalesce(c ->> 'code', 'null') k FROM gold.policy p, jsonb_array_elements(p.criteria) c
-      WHERE p.status = 'ACTIVE'
+      WHERE p.status = 'ACTIVE' AND p.engine = 'HEURISTIC'
         AND (p.ranking_mode <> 'LEXICOGRAPHIC'
              OR coalesce(c ->> 'code', '') NOT IN ('ONLINE_FIRST', 'RUSH', 'URGENT_DUE', 'PRIORITY', 'SAME_VARIETY',
                                                    'SAME_SPECIES', 'DUE_DATE', 'RUN_ORDER'))) x
@@ -614,8 +626,8 @@ FROM (SELECT po_number || ':' || coalesce(species_code, '-') k FROM gold.v_open_
 
 -- ============================================================================ RULE
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'RULE', 'a runnable ONLINE batch is position 1', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_plan_id || '/' || se.position k FROM gold.schedule_entry se
+SELECT 'gold', 'schedule_entry', 'RULE', 'a runnable ONLINE batch is position 1 [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_plan_id || '/' || se.position k FROM hse se
       JOIN silver.line_schedule_item li ON li.line_schedule_item_id = se.line_schedule_item_id
       WHERE li.status_code = 'ONLINE' AND se.entry_status = 'PLANNED' AND se.position <> 1) x
 UNION ALL
@@ -632,24 +644,25 @@ FROM (SELECT q.po_number k FROM gold.v_open_queue q
           EXISTS (SELECT 1 FROM gold.v_trusted_fact f WHERE f.line_schedule_item_id = q.line_schedule_item_id AND f.fact_type = 'NOT_READY')
           AND NOT EXISTS (SELECT 1 FROM gold.v_trusted_fact f WHERE f.line_schedule_item_id = q.line_schedule_item_id AND f.fact_type = 'RELEASE'))) x
 UNION ALL
-SELECT 'gold', 'schedule_entry', 'RULE', 'latest plan: HOLD ⇔ v_open_queue.is_hold', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT q.po_number k FROM gold.schedule_entry se JOIN latest l USING (schedule_plan_id)
+SELECT 'gold', 'schedule_entry', 'RULE', 'latest plan: HOLD ⇔ v_open_queue.is_hold [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT q.po_number k FROM hse se JOIN hlatest l USING (schedule_plan_id)
       JOIN gold.v_open_queue q ON q.line_schedule_item_id = se.line_schedule_item_id
       WHERE (se.entry_status = 'HOLD') <> q.is_hold) x
 UNION ALL
-SELECT 'gold', 'entry_reason', 'RULE', 'latest plan: HOLD reason matches hold_reason (QA_FAIL→QA_HOLD, STATUS→STATUS_HOLD, …)', 'ERROR', NULL, 0,
+SELECT 'gold', 'entry_reason', 'RULE', 'latest plan: HOLD reason matches hold_reason (QA_FAIL→QA_HOLD, STATUS→STATUS_HOLD, …) [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT q.po_number || ':' || rc.reason_code k FROM gold.schedule_entry se JOIN latest l USING (schedule_plan_id)
+FROM (SELECT q.po_number || ':' || rc.reason_code k FROM hse se JOIN hlatest l USING (schedule_plan_id)
       JOIN gold.v_open_queue q ON q.line_schedule_item_id = se.line_schedule_item_id
       JOIN gold.entry_reason er ON er.schedule_entry_id = se.schedule_entry_id AND er.seq = 1
       JOIN gold.reason_code rc USING (reason_code_id)
       WHERE se.entry_status = 'HOLD'
         AND rc.reason_code <> CASE q.hold_reason WHEN 'QA_FAIL' THEN 'QA_HOLD' WHEN 'STATUS' THEN 'STATUS_HOLD'
-                                                 WHEN 'NOT_READY' THEN 'NOT_READY_HOLD' WHEN 'NOTE_HOLD' THEN 'NOTE_HOLD' END) x
+                                                 WHEN 'NOT_READY' THEN 'NOT_READY_HOLD' WHEN 'NOTE_HOLD' THEN 'NOTE_HOLD'
+                                                 WHEN 'OVERRIDE_HOLD' THEN 'OVERRIDE_HOLD' END) x
 UNION ALL
-SELECT 'gold', 'entry_reason', 'RULE', 'latest plan: ONLINE + not-ready note ⇒ NOT_READY_WARNING', 'ERROR', NULL, 0,
+SELECT 'gold', 'entry_reason', 'RULE', 'latest plan: ONLINE + not-ready note ⇒ NOT_READY_WARNING [heuristic plans]', 'ERROR', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT q.po_number k FROM gold.schedule_entry se JOIN latest l USING (schedule_plan_id)
+FROM (SELECT q.po_number k FROM hse se JOIN hlatest l USING (schedule_plan_id)
       JOIN gold.v_open_queue q ON q.line_schedule_item_id = se.line_schedule_item_id
       WHERE q.status_code = 'ONLINE' AND q.is_not_ready AND se.entry_status = 'PLANNED'
         AND NOT EXISTS (SELECT 1 FROM gold.entry_reason er JOIN gold.reason_code rc USING (reason_code_id)
@@ -667,8 +680,8 @@ FROM (SELECT erf.semantic_fact_id::text k FROM gold.entry_reason_fact erf
       JOIN latest l USING (schedule_plan_id) JOIN gold.semantic_fact sf USING (semantic_fact_id)
       WHERE sf.status NOT IN ('AUTO', 'CONFIRMED')) x
 UNION ALL
-SELECT 'gold', 'entry_reason', 'RULE', 'seq 1 of an ONLINE planned entry is ALREADY_RUNNING', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
-FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
+SELECT 'gold', 'entry_reason', 'RULE', 'seq 1 of an ONLINE planned entry is ALREADY_RUNNING [heuristic plans]', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM hse se
       JOIN silver.line_schedule_item li ON li.line_schedule_item_id = se.line_schedule_item_id
       JOIN gold.entry_reason er ON er.schedule_entry_id = se.schedule_entry_id AND er.seq = 1
       JOIN gold.reason_code rc USING (reason_code_id)
@@ -676,6 +689,146 @@ FROM (SELECT se.schedule_entry_id::text k FROM gold.schedule_entry se
 UNION ALL
 SELECT 'gold', 'schedule_plan', 'RULE', 'every plan cites its policy', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
 FROM (SELECT schedule_plan_id::text k FROM gold.schedule_plan WHERE policy_id IS NULL) x
+
+-- ============================================================================ PLANNER v2 (Q1–Q9)
+UNION ALL
+SELECT 'gold', 'plan_override', 'GRAIN', '(plan_event_id, element_seq) unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT plan_event_id || '/' || element_seq k FROM gold.plan_override GROUP BY plan_event_id, element_seq HAVING count(*) > 1) x
+UNION ALL
+SELECT 'gold', 'line_downtime', 'GRAIN', '(plan_event_id, element_seq) unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT plan_event_id || '/' || element_seq k FROM gold.line_downtime GROUP BY plan_event_id, element_seq HAVING count(*) > 1) x
+UNION ALL
+SELECT 'gold', 'repair_proposal', 'GRAIN', '(plan_event_id, element_seq) unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT plan_event_id || '/' || element_seq k FROM gold.repair_proposal GROUP BY plan_event_id, element_seq HAVING count(*) > 1) x
+UNION ALL
+SELECT 'gold', 'v_active_override', 'GRAIN', '(process_order_id, override_type) unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT process_order_id || '/' || override_type k FROM gold.v_active_override GROUP BY process_order_id, override_type HAVING count(*) > 1) x
+UNION ALL
+SELECT 'gold', 'work_center_calendar', 'GRAIN', '(work_center_id, iso_weekday, season) unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT work_center_id || '/' || iso_weekday || '/' || season k FROM gold.work_center_calendar
+      GROUP BY work_center_id, iso_weekday, season HAVING count(*) > 1) x
+UNION ALL
+SELECT 'gold', 'fail_reason', 'RELATION', 'every silver fail reason is a gold fail_reason (origin SILVER)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT DISTINCT qt.fail_reason_code k FROM silver.quality_test qt
+      WHERE qt.fail_reason_code IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM gold.fail_reason f WHERE f.fail_reason_code = qt.fail_reason_code AND f.origin = 'SILVER')) x
+UNION ALL
+SELECT 'gold', 'trait_family', 'RELATION', 'every silver trait family is a gold trait_family (origin SILVER)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT DISTINCT li.trait_family_code k FROM silver.line_schedule_item li
+      WHERE NOT EXISTS (SELECT 1 FROM gold.trait_family t WHERE t.trait_family_code = li.trait_family_code AND t.origin = 'SILVER')) x
+UNION ALL
+SELECT 'gold', 'fail_reason / trait_family', 'RULE', 'planner-only codes waiting for confirmation (origin PLANNER)', 'INFO', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT fail_reason_code k FROM gold.fail_reason WHERE origin = 'PLANNER'
+      UNION ALL SELECT trait_family_code FROM gold.trait_family WHERE origin = 'PLANNER') x
+UNION ALL
+SELECT 'gold', 'repair_route', 'RELATION', 'route work centers are in-scope colorsort / gravity lines', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT rr.fail_reason_code || '->' || w.work_center_code k FROM gold.repair_route rr
+      JOIN silver.work_center w ON w.work_center_id = rr.route_work_center_id
+      WHERE NOT w.is_in_scope OR w.line_type NOT IN ('COLORSORT', 'GRAVITY')) x
+UNION ALL
+SELECT 'gold', 'config', 'RELATION', 'planner_rules JSON matches its tables (calendar, cleanouts, routes)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT 'calendar' k WHERE (SELECT jsonb_agg(k2 ORDER BY k2) FROM jsonb_object_keys(gold.cfg('planner_rules')::jsonb -> 'calendar') k2)
+                                IS DISTINCT FROM (SELECT jsonb_agg(DISTINCT wc.work_center_code ORDER BY wc.work_center_code)
+                                                  FROM gold.work_center_calendar c JOIN silver.work_center wc USING (work_center_id)
+                                                  WHERE c.season = gold.cfg('season'))
+      UNION ALL
+      SELECT 'cleanoutTriggers' WHERE gold.cfg('planner_rules')::jsonb -> 'cleanoutTriggers'
+                                      IS DISTINCT FROM (SELECT jsonb_agg(rule_code ORDER BY sequence_rule_id)
+                                                        FROM gold.sequence_rule WHERE rule_type = 'CLEANOUT')
+      UNION ALL
+      SELECT 'repairRoutes' WHERE (SELECT jsonb_agg(k3 ORDER BY k3) FROM jsonb_object_keys(gold.cfg('planner_rules')::jsonb -> 'repairRoutes') k3)
+                                  IS DISTINCT FROM (SELECT jsonb_agg(fail_reason_code ORDER BY fail_reason_code) FROM gold.repair_route)) x
+UNION ALL
+SELECT 'gold', 'work_center_calendar', 'CARDINALITY', 'every demo line has a calendar for the current season', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT wc.work_center_code k FROM silver.work_center wc
+      WHERE wc.demo_line_id IS NOT NULL AND NOT EXISTS (
+          SELECT 1 FROM gold.work_center_calendar c WHERE c.work_center_id = wc.work_center_id AND c.season = gold.cfg('season'))) x
+UNION ALL
+SELECT 'gold', 'plan_override', 'RELATION', 'override PO = the PO named in override_json', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT o.plan_override_id::text k FROM gold.plan_override o JOIN silver.process_order po USING (process_order_id)
+      WHERE po.po_number IS DISTINCT FROM (silver.norm_po(o.override_json ->> 'po')).po_number) x
+UNION ALL
+SELECT 'gold', 'plan_override', 'RELATION', 'override comes from a planner_run event', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT o.plan_override_id::text k FROM gold.plan_override o JOIN gold.plan_event pe USING (plan_event_id)
+      WHERE pe.event_type <> 'planner_run') x
+UNION ALL
+SELECT 'gold', 'repair_proposal', 'RELATION', 'proposal answers a FAIL test of the same PO; fail reason = the test reason', 'WARN', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT rp.repair_proposal_id::text k FROM gold.repair_proposal rp
+      LEFT JOIN silver.quality_test qt USING (quality_test_id)
+      WHERE qt.quality_test_id IS NULL OR qt.process_order_id <> rp.parent_process_order_id OR qt.result_code <> 'FAIL'
+         OR rp.fail_reason_code IS DISTINCT FROM qt.fail_reason_code) x
+UNION ALL
+SELECT 'gold', 'line_downtime', 'CONSTRAINT', 'downtime windows do not overlap on a line', 'WARN', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT a.line_downtime_id || '&' || b.line_downtime_id k FROM gold.line_downtime a
+      JOIN gold.line_downtime b ON b.work_center_id = a.work_center_id AND b.line_downtime_id > a.line_downtime_id
+      WHERE tstzrange(a.starts_at, a.ends_at) && tstzrange(b.starts_at, b.ends_at)) x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'RELATION', 'planner: schedule row belongs to the entry PO (guard 1)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM pse se
+      JOIN silver.line_schedule_item li ON li.line_schedule_item_id = se.line_schedule_item_id
+      WHERE li.process_order_id IS DISTINCT FROM se.process_order_id) x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'RELATION', 'planner: row on the plan line, or a LINE_SWAP to it sent by then (guard 2)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM pse se
+      JOIN silver.line_schedule_item li ON li.line_schedule_item_id = se.line_schedule_item_id
+      WHERE li.work_center_id <> se.plan_work_center_id AND NOT EXISTS (
+          SELECT 1 FROM gold.plan_override o
+          WHERE o.process_order_id = se.process_order_id AND o.override_type = 'LINE_SWAP' AND o.is_active
+            AND o.to_work_center_id = se.plan_work_center_id AND o.plan_event_id <= se.plan_plan_event_id)) x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'planner: PLANNED start ≤ end; HOLD has no times (guard 3)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM pse se
+      WHERE (se.entry_status = 'PLANNED' AND (se.planned_start_at IS NULL OR se.planned_end_at IS NULL
+                                             OR se.planned_end_at < se.planned_start_at))
+         OR (se.entry_status = 'HOLD' AND (se.planned_start_at IS NOT NULL OR se.planned_end_at IS NOT NULL))) x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'planner: slack_days = due_date − planned end date (as sent)', 'WARN', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.schedule_entry_id::text k FROM pse se, tz
+      WHERE se.entry_status = 'PLANNED' AND se.due_date IS NOT NULL AND se.slack_days IS NOT NULL
+        AND se.slack_days <> (se.due_date - (se.planned_end_at AT TIME ZONE tz.tz)::date)) x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'CONSTRAINT', 'every entry with a due date has its due_date_basis (Q6)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT schedule_entry_id::text k FROM gold.schedule_entry WHERE due_date IS NOT NULL AND due_date_basis IS NULL) x
+UNION ALL
+SELECT 'gold', 'schedule_plan', 'RULE', 'plan policy engine matches its author (planner-v2 ↔ PLANNER)', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT sp.schedule_plan_id::text k FROM gold.schedule_plan sp JOIN gold.policy p USING (policy_id)
+      WHERE (sp.created_by = 'planner-v2') <> (p.engine = 'PLANNER')) x
+UNION ALL
+SELECT 'gold', 'schedule_plan', 'RULE', 'planner plans come from planner_run events', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT sp.schedule_plan_id::text k FROM gold.schedule_plan sp LEFT JOIN gold.plan_event pe USING (plan_event_id)
+      WHERE sp.created_by = 'planner-v2' AND pe.event_type IS DISTINCT FROM 'planner_run') x
+UNION ALL
+SELECT 'gold', 'schedule_entry', 'RULE', 'latest heuristic plans do not hold a PO swapped to another line', 'ERROR', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT se.process_order_id::text k FROM hse se JOIN hlatest l USING (schedule_plan_id)
+      JOIN gold.v_active_override o ON o.process_order_id = se.process_order_id AND o.override_type = 'LINE_SWAP'
+      WHERE o.to_work_center_id <> l.work_center_id) x
+UNION ALL
+SELECT 'gold', 'policy', 'CONSTRAINT', 'ACTIVE PLANNER policies use the planner criteria codes', 'INFO', NULL, 0,
+       count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT p.policy_id || ':' || coalesce(c ->> 'code', 'null') k FROM gold.policy p, jsonb_array_elements(p.criteria) c
+      WHERE p.status = 'ACTIVE' AND p.engine = 'PLANNER'
+        AND coalesce(c ->> 'code', '') NOT IN ('PRIORITY', 'SPECIES_GROUP', 'SAP_FINISH')) x
+UNION ALL
+SELECT 'gold', 'v_plan_impact', 'GRAIN', 'schedule_plan_id unique', 'ERROR', NULL, 0, count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')
+FROM (SELECT schedule_plan_id::text k FROM gold.v_plan_impact GROUP BY 1 HAVING count(*) > 1) x
 
 -- ============================================================================ CATALOG (key standard, uc1-data-model §5.3)
 UNION ALL
@@ -722,7 +875,8 @@ FROM (SELECT c.relname || '.' || a.attname || '→' || rc.relname || '.' || ra.a
       JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.conkey[1]
       JOIN pg_class rc ON rc.oid = k.confrelid JOIN pg_attribute ra ON ra.attrelid = rc.oid AND ra.attnum = k.confkey[1]
       WHERE k.contype = 'f' AND n.nspname IN ('silver', 'gold') AND c.relname NOT LIKE '%\_legacy'
-        AND a.attname <> ra.attname AND NOT (a.attname = 'parent_plan_id' AND ra.attname = 'schedule_plan_id')) x
+        AND a.attname <> ra.attname AND a.attname NOT LIKE '%\_' || ra.attname   -- role FKs (from_/to_/parent_…) are fine
+        AND NOT (a.attname = 'parent_plan_id' AND ra.attname = 'schedule_plan_id')) x
 UNION ALL
 SELECT 'catalog', 'silver/gold', 'CATALOG', 'FK columns without a leading index (join / cascade cost)', 'INFO', NULL, 0,
        count(*), array_to_string((array_agg(k ORDER BY k))[1:5], ', ')

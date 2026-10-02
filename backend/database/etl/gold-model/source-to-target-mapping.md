@@ -429,3 +429,60 @@ Candidates: `v_open_queue` WHERE `work_center_id` = the line. Runnable = NOT `is
 | `raw.note_reading` (N) | ✔ | ✔ | — | — | ✔ | durable |
 | `raw.note_review` (N) | ✔ | append-only | — | — | ✔ | durable |
 | `raw.plan_decision_event` (deferred) | ✔ | append-only | — | — | ✔ | durable |
+
+---
+
+## 9. Planner v2: payload → gold (built 2026-10-02)
+
+Source: `gold.plan_event.payload` of a `planner_run` event, written by the Data API for the semantic planner and read by `gold.replan`. The payload is stored unchanged; these are the typed copies. `element_seq` = the 1-based position of the element in its array.
+
+### 9.1 `payload.entries[i]` → `gold.schedule_entry`
+
+| Target | JSON key | Rule |
+| --- | --- | --- |
+| `line_schedule_item_id` | `lineScheduleItemId` | must exist in silver |
+| `process_order_id` | `processOrderId` | default = the schedule row's PO; must equal it (guard 1) |
+| `position` | `position` | unique per plan (table constraint) |
+| `entry_status` | `entryStatus` | upper case; default `PLANNED` |
+| `planned_start_at`, `planned_end_at` | `plannedStartAt`, `plannedEndAt` | ISO timestamps; PLANNED start ≤ end, HOLD null (guard 3) |
+| `est_run_h`, `est_changeover_h` | `estRunH`, `estChangeoverH` | as sent |
+| `due_date` | `dueDate` | the SAP finish date (planner rule) |
+| `due_date_basis` | `dueDateBasis` | default `SAP_FINISH` |
+| `slack_days`, `is_at_risk` | `slackDays`, `isAtRisk` | as sent (`isAtRisk` default false) |
+| `previous_position` | `previousPosition` | as sent when the key is present, else computed from the parent plan |
+| — | line | row on the plan line, or an active `LINE_SWAP` of the PO to this line (guard 2) |
+| `entry_reason` (seq, code, params) | `reasons[j].seq`, `.code`, `.params` | via `gold.add_reason` (code must exist, params must carry `param_keys`); seq default j |
+| `entry_reason_fact` | `reasons[j].factIds` | one row per id |
+
+### 9.2 Other payload arrays
+
+| Target | JSON | Rule |
+| --- | --- | --- |
+| `plan_override.process_order_id` | `overrides[i].po` | `silver.norm_po`; unknown PO rejects the call |
+| `plan_override.override_type` | `.type` | `LINE_SWAP` \| `PIN_POSITION` \| `FORCE_HOLD` |
+| `plan_override.from_work_center_id` | — | line of the PO's open schedule row |
+| `plan_override.to_work_center_id` | `.workCenterCode` (or `.lineId`) | `gold.resolve_line`; LINE_SWAP only |
+| `plan_override.pinned_position` | `.position` (or `.pinnedPosition`) | PIN_POSITION only |
+| `plan_override.hold_reason` | `.reason` (or `.holdReason`) | FORCE_HOLD only; default `planner override` |
+| `plan_override.is_active` | `.active` | default true; the latest row per (PO, type) wins |
+| `line_downtime.work_center_id` | `downtime[i].lineId` (or `.workCenterCode`) | `gold.resolve_line` |
+| `line_downtime.starts_at`, `ends_at`, `reason` | `.startsAt`, `.endsAt`, `.reason` | ends > starts |
+| `repair_proposal.parent_process_order_id` | `proposals[i].parentPo` | unknown PO rejects the call |
+| `repair_proposal.route_work_center_id` | `.route` | a work-center code, or an in-scope LSV line type (`COLORSORT` → LSVCLSRT, `GRAVITY` → LSVGRVTY) |
+| `repair_proposal.quality_test_id` | `.qualityTestId` | default = the PO's latest FAIL test |
+| `repair_proposal.fail_reason_code` | `.failReason` | default = that test's fail reason; must be a `gold.fail_reason` |
+| `repair_proposal.status` | `.status` | default `PROPOSED` |
+| `*_json` | the element | as sent |
+| — | `impact` | not copied: `gold.v_plan_impact.planner_impact` reads it from the payload |
+
+### 9.3 Reference tables → `gold.config.planner_rules`
+
+| JSON key | Source |
+| --- | --- |
+| `season` | `gold.config.season` |
+| `timeZone` | `gold.config.plant_time_zone` |
+| `calendar.<work_center_code>` | `gold.work_center_calendar` of the season: `weekdays` (ISO), `start` = min start, `end` = max end |
+| `cleanoutTriggers` | `gold.sequence_rule.rule_code` WHERE `rule_type = 'CLEANOUT'` |
+| `forbiddenSequence` | first `FORBIDDEN` rule: `from` / `to` trait family |
+| `repairRoutes` | `gold.repair_route`: fail code → route `line_type` |
+| `repairRouteWorkCenters` | `gold.repair_route`: fail code → route `work_center_code` (added so the route can be joined) |

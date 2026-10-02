@@ -341,3 +341,64 @@ Severity: **H** = breaks the demo story or loses data · **M** = wrong numbers o
 | G-19 | L | The proposal doc doesn't match the build: event case, `TRAIT_CHANGE`, missing objects (`queue_response`, `ingest`, `process_ingest_event`, `reset_demo`, `replay_ingest_events`, `v_run_transition`, `v_changeover_observed`, `v_dq_summary`, `cfg`, `resolve_line`, `est_kg_per_h`, `changeover_hours`, `add_reason`) | `005_gold_runtime.sql`, `30_api.sql` | This file supersedes the proposal's "already in gold" section |
 | G-20 | L | `plan_decision` allows two ACCEPTs for one plan; `OVERRIDE`/`REJECT` are never written; `override_detail` has no schema | `accept_plan` | Partial unique; define `override_detail` when the UI needs it |
 | G-21 | M | `entry_reason.params` is untyped; citable ids are found by key name | `agent_context` `cited` CTE | `reason_code.param_keys` + check in `add_reason` |
+
+---
+
+## 7. Planner v2 (built 2026-10-02)
+
+**Why:** the semantic planner (Agent API) now owns the order, times, shift calendar, cleanouts, downtime, line swaps and repair ideas. The planner team asked gold to store its result as JSON and keep serving `event_response` / `agent_context` unchanged. The agreed middle point (decisions Q1–Q9, [WORKING-PLAN.md](./WORKING-PLAN.md) §6):
+- The planner's contract is kept: JSON in, `gold.replan`, the same responses.
+- Gold keeps the model typed: each new grain in the JSON also lands in a table with FKs to silver, inside the same `replan` call. The element is stored as sent too.
+- Nothing that works today is replaced: the heuristic keeps policy v1 and its sort.
+
+Applied to the shared dev RDS with `etl/build_model.py --upgrade-gold-planner-v2` (ALTER in place: gold is mock data; raw and silver untouched). A clean build produces the same model (`migrations/008_gold_planner_v2.sql`). Checks: gold v4 13/13, validation 153 checks with 0 FAIL, `tests/planner_scenario.sql` passes.
+
+### 7.1 Changes to existing tables (additive)
+
+| Table | Change | Why |
+| --- | --- | --- |
+| `plan_event` | `parent_plan_event_id` (self FK, ON DELETE SET NULL); event_type `planner_run` | Q1: a planner plan has its own event (event → plan stays 1:1) and points to the event it answers |
+| `policy` | `engine` `HEURISTIC` \| `PLANNER` (default `HEURISTIC`); one ACTIVE per (line, engine); `gold.active_policy(wc, engine DEFAULT 'HEURISTIC')` | Q2: v1 keeps driving the heuristic; v2 (`PRIORITY`, `SPECIES_GROUP`, `SAP_FINISH`, basis ASSUMPTION pending SQ-02/SQ-04) is cited by planner plans |
+| `schedule_entry` | `due_date_basis` `NEED_BY` \| `SCHEDULE_FINISH` \| `SAP_FINISH` | Q6: the heuristic and the planner measure lateness against different commitments; existing rows backfilled |
+| `reason_code` | `OVERRIDE_HOLD`, `OVERRIDE_PIN` | Q3: the heuristic explains the overrides it applies |
+| `config` | `season`; `planner_rules` (generated) | Q5a: `gold.cfg('planner_rules')` returns the planner's JSON, built from the tables in 7.2 |
+
+### 7.2 New tables
+
+| Table | Grain | PK / business key | FKs | Source |
+| --- | --- | --- | --- | --- |
+| `plan_override` | one override instruction on one PO (`LINE_SWAP`, `PIN_POSITION`, `FORCE_HOLD`) | `plan_override_id`; (`plan_event_id`, `element_seq`) | `plan_event` (cascade), `silver.process_order`, `from_/to_work_center_id` → `silver.work_center` | `payload.overrides[i]` + `override_json` |
+| `line_downtime` | one downtime window on one line | `line_downtime_id`; (`plan_event_id`, `element_seq`) | `plan_event` (cascade), `silver.work_center` | `payload.downtime[i]` + `downtime_json` (the heuristic clock does not use it) |
+| `repair_proposal` | one proposed repair route for one PO | `repair_proposal_id`; (`plan_event_id`, `element_seq`) | `plan_event` (cascade), `parent_process_order_id`, `quality_test_id` (the FAIL it answers), `fail_reason`, `route_work_center_id` | `payload.proposals[i]` + `proposal_json` |
+| `fail_reason` | one QA fail code | `fail_reason_code` | — | the 9 silver codes (origin SILVER) + `FM`, `AP` (origin PLANNER, to confirm) |
+| `trait_family` | one trait family | `trait_family_code` | — | EXCELIS, GMO, FRESH, NONE (SILVER) + `CERTIFIED_NON_GMO` (PLANNER, to confirm) |
+| `work_center_calendar` | one line × ISO weekday × season | `work_center_calendar_id`; (`work_center_id`, `iso_weekday`, `season`) | `silver.work_center` | seed (LSVLN1/LSVLN2 Mon–Sat 00:00–24:00, HARVEST) |
+| `sequence_rule` | one sequencing rule | `sequence_rule_id`; `rule_code` | `from_/to_trait_family_code` → `trait_family`, `work_center_id` | seed (cleanouts SPECIES_CHANGE, BEFORE_EXCELIS, AFTER_GMO; forbidden GMO → CERTIFIED_NON_GMO) |
+| `repair_route` | one fail code → rework work center | `fail_reason_code` | `fail_reason`, `route_work_center_id` → `silver.work_center` | seed (DENT, DISCOLORED → LSVCLSRT; FM, AP → LSVGRVTY) |
+
+Views: `gold.v_active_override` (one per PO × type, latest row, active only) and `gold.v_plan_impact` (one per plan: planned / hold / at-risk counts, newly late and no longer late on the same basis, late on a changed basis, moves, changeover hours vs parent, and the planner's `impact` claim). `v_open_queue` gains `swapped_to_work_center_id`, `swap_override_id`, `hold_override_id`, `override_hold_reason`, `pin_override_id`, `override_pinned_position` (appended), and `hold_reason` `OVERRIDE_HOLD`.
+
+### 7.3 `gold.replan` behaviour
+
+1. If the event already has a plan, return it (applies to every event).
+2. `planner_run`: store `overrides`, `downtime` and `proposals` typed (unknown PO / line / route rejects the call). `payload` is never changed.
+3. `payload.entries` present (only accepted on `planner_run`): new plan version with `created_by = 'planner-v2'` and the ACTIVE PLANNER policy. Entries are stored as sent, with three guards:
+   - the schedule row belongs to the PO;
+   - the row is on this line, or the PO has an active `LINE_SWAP` to it;
+   - PLANNED has start ≤ end, and HOLD has no times.
+
+   One failing entry rejects the whole plan. Reasons go through `add_reason` (codes and required params checked; `factIds` linked). `due_date_basis` defaults to `SAP_FINISH`.
+4. No entries: the heuristic runs with policy v1, and respects active overrides:
+   - a PO swapped away is not planned here;
+   - `FORCE_HOLD` → HOLD (`OVERRIDE_HOLD`);
+   - `PIN_POSITION` → that position (`OVERRIDE_PIN`), but the running batch stays first.
+
+Not done, as agreed: no wrapper function (Q8a); `agent_context` unchanged (Q8b); the heuristic doesn't add POs swapped *into* its line (the planner plans those).
+
+### 7.4 Open questions for the planner team
+
+1. What do `FM` and `AP` mean (loaded as PLANNER codes to confirm)?
+2. Is `CERTIFIED_NON_GMO` a real trait value, and how is it told apart from `NONE` in the schedules?
+3. `COB` is the most frequent fail (263 tests) and has no repair route: on purpose?
+4. Does `SPECIES_GROUP` mean same variety first, then same species (as in the heuristic)?
+5. Does an override end at a date, or only when a later run sends `active: false`?

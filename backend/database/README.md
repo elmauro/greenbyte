@@ -47,6 +47,7 @@ python backend/database/etl/build_model.py --checks-only    # rerun the reconcil
 python backend/database/etl/build_model.py --scenario       # storyline test, rolled back
 python backend/database/etl/build_model.py --reset-demo line-1
 python backend/database/etl/build_model.py --validate       # grain / relation / constraint report, read-only (128 checks)
+python backend/database/etl/build_model.py --upgrade-gold-planner-v2  # live DB: planner v2 in place (applied on dev 2026-10-02)
 python backend/database/etl/build_model.py --upgrade-gold-v4  # live DB: gold v4 in place, raw/silver untouched (applied once on dev, 2026-10-01)
 ```
 
@@ -55,7 +56,7 @@ python backend/database/etl/build_model.py --upgrade-gold-v4  # live DB: gold v4
 - **One transaction.** Migrations, transforms, seeds, the gold functions, the baseline plans and `tests/reconciliation.sql` all run in one transaction. If any check fails, everything rolls back and the previous build stays.
 - **Silver and gold are fully derived.** Both schemas are dropped and rebuilt, then the plans are regenerated: baseline v1 for each line with a `demo_line_id`, then every non-voided `raw.ingest_event` is replayed. Accept decisions aren't kept across rebuilds.
 - **`raw.ingest_event`, `raw.note_reading` and `raw.note_review` are never dropped.** They are the durable input the Data API writes outside gold: upstream signals, readings of free-text notes (rules-v1, Bedrock, a person) and human confirm/reject of a fact. They are replayed into gold on every build. Rerun `build_model.py` after every `load_raw.py` run.
-- **Ranking policy.** `seeds/gold_policy.sql` holds policy v1 (the heuristic-v1 order). Every plan records `policy_id`.
+- **Ranking policy.** `seeds/gold_policy.sql` holds policy v1 (engine HEURISTIC, the heuristic-v1 order) and v2 (engine PLANNER, the semantic planner's rules). Every plan records `policy_id`.
 
 ## 3. Data API usage (gold functions)
 
@@ -71,6 +72,23 @@ SELECT gold.review_fact(<semantic_fact_id>, 'REJECTED', 'scheduler', 'already fu
 SELECT gold.record_note_reading('Needs fumi!!', 'BEDROCK', '<model id>', 'v1', '[{"fact_type":"NOT_READY","confidence":0.9}]');
 SELECT * FROM gold.v_plan_status;                                                   -- acceptance history per plan
 SELECT gold.reset_demo('line-1');                                                   -- back to the calm baseline
+```
+
+### Planner v2 path (semantic planner → Data API → gold)
+
+Run in **one transaction**: insert a `planner_run` event with the planner JSON, then replan. Calling `replan` again with the same event id returns the saved plan. One bad entry rejects the whole plan. Details: [`etl/gold-model/gold-data-model.md`](./etl/gold-model/gold-data-model.md) §7.
+
+```sql
+SELECT gold.cfg('planner_rules')::jsonb;                                   -- calendar, cleanouts, forbidden sequence, repair routes
+BEGIN;
+INSERT INTO gold.plan_event (work_center_id, event_type, source, parent_plan_event_id, payload, created_by)
+VALUES ((gold.resolve_line('line-1')).work_center_id, 'planner_run', 'ui_manual', <event it answers or NULL>,
+        '{"entries": [...], "impact": {...}, "proposals": [...], "downtime": [...], "overrides": [...]}', 'planner')
+RETURNING plan_event_id;
+SELECT gold.replan('line-1', <plan_event_id>);                             -- planner-v2 plan (or the heuristic if no entries)
+SELECT gold.event_response(<schedule_plan_id>);                            -- same JSON as today
+COMMIT;
+SELECT * FROM gold.v_plan_impact WHERE schedule_plan_id = <schedule_plan_id>;
 ```
 
 The ingest functions accept an optional idempotency key. They refuse a PO that isn't on the line's open queue, so no PO is ever invented. Mapping, keys and data-quality rules are in `data_sources/observations.md`; the model and integration summary is in [`backend/data-model/`](../data-model/README.md).

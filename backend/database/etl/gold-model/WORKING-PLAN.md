@@ -145,3 +145,30 @@ Demo scenario (`tests/demo_scenario.sql`): baseline Line 1 with facts → `10022
 - Gates: `node cursor/scripts/run-feature-gates.mjs` between phases.
 - On close: feature manifest, `cursor/analysis/features/INDEX.md`, `cursor/company/future-work/backend/STORY-LOG.md`, `STORY-REGISTRY.md`.
 - Docs to update when Phase 1 lands: `backend/data-model/uc1-data-model.md` §5.6 (gold objects) and §7.1 (heuristic), `backend/database/README.md` (build steps), `backend/docs/api/` examples (`agent_context` facts, new reason codes).
+
+---
+
+## 6. Planner v2 decisions (2026-10-02)
+
+Request: lean gold handoff for the semantic planner (planner team). Team rules applied:
+1. If the ask breaks current logic, propose a version that fits the model.
+2. If it can be accommodated, add columns without changing existing ones.
+3. A new grain gets a new table.
+4. Silver stays the source of truth.
+
+| ID | Decision | Outcome |
+| --- | --- | --- |
+| Q1 | Which event a planner plan belongs to | Own `planner_run` event (+ `parent_plan_event_id`); one plan per event; a repeat call returns the saved plan |
+| Q2 | Policy v2 vs the heuristic | Additive `policy.engine`; v1 HEURISTIC stays ACTIVE, v2 PLANNER ACTIVE |
+| Q3 | Overrides / line swap | One table `plan_override` (typed + `override_json`; LINE_SWAP, PIN_POSITION, FORCE_HOLD); the heuristic respects them |
+| Q4a | Downtime | `line_downtime`, planner-only (heuristic clock unchanged) |
+| Q4b | Repair proposals | `repair_proposal`, aligned to silver PO / QA test / work center |
+| Q4c | Impact | JSON in the payload + derived `v_plan_impact` |
+| Q5a | `planner_rules` | Typed tables (`work_center_calendar`, `sequence_rule`, `repair_route`); config JSON generated from them |
+| Q5b | `FM`, `AP`, `CERTIFIED_NON_GMO` | Gold reference domains `fail_reason` / `trait_family` with origin SILVER / PLANNER; silver untouched |
+| Q6 | `due_date` meaning | `schedule_entry.due_date_basis`; planner default SAP_FINISH; old rows backfilled |
+| Q7 | Planner output checks | 3 guards; one bad entry rejects the plan; heuristic-only validation checks scoped, planner checks added |
+| Q8 | Entry point / Agent context | No wrapper (INSERT event + `replan` + `event_response` in one transaction); `agent_context` unchanged |
+| Q9 | Delivery | ALTER in place + mirror in the repo; v2 criteria stored as ASSUMPTION; same branch `gold-layer-schemas` |
+
+Built and applied 2026-10-02 (`--upgrade-gold-planner-v2`). Open questions for the planner team: gold-data-model §7.4.

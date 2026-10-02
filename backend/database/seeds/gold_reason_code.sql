@@ -1,6 +1,7 @@
 -- Reason codes written by gold.replan into gold.entry_reason. Templates are a fallback; the Agent API writes the prose
 -- from the same params and must cite only the ids they contain.
 -- param_keys = params that are always present (non-null) for the code; gold.add_reason rejects a row without them.
+-- Idempotent (ON CONFLICT DO NOTHING): the in-place upgrades re-run it to add new codes.
 INSERT INTO gold.reason_code (reason_code, category, description, template, param_keys) VALUES
     ('ALREADY_RUNNING', 'STATE', 'Batch is already running on the line: kept first',
         'Already running on {work_center_code} — kept in position 1', '{work_center_code,status_code}'),
@@ -38,4 +39,10 @@ INSERT INTO gold.reason_code (reason_code, category, description, template, para
     ('NOTE_DEADLINE', 'URGENCY', 'A trusted note gives a deadline',
         'Note deadline {deadline_date}: "{note_text}"', '{semantic_fact_id,deadline_date,note_text}'),
     ('THROUGHPUT_FALLBACK', 'STATE', 'Too few logged runs for this species on the line: line median kg/h used',
-        'No {species_code} run history on {work_center_code}: line median speed used', '{work_center_code}');
+        'No {species_code} run history on {work_center_code}: line median speed used', '{work_center_code}'),
+    -- planner v2 (Q3): active overrides applied by the heuristic (cite plan_override_id)
+    ('OVERRIDE_HOLD', 'HARD', 'A planner / scheduler override forces the batch on hold',
+        'On hold by override: {hold_reason}', '{plan_override_id,hold_reason}'),
+    ('OVERRIDE_PIN', 'STATE', 'A planner / scheduler override pins the batch to a position',
+        'Pinned to position {pinned_position} by override', '{plan_override_id,pinned_position}')
+ON CONFLICT (reason_code) DO NOTHING;

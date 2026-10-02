@@ -36,6 +36,44 @@ LEFT JOIN LATERAL (
     ORDER BY pd.decided_at DESC LIMIT 1) d ON true;
 COMMENT ON VIEW gold.v_plan_status IS 'Per plan: latest?, accepted (from plan_decision), when and by whom. Status stays the lifecycle of the latest plan';
 
+-- planner v2 (Q4c, Q6): impact of a plan vs its parent, derived from the entries (R-DERIVED). "Newly late" compares like
+-- with like: a PO whose due_date_basis changed (e.g. heuristic NEED_BY -> planner SAP_FINISH) is listed apart.
+-- planner_impact = what the planner said (payload.impact of a planner_run), shown next to the derived numbers.
+CREATE VIEW gold.v_plan_impact AS
+WITH pair AS (
+    SELECT sp.schedule_plan_id, se.process_order_id, po.po_number, se.position, se.entry_status, se.is_at_risk,
+           se.due_date_basis, se.est_changeover_h,
+           pe.position AS parent_position, pe.is_at_risk AS parent_at_risk, pe.due_date_basis AS parent_basis
+    FROM gold.schedule_plan sp
+    JOIN gold.schedule_entry se USING (schedule_plan_id)
+    JOIN silver.process_order po ON po.process_order_id = se.process_order_id
+    LEFT JOIN gold.schedule_entry pe ON pe.schedule_plan_id = sp.parent_plan_id AND pe.process_order_id = se.process_order_id
+)
+SELECT sp.schedule_plan_id, sp.work_center_id, sp.plan_version, sp.created_by, sp.parent_plan_id,
+       count(p.process_order_id) FILTER (WHERE p.entry_status = 'PLANNED') AS n_planned,
+       count(p.process_order_id) FILTER (WHERE p.entry_status = 'HOLD') AS n_hold,
+       count(p.process_order_id) FILTER (WHERE p.is_at_risk) AS n_at_risk,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE p.is_at_risk AND NOT coalesce(p.parent_at_risk, false)
+             AND p.due_date_basis IS NOT DISTINCT FROM p.parent_basis), '[]') AS newly_late,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE NOT p.is_at_risk AND p.parent_at_risk
+             AND p.due_date_basis IS NOT DISTINCT FROM p.parent_basis), '[]') AS no_longer_late,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE p.is_at_risk AND p.parent_position IS NOT NULL
+             AND p.due_date_basis IS DISTINCT FROM p.parent_basis), '[]') AS late_on_changed_basis,
+       count(p.process_order_id) FILTER (WHERE p.parent_position IS NOT NULL AND p.parent_position <> p.position) AS n_moved,
+       coalesce(sum(p.est_changeover_h), 0) AS changeover_h,
+       (SELECT coalesce(sum(x.est_changeover_h), 0) FROM gold.schedule_entry x WHERE x.schedule_plan_id = sp.parent_plan_id)
+           AS parent_changeover_h,
+       ev.payload -> 'impact' AS planner_impact
+FROM gold.schedule_plan sp
+LEFT JOIN pair p USING (schedule_plan_id)
+LEFT JOIN gold.plan_event ev ON ev.plan_event_id = sp.plan_event_id AND ev.event_type = 'planner_run'
+GROUP BY sp.schedule_plan_id, sp.work_center_id, sp.plan_version, sp.created_by, sp.parent_plan_id, ev.payload;
+COMMENT ON VIEW gold.v_plan_impact IS
+  'Per plan vs its parent: planned / hold / at-risk counts, newly late and no longer late (same due_date_basis only), late on a changed basis, moved POs, changeover hours vs parent, and the planner''s own impact claim';
+
 -- One row per plan entry, with the BFF QueueRow shape in queue_row.
 CREATE VIEW gold.v_plan_queue AS
 SELECT sp.schedule_plan_id, sp.work_center_id, wc.work_center_code, coalesce(wc.demo_line_id, wc.work_center_code) AS line_id,
