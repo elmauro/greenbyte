@@ -351,7 +351,7 @@ export const en = {
       passwordLabel: 'Password',
       submit: 'Continue',
       error: 'Invalid username or password.',
-      hint: 'Default demo user is documented in frontend/.env.example (override with VITE_DEMO_PLANT_USERNAME / VITE_DEMO_PLANT_PASSWORD).',
+      hint: 'Default demo user is\ngreenbyte_user\ngr33nb4t3',
     },
     ux: {
       navHelp: 'Help',

@@ -35,6 +35,7 @@ Path:
 | GREENBYTE-011 | n/a | `copilot-select-order-placeholder` | Copilot order select placeholder (not em dash) | frontend | done |
 | GREENBYTE-012 | n/a | `remove-post-accept-queue-bell-notification` | Remove post-accept queue bell notification | frontend | done |
 | GREENBYTE-013 | n/a | `nav-pasco-conditioning-label` | Nav label Pasco conditioning | frontend | done |
+| GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | frontend | done |
 
 ## How to update
 

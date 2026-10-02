@@ -519,7 +519,7 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
       passwordLabel: 'Contraseña',
       submit: 'Continuar',
       error: 'Usuario o contraseña incorrectos.',
-      hint: 'Usuario demo por defecto en frontend/.env.example (override con VITE_DEMO_PLANT_USERNAME / VITE_DEMO_PLANT_PASSWORD).',
+      hint: 'Usuario demo por defecto:\ngreenbyte_user\ngr33nb4t3',
     },
     ux: {
       navHelp: 'Ayuda',

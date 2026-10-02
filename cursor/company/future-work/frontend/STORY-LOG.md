@@ -7,6 +7,18 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-014 — Show demo login credentials on sign-in hint
+
+- FW: `n/a` · Slug: `show-demo-login-credentials-on-sign-in-hint` · Stack: frontend
+- Change type: `fix` · Branch: `feature/greenbyte-014-demo-login-hint` · PR: `fix(frontend): show demo login credentials on sign-in hint`
+- Status: shipped · Shipped: 2026-10-02 · Package: [`frontend/show-demo-login-credentials-on-sign-in-hint/`](../../../analysis/features/frontend/show-demo-login-credentials-on-sign-in-hint/)
+
+### GREENBYTE-013 — Nav label Pasco conditioning
+
+- FW: `n/a` · Slug: `nav-pasco-conditioning-label` · Stack: frontend
+- Change type: `feat` · Branch: `feature/greenbyte-013` · PR: `feat(frontend): rename nav label to Pasco conditioning (GREENBYTE-013)`
+- Status: shipped · Shipped: 2026-10-02 · Package: [`frontend/nav-pasco-conditioning-label/`](../../../analysis/features/frontend/nav-pasco-conditioning-label/)
+
 ### GREENBYTE-012 — Remove post-accept queue bell notification
 
 - FW: `n/a` · Slug: `remove-post-accept-queue-bell-notification` · Stack: frontend
