@@ -22,11 +22,11 @@ Local dev uses **MSW** to mock the BFF (`VITE_USE_MSW=true` in `.env.development
 
 | Path | Description |
 | --- | --- |
-| `/demo/plant` | UC1 interactive demo |
+| `/demo/plant` | Pasco conditioning hub (queue + tour links) |
 | `/demo/plant/tour` | Guided 6-step tour (rush + QA previews) |
 | `/demo/plant/flow` | UI ↔ API integration map (incl. `sap-queue-refresh`) |
 | `/demo/architecture` | Team architecture page |
-| `/demo/plant/ux` | UC1 Pasco demo |
+| `/demo/plant/ux` | Program Timeline (Line Scheduler UX) |
 
 ## Configuration
 
