@@ -813,7 +813,7 @@ export function PlantBaselineDashboard({
                 timeline
               )}
             </div>
-            {acceptFooter}
+            {!isUx && acceptFooter}
           </>
         );
       }
@@ -1025,12 +1025,10 @@ export function PlantBaselineDashboard({
             <div>
               {onLineChange && !(isUx && !compact) && (
                 <div>
-                  <label htmlFor={lineSelectId} className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {copy.lineSelectLabel}
-                  </label>
                   <PlantSelect
                     id={lineSelectId}
-                    className="mt-1 w-full max-w-md"
+                    className="w-full max-w-md"
+                    ariaLabel={copy.lineSelectLabel}
                     value={selectedLine.id}
                     onChange={onLineChange}
                     options={PLANT_LINES.map((line) => ({
@@ -1043,12 +1041,9 @@ export function PlantBaselineDashboard({
               )}
               {onLineChange && isUx && !compact && (
                 <div className="lg:hidden">
-                  <label htmlFor={`${lineSelectId}-mobile`} className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {copy.lineSelectLabel}
-                  </label>
                   <PlantSelect
                     id={`${lineSelectId}-mobile`}
-                    className="mt-1 w-full max-w-md"
+                    className="w-full max-w-md"
                     ariaLabel={copy.lineSelectLabel}
                     value={selectedLine.id}
                     onChange={onLineChange}
@@ -1147,7 +1142,11 @@ export function PlantBaselineDashboard({
       {isUx && eventPendingReview && onAccept && (
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
           <div className="mx-auto flex flex-wrap items-center gap-4 sm:justify-between">
-            <p className="hidden flex-1 text-sm text-gray-600 sm:block">{ux.footerAction}</p>
+            <p className="flex-1 text-sm text-gray-600">
+              {schedule.footerTotal
+                .replace('{count}', String(active.length))
+                .replace('{runtime}', schedule.demoRuntime)}
+            </p>
             {activeSection !== 'scheduling' && (
               <button
                 type="button"
