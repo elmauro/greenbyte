@@ -1,14 +1,20 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { DemoSessionGuard } from '../components/demo/DemoSessionGuard';
 import { DemoSignInPage } from '../pages/demo/DemoSignInPage';
-import { HackathonArchitecturePage } from '../pages/demo/HackathonArchitecturePage';
+import { HowItWorksPage } from '../pages/demo/HowItWorksPage';
 import { PlantCapacityDemo } from '../pages/demo/PlantCapacityDemo';
 import { PlantCapacityUxDemo } from '../pages/demo/PlantCapacityUxDemo';
 import { PlantCapacityTour } from '../pages/demo/PlantCapacityTour';
-import { PlantUc1FlowGallery } from '../pages/demo/PlantUc1FlowGallery';
 import { Home } from '../pages/Home/Home';
 import { paths } from './paths';
+
+function RedirectFlowToHowItWorks() {
+  const [params] = useSearchParams();
+  const next = new URLSearchParams(params);
+  next.set('section', 'api');
+  return <Navigate to={`${paths.demoHowItWorks}?${next.toString()}`} replace />;
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -50,10 +56,18 @@ export function AppRoutes() {
         }
       />
       <Route
+        path={paths.demoHowItWorks}
+        element={
+          <DemoSessionGuard>
+            <HowItWorksPage />
+          </DemoSessionGuard>
+        }
+      />
+      <Route
         path={paths.demoPlantFlow}
         element={
           <DemoSessionGuard>
-            <PlantUc1FlowGallery />
+            <RedirectFlowToHowItWorks />
           </DemoSessionGuard>
         }
       />
@@ -61,7 +75,7 @@ export function AppRoutes() {
         path={paths.demoArchitecture}
         element={
           <DemoSessionGuard>
-            <HackathonArchitecturePage />
+            <Navigate to={paths.demoHowItWorks} replace />
           </DemoSessionGuard>
         }
       />

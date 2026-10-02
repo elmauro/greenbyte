@@ -4,7 +4,7 @@
 **Contract types (frontend):** `frontend/src/demo/plant/plantDemoTypes.ts`  
 **Client:** `frontend/src/services/plantDemoApi.ts`  
 **Target BFF:** `core-api` (`/demo/plant/*`)  
-**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7 · **Live UI ↔ API:** `/demo/plant/flow` · **Backend dev brief:** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
+**Related:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) · [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7 · **Live UI ↔ API:** `/demo/how-it-works?section=api` (`/demo/plant/flow` redirects and keeps `step`) · **Backend dev brief:** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)
 
 The **browser calls only the BFF**. The BFF calls **Data API (Camilo)** and **Agent API (David)**. Today, if `VITE_API_BASE_APP` is unset, the same JSON is served by `plantDemoServer` on the client for static demo; production target is live BFF.
 
@@ -66,7 +66,7 @@ flowchart LR
 | — | UI **poll** (BFF or MSW) | Every ~5s while `/demo/plant` open | `GET /demo/plant/lines/{lineId}/queue?locale=` | While a plan is **PROPOSED**: `gold.event_response` plus simulated `POST /explain-replan`. Otherwise `gold.v_open_queue`. | `queue[]`, `reasonShort`, `pendingDiff`, `pendingExplanation` |
 
 **Tour (`/demo/plant/tour`):** read-only **same React components**; no live HTTP (uses `plantFlowSnapshots`).  
-**Backend owners per step:** see `/demo/plant/flow` → **Likely backend owners** (Mauricio · BFF, Camilo · Data API, David · Agent API).
+**Backend owners per step:** see `/demo/how-it-works?section=api` → **Likely backend owners** (Mauricio · BFF, Camilo · Data API, David · Agent API).
 
 ---
 
@@ -162,7 +162,7 @@ sequenceDiagram
 
 **Canonical file (copy into Postman, contract tests, OpenAPI samples):** [../../backend/docs/api/uc1-demo-response-examples.json](../../backend/docs/api/uc1-demo-response-examples.json)
 
-**Live in app:** `/demo/plant/flow` → pick step → **Response JSON** panel (same shapes).
+**Live in app:** `/demo/how-it-works?section=api` → pick a step → request example, then response JSON (same shapes). `/demo/plant/flow?step=` redirects and keeps the step.
 
 Types: `frontend/src/demo/plant/plantDemoTypes.ts` · mock: `plantDemoServer.ts` · MSW: `plantDemoHandlers.ts`.
 
@@ -186,7 +186,7 @@ Six rows (5 active + 1 `COMPLETE`). Baseline `planVersion: 1`, optional `lastEve
 
 ### `POST /demo/plant/batches/explain` → `PlantBatchExplainResponse`
 
-Sales nice-to-have. **Request:** `{ "po", "question", "locale" }`. **Response:** `{ "po", "answer", "citations[]" }`. Does not change the queue. UI: `/demo/plant/flow?step=07`.
+Sales nice-to-have. **Request:** `{ "po", "question", "locale" }`. **Response:** `{ "po", "answer", "citations[]" }`. Does not change the queue. UI: `/demo/how-it-works?section=api&step=07`.
 
 ### `POST /demo/plant/schedule/accept` → `PlantAcceptResponse`
 

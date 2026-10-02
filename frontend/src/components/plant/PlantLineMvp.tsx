@@ -46,10 +46,10 @@ export function PlantLineMvp() {
             <Link to={paths.demoPlantUx} className="inline-flex items-center text-brand-blue hover:text-brand-blue/80">
               {copy.uxCompare.previewLink} →
             </Link>
-            <Link to={paths.demoArchitecture} className="inline-flex items-center text-brand-blue hover:text-brand-blue/80">
+            <Link to={paths.demoHowItWorks} className="inline-flex items-center text-brand-blue hover:text-brand-blue/80">
               {copy.links.architecture} →
             </Link>
-            <Link to={paths.demoPlantFlow} className="inline-flex items-center text-brand-blue hover:text-brand-blue/80">
+            <Link to={`${paths.demoHowItWorks}?section=api`} className="inline-flex items-center text-brand-blue hover:text-brand-blue/80">
               {copy.links.flowSlides} →
             </Link>
           </div>

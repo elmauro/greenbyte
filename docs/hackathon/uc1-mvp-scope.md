@@ -4,7 +4,7 @@
 **Persona:** Seed conditioning line scheduler (Pasco)  
 **Routes:** `/demo/plant` (interactive demo) · `/demo/plant/tour` (5-step story)  
 **Architecture:** [syngenta-demo-architecture.md](./syngenta-demo-architecture.md) §7  
-**UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/plant/flow`  
+**UI ↔ backend (when/what):** [uc1-ui-backend-flow.md](./uc1-ui-backend-flow.md) · **Live map:** `/demo/how-it-works?section=api` (`/demo/plant/flow` redirects and keeps `step`)  
 **Backend handoff (Rush · QA · Explain batch):** [../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md](../../backend/docs/api/UC1-SYNGENTA-DEMO-CONTEXT.md)  
 **Syngenta brief vs demo assumptions:** [uc1-syngenta-assumptions.md](./uc1-syngenta-assumptions.md)  
 **Architecture, events, decisions, AI data model:** [uc1-system-blueprint.md](./uc1-system-blueprint.md)
@@ -74,7 +74,7 @@ We build **B+** for hackathon week; A is embedded in B+; C is explicitly deferre
 5. **Explain my batch** (sales) — `POST batches/explain` (no queue change)  
 6. Accept schedule + audit message  
 
-**Tour:** `/demo/plant/tour` embeds the same components (read-only). **Flow map:** `/demo/plant/flow` (steps 03 / 03b / 07 = three triggers).  
+**Tour:** `/demo/plant/tour` embeds the same components (read-only). **Flow map:** `/demo/how-it-works?section=api` (steps 03 / 03b / 07 = three triggers).  
 
 ### 4.2 API shapes (frontend ↔ BFF)
 

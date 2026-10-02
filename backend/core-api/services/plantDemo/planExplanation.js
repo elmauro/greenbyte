@@ -1,4 +1,5 @@
 import { postExplainReplan } from './agentApiClient.js';
+import { resolveExplainPo } from './explanationBuilder.js';
 
 /**
  * Maps a gold.event_response payload onto the scheduler contract and the
@@ -23,12 +24,13 @@ export function explainContextFromPlan(plan, overrides = {}) {
   const isRefresh = eventType === 'queue_refresh' || source === 'etl_refresh';
   const added = Array.isArray(plan?.diff?.added) ? plan.diff.added : [];
   const held = Array.isArray(plan?.diff?.held) ? plan.diff.held : [];
-  const focusPo =
-    overrides.focusPo ??
-    added[0] ??
-    held[0] ??
-    plan?.diff?.moves?.[0]?.po ??
-    null;
+  const focusPo = resolveExplainPo({
+    focusPo: overrides.focusPo,
+    added,
+    held,
+    moves: plan?.diff?.moves ?? [],
+    queue: plan?.queue ?? [],
+  });
 
   return {
     uiEventType: isQa ? 'qa_fail' : 'rush',

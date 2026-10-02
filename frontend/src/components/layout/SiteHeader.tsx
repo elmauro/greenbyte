@@ -31,8 +31,7 @@ export function SiteHeader() {
     ? [
         { label: m.nav.demoPlant, to: paths.demoPlant },
         { label: m.nav.demoPlantUx, to: paths.demoPlantUx },
-        { label: m.nav.demoPlantFlow, to: paths.demoPlantFlow },
-        { label: m.nav.demoArchitecture, to: paths.demoArchitecture },
+        { label: m.nav.howItWorks, to: paths.demoHowItWorks },
       ]
     : [];
 

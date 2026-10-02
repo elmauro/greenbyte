@@ -158,7 +158,11 @@ export function PlantBaselineDashboard({
   const totalKg = active.reduce((s, r) => s + r.kg, 0);
   const nextRow = active[0];
   const utilization = Math.min(95, 58 + active.length * 2);
-  const eventActive = Boolean(eventType && explanation);
+  const explanationLead = (explanation?.alertBanner ?? '').trim() || (explanation?.summary ?? '').trim();
+  const explanationHasCopy = Boolean(
+    explanationLead || explanation?.bullets?.some((line) => line.trim().length > 0),
+  );
+  const eventActive = Boolean(eventType && explanation && explanationHasCopy);
   /** Rush/QA still awaiting human accept — hide event chrome once accepted. */
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
@@ -301,7 +305,7 @@ export function PlantBaselineDashboard({
         const remote = remoteNotices.find((notice) => notice.lineId === line.id);
         const isCurrent = line.id === selectedLine.id;
         if (isCurrent) {
-          if (!showSchedulingNotification || !eventType) return [];
+          if (!eventType || !eventPendingReview) return [];
           return [{ lineId: line.id, eventType, summary: explanation?.summary }];
         }
         if (!remote || dismissedNoticeIds.includes(`${remote.lineId}:${remote.eventType}`)) return [];
@@ -453,17 +457,20 @@ export function PlantBaselineDashboard({
     setDismissedNoticeIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
   }
 
-  const eventBanner = eventPendingReview && explanation && (
+  const eventBanner = eventPendingReview && explanation && explanationLead && (
     <div className="mb-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 sm:flex-row sm:items-start">
       <span className="text-amber-600">⚠</span>
       <div className="min-w-0 flex-1">
         {isUx && (
           <p className="font-semibold">{ux.amberTitle}</p>
         )}
-        {!isUx && (
+        {!isUx && explanation.alertBanner?.trim() && (
           <p>{explanation.alertBanner}</p>
         )}
-        {!isUx && explanation.summary && (
+        {!isUx && !explanation.alertBanner?.trim() && (
+          <p>{explanationLead}</p>
+        )}
+        {!isUx && explanation.alertBanner?.trim() && explanation.summary && (
           <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
         )}
         {isUx && (

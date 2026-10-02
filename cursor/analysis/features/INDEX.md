@@ -28,6 +28,8 @@ Path:
 | GREENBYTE-004 | n/a | `uc1-plant-ux-compare` | UC1 Plant UX compare page | frontend | done |
 | GREENBYTE-005 | n/a | `uc1-data-model-medallion` | UC1 data model medallion (raw silver gold) | backend | done |
 | GREENBYTE-006 | n/a | `uc1-manual-schedule-adjust` | UC1 manual schedule adjust | frontend | done |
+| GREENBYTE-007 | n/a | `how-it-works-reference` | How it works reference | frontend | done |
+| GREENBYTE-008 | n/a | `copilot-placeholder-order-fix` | Copilot placeholder order fix | frontend | done |
 
 ## How to update
 

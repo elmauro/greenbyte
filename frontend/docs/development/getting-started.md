@@ -35,8 +35,9 @@ Create **`frontend/.env.development`** from [`.env.development.example`](../../.
 | --- | --- |
 | `/demo/plant` | Interactive Line 1 — rush, QA, explain batch, accept |
 | `/demo/plant/tour` | 6-step guided story (rush + QA, same components, read-only) |
-| `/demo/plant/flow` | UI ↔ BFF map + JSON + backend owners (steps 01–07 incl. 03c SAP refresh) |
-| `/demo/architecture` | Hackathon architecture + endpoint tables |
+| `/demo/how-it-works` | How it works: Architecture, or UI and API with a request and response on each step |
+| `/demo/plant/flow` | Redirects to `/demo/how-it-works?section=api` (keeps `step`) |
+| `/demo/architecture` | Redirects to `/demo/how-it-works` |
 
 Footer on `/demo/plant` shows **MSW**, **in-process**, or **live BFF** depending on env.
 
