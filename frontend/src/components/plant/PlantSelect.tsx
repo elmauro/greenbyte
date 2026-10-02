@@ -10,6 +10,8 @@ type PlantSelectProps = {
   size?: 'sm' | 'md';
   className?: string;
   ariaLabel?: string;
+  /** Shown when `value` is empty or not in `options` (default em dash). */
+  emptyLabel?: string;
 };
 
 export function PlantSelect({
@@ -20,6 +22,7 @@ export function PlantSelect({
   size = 'md',
   className = '',
   ariaLabel,
+  emptyLabel = '—',
 }: PlantSelectProps) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -86,7 +89,11 @@ export function PlantSelect({
         onKeyDown={onTriggerKey}
         className={`flex w-full items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white font-medium text-gray-900 hover:border-gray-300 focus:border-brand-green focus:outline-none focus:ring-2 focus:ring-brand-green/20 ${pad}`}
       >
-        <span className="truncate">{selected?.label ?? '—'}</span>
+        <span
+          className={`truncate ${selected ? 'text-gray-900' : 'font-normal text-gray-500'}`}
+        >
+          {selected?.label ?? emptyLabel}
+        </span>
         <svg
           viewBox="0 0 20 20"
           className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}

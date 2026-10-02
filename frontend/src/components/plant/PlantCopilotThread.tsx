@@ -140,6 +140,8 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: Plant
           size="sm"
           value={po}
           onChange={choosePo}
+          emptyLabel={shell.selectOrderPlaceholder}
+          ariaLabel={shell.selectOrderPlaceholder}
           options={selectable.map((row) => ({
             value: row.po,
             label: `${row.po} · ${row.species}`,

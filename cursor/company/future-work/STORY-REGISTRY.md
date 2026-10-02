@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-011` (update when assigning).
+**Next free execution ID:** `GREENBYTE-012` (update when assigning).
 
 ---
 
@@ -31,6 +31,7 @@ Status: **backlog** = FW without execution ID; **active** = feature folder exist
 
 | Execution story | Backlog ID | Feature slug | Feature name | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-011 | n/a | `copilot-select-order-placeholder` | Copilot order select placeholder (not em dash) | P2 | shipped |
 | GREENBYTE-010 | n/a | `pending-po-highlight` | Pending replan PO highlight (not running slot) | P2 | shipped |
 | GREENBYTE-009 | n/a | `uc1-scheduler-ux-test-cases` | UC1 scheduler UX test cases | P2 | shipped |
 | GREENBYTE-008 | n/a | `copilot-placeholder-order-fix` | Copilot placeholder order fix | P2 | shipped |

@@ -232,6 +232,7 @@ export const en = {
       adjustDown: 'Move down',
       adjustRunning: 'Running',
       thisOrder: 'This order',
+      selectOrderPlaceholder: 'Select an order',
       selectRowHint: 'Select an order on the timeline, then ask about it here.',
       hideCopilot: 'Hide copilot',
       showCopilot: 'Show copilot',
