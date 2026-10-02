@@ -687,14 +687,9 @@ export function PlantBaselineDashboard({
             {approvedStrip}
             {metricsGrid}
             {!eventPendingReview && (
-              <p className="mt-4 text-sm text-gray-600">
-                {isUx ? ux.whereNext : copy.copilotIdle}{' '}
-                {showProgramTimeline && !isUx && `(${b.nav.queue} → ${b.nav.scheduling})`}
-              </p>
-            )}
-            {isUx && !eventPendingReview && (
-              <p className="mt-2 text-sm text-gray-500">
-                {acceptNotice ? ux.nextApproved : ux.nextCalm}
+              <p className="mt-4 text-sm leading-relaxed text-gray-600">
+                {isUx ? (acceptNotice ? ux.nextApproved : ux.nextCalm) : copy.copilotIdle}
+                {!isUx && showProgramTimeline ? ` (${b.nav.queue} → ${b.nav.scheduling})` : null}
               </p>
             )}
           </>
@@ -1030,7 +1025,7 @@ export function PlantBaselineDashboard({
                 </div>
               )}
               {!onLineChange && <h2 className="text-xl font-bold text-gray-900">{b.pageTitle}</h2>}
-              {!(isUx && eventPendingReview) && (
+              {!isUx && (
                 <p className="mt-1 text-sm font-medium text-brand-green">
                   {eventPendingReview ? b.moodLineEvent : b.moodLine}
                 </p>

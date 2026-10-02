@@ -91,11 +91,13 @@ describe('UC1 scheduler UX', () => {
     cy.contains('button', 'Ask').should('be.visible');
   });
 
-  it('shows the data-feed note on the classic plant page', () => {
+  it('shows the data-feed note on the Pasco conditioning hub', () => {
     visitSignedIn('/demo/plant');
     cy.contains('Events come from data \u2014 not from this screen', { timeout: 20000 }).should('be.visible');
-    cy.contains('Calm & stable').should('be.visible');
+    cy.contains('How it works \u2014 UI and API').should('be.visible');
     cy.contains('POST /demo/plant/ingest/sap-priority-change').should('be.visible');
+    cy.get('aside nav[aria-label="Panel"]').should('not.exist');
+    cy.contains('nav[aria-label="Conditioning line"] button', 'Scheduling').should('be.visible');
   });
 
   it('opens the guided tour', () => {

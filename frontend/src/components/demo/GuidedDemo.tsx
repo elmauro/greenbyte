@@ -40,7 +40,7 @@ type GuidedDemoProps = {
   };
   otherDemo?: { label: string; href: string };
   architectureLink?: { label: string; href: string };
-  /** Same React widgets as /demo/plant (replaces optional step PNG). */
+  /** Same React widgets as /demo/plant/ux (replaces optional step PNG). */
   renderStepPreview?: (stepIndex: number) => ReactNode;
 };
 
