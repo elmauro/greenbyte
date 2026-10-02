@@ -34,7 +34,7 @@ describe('UC1 scheduler UX', () => {
     });
     cy.location('pathname').should('eq', '/demo/sign-in');
     cy.location('search').should('include', 'returnTo=');
-    cy.contains('h1', 'Sign in to Line 1 UX preview').should('be.visible');
+    cy.contains('h1', 'Sign in to Pasco line scheduler').should('be.visible');
   });
 
   it('sends an unsigned plant visitor to the sign-in gate', () => {
@@ -45,7 +45,7 @@ describe('UC1 scheduler UX', () => {
       },
     });
     cy.location('pathname').should('eq', '/demo/sign-in');
-    cy.contains('h1', 'Sign in to Line 1 UX preview').should('be.visible');
+    cy.contains('h1', 'Sign in to Pasco line scheduler').should('be.visible');
   });
 
   it('shows the calm queue, switches lines, and opens Scheduling', () => {
