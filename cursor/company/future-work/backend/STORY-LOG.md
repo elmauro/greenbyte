@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-017 — Data tweak
+
+- FW: `n/a` · Slug: `data-tweak` · Stack: backend
+- Change type: `feat` · Branch: `feature/data-tweak` · PR: `GREENBYTE-017: Data tweak`
+- Status: active (implementation; dev RDS apply pending) · Package: [`backend/data-tweak/`](../../../analysis/features/backend/data-tweak/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: data-tweak
+Feature name: Data tweak
+Ticket/story: GREENBYTE-017
+Backlog ID: n/a
+Change type: feat
+Stack scope: backend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-005 — UC1 data model medallion (raw silver gold)
 
 - FW: `n/a` · Slug: `uc1-data-model-medallion` · Stack: backend

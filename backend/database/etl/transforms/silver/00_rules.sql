@@ -5,6 +5,17 @@
 CREATE FUNCTION silver.extract_as_of() RETURNS date
 LANGUAGE sql IMMUTABLE AS $$ SELECT date '2026-09-28' $$;
 
+-- R-DATE-SHIFT (GREENBYTE-017 data tweak, observations.md §6.1): the demo runs live on demo day, after the extract date.
+-- The demo clock (gold.config as_of_date / plan_start_at) starts at demo_as_of(), and the forward-looking commitment
+-- dates (schedule finish, original finish, SAP finish) move demo_date_shift_days() forward in silver, so a few
+-- orders stay tight against the new clock. raw keeps the source values. History dates (run_date, test_date) are not
+-- shifted, and DQ-15 keeps measuring the source SAP finish against extract_as_of().
+CREATE FUNCTION silver.demo_as_of() RETURNS date
+LANGUAGE sql IMMUTABLE AS $$ SELECT date '2026-10-02' $$;
+
+CREATE FUNCTION silver.demo_date_shift_days() RETURNS int
+LANGUAGE sql IMMUTABLE AS $$ SELECT 7 $$;
+
 -- R-TEXT for codes: trim, collapse inner whitespace, upper case. Empty -> NULL.
 CREATE FUNCTION silver.norm_code(v text) RETURNS text
 LANGUAGE sql IMMUTABLE AS $$
@@ -28,6 +39,10 @@ CREATE FUNCTION silver.to_date(v text) RETURNS date
 LANGUAGE sql IMMUTABLE AS $$
     SELECT CASE WHEN btrim(v) ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN btrim(v)::date END
 $$;
+
+-- R-DATE-SHIFT: a commitment date (finish / SAP finish) as the demo sees it = source date + demo_date_shift_days().
+CREATE FUNCTION silver.to_commit_date(v text) RETURNS date
+LANGUAGE sql IMMUTABLE AS $$ SELECT silver.to_date(v) + silver.demo_date_shift_days() $$;
 
 -- R-PO ------------------------------------------------------------------------------------------
 -- Valid patterns: 100/240 + 7 digits (10), 300/120 + 6 digits (9), 10002 + 4 digits (9-digit Seed Health).

@@ -38,6 +38,7 @@ Path:
 | GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | frontend | done |
 | GREENBYTE-015 | n/a | `plant-hub-horizontal-scheduler-ux` | Align Pasco hub with horizontal scheduler UX | frontend | done |
 | GREENBYTE-016 | n/a | `nav-syngenta-labels` | Demo nav Syngenta labels | frontend | done |
+| GREENBYTE-017 | n/a | `data-tweak` | Data tweak (demo commitment dates on demo day) | backend | review |
 
 ## How to update
 

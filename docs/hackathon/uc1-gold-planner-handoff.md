@@ -8,6 +8,8 @@ The planner owns the order, the times, lateness, the calendar, cleanouts, repair
 
 ---
 
+> **Dates (2026-10-02, GREENBYTE-017):** the demo clock (`gold.cfg('plan_start_at')`) is now 2026-10-02 06:00 America/Los_Angeles. `sap_finish_date` and the schedule finish dates in silver are the source dates + 7 days. The JSON examples below are illustrative. See [gold-data-model §8](../../backend/database/etl/gold-model/gold-data-model.md).
+
 ## 1. Insert a config row
 
 `gold.config.value` is text. Store this JSON under the key `planner_rules`. The planner reads it with `gold.cfg('planner_rules')`. Downtime and overrides are not in this document; they ride along on the plan payload in section 3.

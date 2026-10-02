@@ -172,3 +172,19 @@ Request: lean gold handoff for the semantic planner (planner team). Team rules a
 | Q9 | Delivery | ALTER in place + mirror in the repo; v2 criteria stored as ASSUMPTION; same branch `gold-layer-schemas` |
 
 Built and applied 2026-10-02 (`--upgrade-gold-planner-v2`). Open questions for the planner team: gold-data-model §7.4.
+
+## 7. Demo date shift decisions (GREENBYTE-017, 2026-10-02)
+
+Request (Data API owner): the dates in the data are already in the past, and the demo shows delivery dates live. Move the scheduled finish dates forward in gold without breaking any key relation.
+
+| ID | Decision | Outcome |
+| --- | --- | --- |
+| DT-1 | Where to apply | In **silver**, not as an `UPDATE` on gold: the finish date lives in `silver.line_schedule_item`, and gold is dropped and rebuilt on every build (G-01). raw and the CSVs are untouched |
+| DT-2 | Clock vs dates (option C) | Clock moves to demo day (`silver.demo_as_of()` = 2026-10-02). Dates move just enough to keep a few orders tight. The first request was +2 months, but that would leave nothing at risk |
+| DT-3 | Shift size | **+7 days** (`silver.demo_date_shift_days()`), chosen from the CSV simulation: 8 of 153 open rows overdue, 20 due within 3 days, none on Line 1 at day 0 |
+| DT-4 | Scope | All lines; all commitment dates: scheduled finish, original finish, SAP finish (the planner's lateness basis). The need-by date follows |
+| DT-5 | Not shifted | run / test history, audit timestamps, live ingest and SAP-batch dates, and DQ-15 (measured on the source date, still 103) |
+| DT-6 | Apply | Full `build_model.py` on the dev RDS + `--reset-demo` per demo line. **Applied 2026-10-02** to the dev RDS: full build (reconciliation 61/61, gold v4 13/13) + `--reset-demo line-1` |
+
+Follow-ups: the MSW mocks and BFF fallbacks (`frontend/src/demo/plant/*`, `backend/core-api/services/plantDemo/{constants,pascoLine1Baseline,customerOrderMeta}.js`) still carry dates from the old clock. Refresh them from the rebuilt `queue_response` (UI/BFF owner).
+
