@@ -18,7 +18,7 @@ Session is stored in `sessionStorage` for the browser tab. The same session unlo
 
 ## Deep links
 
-- `?section=dashboard|queue|scheduling|copilot` on the UX route.
+- `?section=dashboard|queue|scheduling` on the UX route. `section=copilot` opens Scheduling. `po` selects that order in the copilot beside the timeline.
 
 ## Feature package
 

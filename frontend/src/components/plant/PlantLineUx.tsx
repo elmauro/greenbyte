@@ -15,6 +15,7 @@ import { PlantBaselineDashboard } from './PlantBaselineDashboard';
 const SECTIONS: PlantNavSection[] = ['dashboard', 'queue', 'scheduling', 'copilot'];
 
 function parseSection(raw: string | null): PlantNavSection {
+  if (raw === 'copilot') return 'scheduling';
   if (raw && SECTIONS.includes(raw as PlantNavSection)) return raw as PlantNavSection;
   return 'dashboard';
 }
@@ -49,6 +50,16 @@ export function PlantLineUx() {
     (next: PlantNavSection) => {
       const params = new URLSearchParams(searchParams);
       params.set('section', next);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const selectOrder = useCallback(
+    (po: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('section', 'scheduling');
+      params.set('po', po);
       setSearchParams(params, { replace: true });
     },
     [searchParams, setSearchParams],
@@ -93,10 +104,13 @@ export function PlantLineUx() {
             onLineChange={(nextId) => {
               const params = new URLSearchParams(searchParams);
               params.set('line', nextId);
+              params.delete('po');
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void handleAccept()}
             onManualOrder={setManualOrder}
+            onSelectOrder={selectOrder}
+            explainPo={searchParams.get('po') ?? undefined}
           />
           </>
         )}

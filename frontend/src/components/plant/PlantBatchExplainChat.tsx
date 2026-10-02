@@ -8,14 +8,26 @@ type PlantBatchExplainChatProps = {
   queue: QueueRow[];
   /** Inside plant shell AI Copilot nav — parent supplies page title. */
   embedded?: boolean;
+  /** Order chosen from the schedule. Selects that batch when it is on this line. */
+  focusPo?: string;
+  /** Keeps the timeline selection in sync when the order is changed from this panel. */
+  onPoChange?: (po: string) => void;
 };
 
-export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExplainChatProps) {
+export function PlantBatchExplainChat({
+  queue,
+  embedded = false,
+  focusPo,
+  onPoChange,
+}: PlantBatchExplainChatProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
   const shell = m.plantMvp.scheduleShell;
   const selectable = useMemo(() => queue.filter((r) => r.status !== 'COMPLETE'), [queue]);
-  const [po, setPo] = useState(() => selectable[0]?.po ?? '');
+  const [po, setPo] = useState(() => {
+    if (focusPo && selectable.some((row) => row.po === focusPo)) return focusPo;
+    return selectable[0]?.po ?? '';
+  });
   const selected = selectable.find((row) => row.po === po) ?? null;
   const position = selected ? queue.findIndex((row) => row.po === selected.po) + 1 : 0;
   const [question, setQuestion] = useState('');
@@ -24,11 +36,19 @@ export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExp
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (selectable.some((row) => row.po === po)) return;
+    if (po && selectable.some((row) => row.po === po)) return;
     setPo(selectable[0]?.po ?? '');
     setAnswer(null);
     setCitations([]);
   }, [selectable, po]);
+
+  useEffect(() => {
+    if (!focusPo || focusPo === po) return;
+    if (!selectable.some((row) => row.po === focusPo)) return;
+    setPo(focusPo);
+    setAnswer(null);
+    setCitations([]);
+  }, [focusPo, selectable, po]);
 
   async function ask(preset?: string) {
     const q = preset ?? question.trim();
@@ -42,6 +62,13 @@ export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExp
     } finally {
       setBusy(false);
     }
+  }
+
+  function choosePo(next: string) {
+    setPo(next);
+    setAnswer(null);
+    setCitations([]);
+    onPoChange?.(next);
   }
 
   return (
@@ -61,10 +88,7 @@ export function PlantBatchExplainChat({ queue, embedded = false }: PlantBatchExp
             id="explain-po"
             className="mt-1.5 w-full max-w-sm"
             value={po}
-            onChange={(next) => {
-              setPo(next);
-              setAnswer(null);
-            }}
+            onChange={choosePo}
             options={selectable.map((row) => ({
               value: row.po,
               label: `${row.po} · ${row.species}`,

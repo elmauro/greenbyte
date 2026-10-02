@@ -13,6 +13,7 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
+import { PlantScheduleCopilot } from './PlantScheduleCopilot';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { PlantListPagination } from './PlantListPagination';
 import { PlantSelect } from './PlantSelect';
@@ -62,6 +63,10 @@ type PlantBaselineDashboardProps = {
   dataRefreshing?: boolean;
   /** Scheduler reorders the proposed plan. The running batch and holds stay put. */
   onManualOrder?: (order: string[]) => void;
+  /** Choose an order for the copilot beside the timeline. */
+  onSelectOrder?: (po: string) => void;
+  /** Order the copilot should explain. Comes from the schedule row. */
+  explainPo?: string;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -130,6 +135,8 @@ export function PlantBaselineDashboard({
   onLineChange,
   dataRefreshing = false,
   onManualOrder,
+  onSelectOrder,
+  explainPo,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -151,9 +158,11 @@ export function PlantBaselineDashboard({
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
   const rushPo = eventHighlightPo;
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => showProgramTimeline || item.id === 'dashboard' || item.id === 'queue',
-  );
+  const visibleNav = NAV_ITEMS.filter((item) => {
+    if (!showProgramTimeline && item.id !== 'dashboard' && item.id !== 'queue') return false;
+    if (isUx && item.id === 'copilot') return false;
+    return true;
+  });
 
   const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
@@ -166,10 +175,16 @@ export function PlantBaselineDashboard({
     else setInternalSection(next);
   }
 
+  function revealScheduleOrder(po: string) {
+    onSelectOrder?.(po);
+    setCopilotOpenTick((n) => n + 1);
+  }
+
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [copilotOpenTick, setCopilotOpenTick] = useState(0);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -731,47 +746,55 @@ export function PlantBaselineDashboard({
             )}
           </>
         );
-      case 'scheduling':
+      case 'scheduling': {
+        const timeline = (
+          <PlantProgramGantt
+            rows={scheduleActive}
+            rushPo={rushPo}
+            compact={compact}
+            layout={ganttLayout}
+            onLayoutChange={setGanttLayout}
+            showMoves={eventPendingReview}
+            expanded={timelineOpen}
+            onExpandedChange={setTimelineOpen}
+            onMoveRow={onManualOrder ? moveRunnable : undefined}
+            onPlaceRow={onManualOrder ? placeRunnable : undefined}
+            selectedPo={isUx ? explainPo : undefined}
+            onSelectRow={isUx ? revealScheduleOrder : undefined}
+          />
+        );
+        const showUxRail = isUx && schedulingLayout === 'full';
+        const showClassicRail = !isUx && eventPendingReview && schedulingLayout === 'full';
         return (
           <>
             {eventBanner}
             <div className="overflow-hidden rounded-xl border border-gray-200">
-              {eventPendingReview && schedulingLayout === 'full' ? (
+              {showUxRail ? (
                 <div className="flex flex-col lg:flex-row">
-                  <PlantProgramGantt
-                    rows={scheduleActive}
-                    rushPo={rushPo}
-                    compact={compact}
-                    layout={ganttLayout}
-                    onLayoutChange={setGanttLayout}
-                    showMoves={eventPendingReview}
-                    expanded={timelineOpen}
-                    onExpandedChange={setTimelineOpen}
-                    onMoveRow={onManualOrder ? moveRunnable : undefined}
-                    onPlaceRow={onManualOrder ? placeRunnable : undefined}
+                  {timeline}
+                  <PlantScheduleCopilot
+                    explanation={eventPendingReview ? explanation : null}
+                    queue={queue}
+                    focusPo={explainPo}
+                    onFocusPo={revealScheduleOrder}
+                    openRequest={copilotOpenTick}
                   />
+                </div>
+              ) : showClassicRail ? (
+                <div className="flex flex-col lg:flex-row">
+                  {timeline}
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
               ) : (
-                <PlantProgramGantt
-                  rows={scheduleActive}
-                  rushPo={rushPo}
-                  compact={compact}
-                  layout={ganttLayout}
-                  onLayoutChange={setGanttLayout}
-                  showMoves={eventPendingReview}
-                  expanded={timelineOpen}
-                  onExpandedChange={setTimelineOpen}
-                  onMoveRow={onManualOrder ? moveRunnable : undefined}
-                  onPlaceRow={onManualOrder ? placeRunnable : undefined}
-                />
+                timeline
               )}
             </div>
             {acceptFooter}
           </>
         );
+      }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded />;
+        return <PlantBatchExplainChat queue={queue} embedded focusPo={explainPo} />;
     }
   }
 
@@ -780,15 +803,6 @@ export function PlantBaselineDashboard({
       <div className="flex min-h-[520px] flex-col md:flex-row">
         {!compact && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
-            <div className="mb-6 flex items-center gap-2 px-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green text-xs font-bold text-white">
-                G
-              </span>
-              <div className="text-[10px] leading-tight">
-                <p className="font-bold text-brand-green">GreenByte</p>
-                <p className="text-gray-500">{b.tagline}</p>
-              </div>
-            </div>
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
             {isUx && (
               <button
@@ -1004,7 +1018,9 @@ export function PlantBaselineDashboard({
       {isUx && !compact && (
         <nav
           aria-label="Line 1 mobile"
-          className="fixed inset-x-0 bottom-0 z-40 grid h-14 grid-cols-4 border-t border-gray-200 bg-white lg:hidden"
+          className={`fixed inset-x-0 bottom-0 z-40 grid h-14 border-t border-gray-200 bg-white lg:hidden ${
+            visibleNav.length > 3 ? 'grid-cols-4' : 'grid-cols-3'
+          }`}
         >
           {visibleNav.map((item) => {
             const badge = navBadgeKind(item.id);
@@ -1036,13 +1052,15 @@ export function PlantBaselineDashboard({
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
           <div className="mx-auto flex flex-wrap items-center gap-4 sm:justify-between">
             <p className="hidden flex-1 text-sm text-gray-600 sm:block">{ux.footerAction}</p>
-            <button
-              type="button"
-              onClick={() => setActiveSection('copilot')}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              {ux.askBtn}
-            </button>
+            {activeSection !== 'scheduling' && (
+              <button
+                type="button"
+                onClick={() => setActiveSection('scheduling')}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                {ux.askBtn}
+              </button>
+            )}
             <button
               type="button"
               disabled={acceptDisabled || accepted}

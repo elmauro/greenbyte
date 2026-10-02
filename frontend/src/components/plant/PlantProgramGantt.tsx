@@ -21,6 +21,10 @@ type PlantProgramGanttProps = {
   onMoveRow?: (index: number, direction: -1 | 1) => void;
   /** Drop a runnable row on another runnable position. Index 0 stays put. */
   onPlaceRow?: (from: number, to: number) => void;
+  /** Order explained in the copilot beside this timeline. */
+  selectedPo?: string;
+  /** Choose an order for the copilot. Does not leave the schedule. */
+  onSelectRow?: (po: string) => void;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -183,6 +187,8 @@ export function PlantProgramGantt({
   onExpandedChange,
   onMoveRow,
   onPlaceRow,
+  selectedPo,
+  onSelectRow,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
@@ -250,6 +256,8 @@ export function PlantProgramGantt({
       dragRef.current = null;
       setDrag(null);
       if (current && current.from !== current.over) onPlaceRow?.(current.from, current.over);
+      const po = current ? rows[current.from]?.po : undefined;
+      if (po) onSelectRow?.(po);
     }
 
     window.addEventListener('pointermove', move);
@@ -262,6 +270,28 @@ export function PlantProgramGantt({
     if (drag.from === index) return 'opacity-40';
     if (drag.over === index) return 'ring-2 ring-inset ring-brand-green';
     return '';
+  }
+
+  function rowRing(po: string, isHold: boolean, isRush: boolean) {
+    if (drag) return '';
+    if (onSelectRow && selectedPo === po) return 'ring-2 ring-inset ring-brand-green';
+    if (isHold) return 'ring-1 ring-inset ring-red-200';
+    if (isRush) return 'ring-1 ring-inset ring-orange-300';
+    return '';
+  }
+
+  function selectRowFromClick(index: number, po: string, event: { target: EventTarget | null }) {
+    if (!onSelectRow || canDragRow(index)) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    onSelectRow(po);
+  }
+
+  function selectRowFromKey(po: string, event: { key: string; preventDefault: () => void; target: EventTarget | null }) {
+    if (!onSelectRow) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    onSelectRow(po);
   }
   const footer = s.footerTotal
     .replace('{count}', String(rows.length))
@@ -453,13 +483,13 @@ export function PlantProgramGantt({
                     key={row.po}
                     data-queue-index={index}
                     onPointerDown={(event) => onDragPointerDown(index, event)}
+                    onClick={(event) => selectRowFromClick(index, row.po, event)}
+                    onKeyDown={(event) => selectRowFromKey(row.po, event)}
+                    tabIndex={onSelectRow ? 0 : undefined}
+                    aria-selected={onSelectRow ? selectedPo === row.po : undefined}
                     className={`grid grid-cols-[14rem_minmax(0,1fr)] items-center gap-2 py-2 ${
-                      isHold
-                        ? 'bg-red-50/80 ring-1 ring-inset ring-red-200'
-                        : isRush
-                          ? 'bg-orange-50/80 ring-1 ring-inset ring-orange-300'
-                          : ''
-                    } ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : ''} ${dragClass(index)}`}
+                      isHold ? 'bg-red-50/80' : isRush ? 'bg-orange-50/80' : ''
+                    } ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
                   >
                     <div className="min-w-0 px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
                       {canDragRow(index) && (
@@ -532,13 +562,17 @@ export function PlantProgramGantt({
                   key={row.po}
                   data-queue-index={index}
                   onPointerDown={(event) => onDragPointerDown(index, event)}
+                  onClick={(event) => selectRowFromClick(index, row.po, event)}
+                  onKeyDown={(event) => selectRowFromKey(row.po, event)}
+                  tabIndex={onSelectRow ? 0 : undefined}
+                  aria-selected={onSelectRow ? selectedPo === row.po : undefined}
                   className={`flex min-h-[7.5rem] flex-col rounded-xl border p-3 shadow-sm ${
                     tone === 'hold'
-                      ? 'border-red-200 bg-red-50 ring-2 ring-red-300'
+                      ? 'border-red-200 bg-red-50'
                       : tone === 'up'
                         ? 'border-green-200 bg-white'
                         : 'border-indigo-100 bg-indigo-50'
-                  } ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : ''} ${dragClass(index)}`}
+                  } ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
                 >
                   <span className={`mb-2 h-1.5 w-10 rounded-full ${toneFill(tone)}`} />
                   {renderRowMeta(row, index, isRush, isHold)}
@@ -568,6 +602,8 @@ export function PlantProgramGantt({
           locale={locale}
           labels={s}
           showMoves={showMoves}
+          selectedPo={selectedPo}
+          onSelectRow={onSelectRow}
           className={
             expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
           }
@@ -590,12 +626,16 @@ function ApprovalTimeline({
   labels,
   className,
   showMoves,
+  selectedPo,
+  onSelectRow,
 }: {
   rows: QueueRow[];
   locale: Locale;
   labels: ApprovalLabels;
   className: string;
   showMoves: boolean;
+  selectedPo?: string;
+  onSelectRow?: (po: string) => void;
 }) {
   const model = buildApproval(rows, showMoves);
   const dayWidth = 4.75;
@@ -620,10 +660,24 @@ function ApprovalTimeline({
               style={{ top: 8 + bar.lane * 52, left: `${bar.left}%` }}
             >
               <div
+                role={onSelectRow ? 'button' : undefined}
+                tabIndex={onSelectRow ? 0 : undefined}
+                aria-pressed={onSelectRow ? selectedPo === bar.row.po : undefined}
+                onClick={() => onSelectRow?.(bar.row.po)}
+                onKeyDown={(event) => {
+                  if (!onSelectRow) return;
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  onSelectRow(bar.row.po);
+                }}
                 className={`truncate rounded-lg px-2.5 py-2 text-[11px] font-semibold shadow-sm ${
-                  bar.kind === 'up'
-                    ? 'bg-brand-green text-white ring-2 ring-green-800'
-                    : 'bg-indigo-100 text-indigo-950'
+                  onSelectRow ? 'cursor-pointer' : ''
+                } ${
+                  selectedPo === bar.row.po
+                    ? 'bg-brand-green text-white ring-2 ring-brand-green-dark'
+                    : bar.kind === 'up'
+                      ? 'bg-brand-green text-white ring-2 ring-green-800'
+                      : 'bg-indigo-100 text-indigo-950'
                 }`}
                 title={bar.row.reasonShort ?? bar.row.finish}
               >
@@ -644,7 +698,19 @@ function ApprovalTimeline({
               {model.held.map(({ row }) => (
                 <li
                   key={row.po}
-                  className="rounded-md border border-red-200 px-2 py-1.5 text-[11px] font-semibold text-red-800"
+                  role={onSelectRow ? 'button' : undefined}
+                  tabIndex={onSelectRow ? 0 : undefined}
+                  aria-pressed={onSelectRow ? selectedPo === row.po : undefined}
+                  onClick={() => onSelectRow?.(row.po)}
+                  onKeyDown={(event) => {
+                    if (!onSelectRow) return;
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    onSelectRow(row.po);
+                  }}
+                  className={`rounded-md border px-2 py-1.5 text-[11px] font-semibold text-red-800 ${
+                    onSelectRow ? 'cursor-pointer' : ''
+                  } ${selectedPo === row.po ? 'border-brand-green ring-2 ring-brand-green' : 'border-red-200'}`}
                   style={{
                     backgroundImage:
                       'repeating-linear-gradient(-45deg, rgba(254,226,226,0.95), rgba(254,226,226,0.95) 6px, rgba(252,165,165,0.55) 6px, rgba(252,165,165,0.55) 8px)',
