@@ -38,6 +38,10 @@ provider:
             - dynamodb:UpdateItem
           Resource:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/greenbyte-${sls:stage}-demo-plant-state
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource: '*'
 
 functions:
   health:
@@ -130,3 +134,38 @@ functions:
       - httpApi:
           method: POST
           path: /demo/plant/batches/explain
+
+  agentPlanCompute:
+    handler: functions/agent-plan-compute/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
+    events:
+      - httpApi:
+          method: POST
+          path: /plan/compute
+
+  agentFactsExtract:
+    handler: functions/agent-facts-extract/handler.handler
+    environment:
+      JEV_ENABLED: ${env:JEV_ENABLED, 'false'}
+      OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY, ''}
+    events:
+      - httpApi:
+          method: POST
+          path: /facts/extract
+
+  agentExplainReplan:
+    handler: functions/agent-explain-replan/handler.handler
+    environment:
+      BEDROCK_ENABLED: ${env:BEDROCK_ENABLED, 'false'}
+      BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'}
+    events:
+      - httpApi:
+          method: POST
+          path: /explain-replan
