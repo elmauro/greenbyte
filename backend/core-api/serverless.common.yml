@@ -7,6 +7,8 @@ provider:
   runtime: nodejs20.x
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
+  # API Gateway HTTP APIs stop at 30 s; a planner run with JEV + Bedrock per-PO notes needs more than the 6 s default.
+  timeout: 29
   environment:
     PROJECT_SLUG: greenbyte
     DEMO_PLANT_TABLE_NAME: greenbyte-${sls:stage}-demo-plant-state
@@ -16,7 +18,10 @@ provider:
     # Semantic planner after each gold ingest. Needs Camilo's gold.replan entries branch; falls back to the heuristic otherwise.
     SEMANTIC_PLANNER_ENABLED: ${env:SEMANTIC_PLANNER_ENABLED, 'false'}
     BEDROCK_ENABLED: ${env:BEDROCK_ENABLED, 'false'}
-    BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'}
+    BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.moonshotai.kimi-k3'}
+    # JEV (OpenRouter) reads every schedule note at replan time and in /facts/extract and the batch chat.
+    JEV_ENABLED: ${env:JEV_ENABLED, 'false'}
+    OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY, ''}
   httpApi:
     cors:
       allowedOrigins:
@@ -138,6 +143,14 @@ functions:
 
   plantDemoExplain:
     handler: functions/plant-demo-explain/handler.handler
+    environment:
+      DATABASE_URL: ${env:DATABASE_URL, ''}
+      PGHOST: ${env:PGHOST, ''}
+      PGPORT: ${env:PGPORT, '5432'}
+      PGDATABASE: ${env:PGDATABASE, 'greenbyte'}
+      PGUSER: ${env:PGUSER, ''}
+      PGPASSWORD: ${env:PGPASSWORD, ''}
+      PGSSL: ${env:PGSSL, 'require'}
     events:
       - httpApi:
           method: POST
@@ -153,9 +166,6 @@ functions:
       PGUSER: ${env:PGUSER, ''}
       PGPASSWORD: ${env:PGPASSWORD, ''}
       PGSSL: ${env:PGSSL, 'require'}
-      SEMANTIC_PLANNER_ENABLED: ${env:SEMANTIC_PLANNER_ENABLED, 'false'}
-      BEDROCK_ENABLED: ${env:BEDROCK_ENABLED, 'false'}
-      BEDROCK_MODEL_ID: ${env:BEDROCK_MODEL_ID, 'us.anthropic.claude-sonnet-4-5-20250929-v1:0'}
     events:
       - httpApi:
           method: POST
@@ -163,6 +173,12 @@ functions:
       - httpApi:
           method: POST
           path: /demo/plant/demo/plan-line
+      - httpApi:
+          method: POST
+          path: /demo/plant/demo/sap-batch
+      - httpApi:
+          method: POST
+          path: /demo/plant/demo/sap-batch-reset
 
   agentPlanCompute:
     handler: functions/agent-plan-compute/handler.handler
@@ -181,9 +197,6 @@ functions:
 
   agentFactsExtract:
     handler: functions/agent-facts-extract/handler.handler
-    environment:
-      JEV_ENABLED: ${env:JEV_ENABLED, 'false'}
-      OPENROUTER_API_KEY: ${env:OPENROUTER_API_KEY, ''}
     events:
       - httpApi:
           method: POST

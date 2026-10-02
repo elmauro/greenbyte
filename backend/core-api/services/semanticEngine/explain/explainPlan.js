@@ -117,14 +117,28 @@ export function templateExplanation(packet) {
   };
 }
 
+/** Models often wrap the JSON in markdown or a sentence. Take the outermost object. */
+export function parseModelJson(raw) {
+  if (raw && typeof raw === 'object') return raw;
+  const text = String(raw).trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
+  try {
+    return JSON.parse(text);
+  } catch {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start >= 0 && end > start) return JSON.parse(text.slice(start, end + 1));
+    throw new Error('model reply was not JSON');
+  }
+}
+
 export async function explainPlan(packet, clients = {}) {
   const fallback = templateExplanation(packet);
   if (!clients.complete) return { explanation: fallback, source: 'template' };
   let lastReason = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      const raw = await clients.complete(explainPrompt(packet, lastReason));
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      const raw = await clients.complete(explainPrompt(packet, lastReason), { maxTokens: 2000 });
+      const parsed = parseModelJson(raw);
       const check = explanationGuard(parsed, packet);
       if (check.ok) return { explanation: parsed, source: 'bedrock' };
       lastReason = check.reason;
@@ -138,6 +152,7 @@ export async function explainPlan(packet, clients = {}) {
 function explainPrompt(packet, rejection) {
   return [
     'Return JSON with alertBanner, summary, bullets (max 4), impact.',
+    'Write those fields as plain sentences a scheduler can read aloud.',
     'Use only process order numbers and dates from this packet. Lead with the triggering event when "event" is set, then orders that miss the SAP finish date.',
     rejection ? `Previous answer was rejected: ${rejection}.` : '',
     packetText(packet),

@@ -1,6 +1,7 @@
 import { jsonResponse, parseJsonBody } from '../../lib/httpResponse.js';
 import { isOpenQueueDbConfigured, queryOpenQueue } from '../../services/plantDemo/openQueueDb.js';
 import { planMorningLine, stageRawLine } from '../../services/plantDemo/morningDemo.js';
+import { ingestSapBatch, resetSapBatch } from '../../services/plantDemo/sapBatch.js';
 import { SapIngestError } from '../../services/plantDemo/sapIngestDb.js';
 
 function lineIdOf(body) {
@@ -16,6 +17,8 @@ export async function handler(event) {
 
   const path = event.rawPath || event.requestContext?.http?.path || '';
   try {
+    if (path.endsWith('/sap-batch')) return jsonResponse(200, await ingestSapBatch(body));
+    if (path.endsWith('/sap-batch-reset')) return jsonResponse(200, await resetSapBatch(lineId));
     if (path.endsWith('/plan-line')) {
       const plan = await planMorningLine(queryOpenQueue, lineId);
       return jsonResponse(200, {

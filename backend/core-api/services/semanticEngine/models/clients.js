@@ -1,5 +1,5 @@
 const JEV_MODEL = 'typesafe/jev-1.13';
-const BEDROCK_MODEL = process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-sonnet-4-5-20250929-v1:0';
+const BEDROCK_MODEL = process.env.BEDROCK_MODEL_ID || 'us.moonshotai.kimi-k3';
 
 export function jevEnabled() {
   return process.env.JEV_ENABLED === 'true' && Boolean(process.env.OPENROUTER_API_KEY?.trim());
@@ -110,14 +110,15 @@ export function createJevClassifier(fetchImpl = fetch) {
 }
 
 export function createBedrockComplete(send) {
-  return async function complete(prompt) {
+  return async function complete(prompt, options = {}) {
     const response = await send({
       modelId: BEDROCK_MODEL,
-      system: [{ text: 'You write short planner explanations. Reply with JSON only.' }],
+      system: [{ text: options.system || 'You write short planner explanations. Reply with JSON only.' }],
       messages: [{ role: 'user', content: [{ text: prompt }] }],
-      inferenceConfig: { temperature: 0, maxTokens: 400 },
-    });
-    return response.output.message.content.map((block) => block.text).join('');
+      // Kimi K3 rejects temperature; the other models default to 0 when it is omitted.
+      inferenceConfig: { maxTokens: options.maxTokens || 400 },
+    }, options.timeoutMs || 8000);
+    return response.output.message.content.map((block) => block.text || '').filter(Boolean).join('');
   };
 }
 
@@ -126,8 +127,8 @@ export async function explainClients() {
   const { BedrockRuntimeClient, ConverseCommand } = await import('@aws-sdk/client-bedrock-runtime');
   const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us-east-1' });
   return {
-    complete: createBedrockComplete((input) => client.send(new ConverseCommand(input), {
-      abortSignal: AbortSignal.timeout(8000),
+    complete: createBedrockComplete((input, timeoutMs) => client.send(new ConverseCommand(input), {
+      abortSignal: AbortSignal.timeout(timeoutMs),
     })),
   };
 }

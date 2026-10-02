@@ -43,7 +43,7 @@ export function explainContextFromPlan(plan, overrides = {}) {
   };
 }
 
-export function normalizePlanQueue(queue) {
+export function normalizePlanQueue(queue, poNotes = {}) {
   if (!Array.isArray(queue)) return [];
   return queue
     .map((row) => {
@@ -60,6 +60,7 @@ export function normalizePlanQueue(queue) {
       };
       if (row.atRisk === true) out.atRisk = true;
       if (row.reasonShort) out.reasonShort = String(row.reasonShort);
+      if (poNotes?.[out.po]) out.aiNote = String(poNotes[out.po]);
       if (previous != null && previous !== '' && Number.isFinite(Number(previous))) {
         out.previousPosition = Number(previous);
       }
@@ -78,11 +79,11 @@ export function normalizePlanDiff(diff) {
   };
 }
 
-export function queueResponseFromPlan(plan, explanation) {
+export function queueResponseFromPlan(plan, explanation, poNotes = {}) {
   const ctx = explainContextFromPlan(plan);
   return {
     lineId: plan.lineId,
-    queue: normalizePlanQueue(plan.queue),
+    queue: normalizePlanQueue(plan.queue, poNotes),
     planVersion: Number(plan.planVersion) || 1,
     lastEvent: ctx.uiEventType,
     acceptedPlanVersion: null,

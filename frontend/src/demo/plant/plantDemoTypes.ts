@@ -8,6 +8,8 @@ export type QueueRow = {
   status: 'PLANNED' | 'COMPLETE' | 'HOLD';
   atRisk?: boolean;
   reasonShort?: string;
+  /** Bedrock comment for this order from the planner run (planner-v2 plans only). */
+  aiNote?: string;
   previousPosition?: number;
   /** Demo proxy for Syngenta open customer orders (ETL later). */
   customerOrderId?: string;

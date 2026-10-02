@@ -17,6 +17,8 @@ const routes = [
   ['POST', /^\/demo\/plant\/batches\/explain$/, 'plant-demo-explain'],
   ['POST', /^\/demo\/plant\/demo\/stage-raw$/, 'plant-demo-morning'],
   ['POST', /^\/demo\/plant\/demo\/plan-line$/, 'plant-demo-morning'],
+  ['POST', /^\/demo\/plant\/demo\/sap-batch$/, 'plant-demo-morning'],
+  ['POST', /^\/demo\/plant\/demo\/sap-batch-reset$/, 'plant-demo-morning'],
   ['POST', /^\/plan\/compute$/, 'agent-plan-compute'],
   ['POST', /^\/facts\/extract$/, 'agent-facts-extract'],
   ['POST', /^\/explain-replan$/, 'agent-explain-replan'],

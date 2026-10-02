@@ -170,6 +170,82 @@ export async function plannerPayloadForPlan(query, schedulePlanId) {
   return rows[0]?.payload ?? null;
 }
 
+const JEV_PROMPT_VERSION = 'facts-v1';
+const FACT_TYPES = new Set(['NOT_READY', 'HOLD', 'RELEASE', 'RUSH', 'DEADLINE', 'INFO']);
+
+function confidenceOf(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : 0.8;
+}
+
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      out[index] = await fn(items[index]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
+/**
+ * Reads every schedule-row note of these rows that JEV has not read yet and stores the reading in
+ * raw.note_reading (reader BEDROCK = model reader, so it outranks rules-v1 in v_note_reading_current).
+ * A failed JEV call stores the rules-v1 reading instead, so the note still counts and JEV retries next run.
+ * Returns the number of texts read.
+ */
+export async function readNotesWithJev(query, lineScheduleItemIds, classify) {
+  if (!lineScheduleItemIds.length) return 0;
+  const { rows } = await query(
+    `SELECT DISTINCT sn.note_text
+     FROM gold.source_note sn
+     WHERE sn.line_schedule_item_id = ANY($1::bigint[])
+       AND nullif(btrim(sn.note_text), '') IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM raw.note_reading nr
+         WHERE nr.note_hash = sn.note_hash AND nr.reader = 'BEDROCK'
+           AND nr.model_id LIKE 'typesafe/jev%' AND nr.prompt_version = $2)`,
+    [lineScheduleItemIds, JEV_PROMPT_VERSION],
+  );
+  if (!rows.length) return 0;
+  const readings = await mapLimit(rows, 6, async ({ note_text: text }) => {
+    try {
+      const guess = await classify(text);
+      if (FACT_TYPES.has(guess?.fact_type)) {
+        return {
+          text,
+          reader: 'BEDROCK',
+          model_id: guess.modelId || 'typesafe/jev-1.13',
+          prompt_version: JEV_PROMPT_VERSION,
+          facts: [{
+            fact_type: guess.fact_type,
+            fact_value: guess.fact_value || {},
+            applies_to: guess.applies_to || 'PO',
+            confidence: confidenceOf(guess.confidence),
+          }],
+        };
+      }
+    } catch (err) {
+      console.warn('jev note skipped:', err.message);
+    }
+    return { text, reader: 'RULE', model_id: 'rules-v1', prompt_version: 'v1', facts: null };
+  });
+  await query(
+    `INSERT INTO raw.note_reading (note_hash, note_text, reader, model_id, prompt_version, facts, read_by)
+     SELECT gold.note_hash(r.text), btrim(r.text), r.reader, r.model_id, r.prompt_version,
+            coalesce(r.facts, gold.rules_v1_facts(r.text)), '${PLANNER_VERSION}'
+     FROM jsonb_to_recordset($1::jsonb) AS r (text text, reader text, model_id text, prompt_version text, facts jsonb)
+     ON CONFLICT (note_hash, reader, model_id, prompt_version) DO NOTHING`,
+    [JSON.stringify(readings)],
+  );
+  await query('SELECT gold.refresh_semantic_facts()');
+  return readings.length;
+}
+
 export function planFromSnapshot(snapshot, event) {
   if (!event) return computePlan(snapshot);
   return applyPlannerEvent(snapshot, event);

@@ -573,14 +573,11 @@ export function PlantBaselineDashboard({
             >
               {copy.table.status}
             </th>
-            {isUx && (
-              <th
-                className={`px-4 py-3 ${hi.has('reason') ? 'bg-brand-green/10 ring-1 ring-inset ring-brand-green/30' : ''}`}
-              >
-                {copy.table.reason}
-              </th>
-            )}
-            {!isUx && <th className="w-10 px-2 py-3" aria-label={b.actionsAria} />}
+            <th
+              className={`px-4 py-3 ${hi.has('reason') ? 'bg-brand-green/10 ring-1 ring-inset ring-brand-green/30' : ''}`}
+            >
+              {copy.table.reason}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -663,14 +660,17 @@ export function PlantBaselineDashboard({
                           : copy.statusLabels.planned}
                   </span>
                 </td>
-                {isUx && (
-                  <td
-                    className={`max-w-[12rem] px-4 py-3 text-xs leading-snug text-gray-600 ${hi.has('reason') ? 'bg-brand-green/5' : ''}`}
-                  >
-                    {row.reasonShort ?? '—'}
-                  </td>
-                )}
-                {!isUx && <td className="px-2 py-3 text-center text-gray-400">⋯</td>}
+                <td
+                  className={`${row.aiNote ? 'min-w-[16rem] max-w-[24rem]' : 'max-w-[12rem]'} px-4 py-3 text-xs leading-snug text-gray-600 ${hi.has('reason') ? 'bg-brand-green/5' : ''}`}
+                >
+                  {row.reasonShort ?? '—'}
+                  {row.aiNote && (
+                    <p className="mt-1 text-[11px] leading-snug text-gray-500">
+                      <span className="mr-1 font-semibold text-brand-green">AI</span>
+                      {row.aiNote}
+                    </p>
+                  )}
+                </td>
               </tr>
             );
           })}
