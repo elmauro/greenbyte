@@ -85,11 +85,11 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     method: 'POST',
     path: '/demo/plant/ingest/sap-priority-change',
     request: {
+      lineId: 'line-1',
+      locale: 'en',
       po: '1002307551',
       priority: 2,
-      scheduledFinish: '2026-10-29',
-      lineId: 'line-2',
-      locale: 'en|es',
+      scheduledFinish: '2026-07-06 09:00',
     },
     responseKey: 'rush',
     mapping: [
@@ -108,13 +108,13 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     method: 'POST',
     path: '/demo/plant/ingest/sap-queue-refresh',
     request: {
+      lineId: 'line-1',
+      locale: 'en',
       po: '1002408120',
       species: 'SWCO',
       kg: 6200,
       scheduledFinish: '2026-07-07 08:00',
       priority: 2,
-      lineId: 'line-1',
-      locale: 'en|es',
     },
     responseKey: 'refresh',
     mapping: [
@@ -134,12 +134,12 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     method: 'POST',
     path: '/demo/plant/ingest/pass-fail-log',
     request: {
-      po: '1002266350',
+      lineId: 'line-1',
+      locale: 'en',
+      po: '1001884747',
       passFail: 'Fail',
       failedFor: 'Dent',
       equipmentId: 'Line 1',
-      lineId: 'line-1',
-      locale: 'en|es',
     },
     responseKey: 'qa',
     mapping: [
@@ -196,7 +196,7 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'accept',
     method: 'POST',
     path: '/demo/plant/schedule/accept',
-    request: { lineId: 'line-1' },
+    request: { lineId: 'line-1', locale: 'en' },
     responseKey: 'accept',
     mapping: [
       { jsonPath: 'acceptedAt', ui: 'Confirmation note' },
@@ -210,7 +210,12 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     preview: 'explain',
     method: 'POST',
     path: '/demo/plant/batches/explain',
-    request: { po: '1002307551', question: 'When does it ship?', locale: 'en|es' },
+    request: {
+      lineId: 'line-1',
+      po: '1002307551',
+      question: 'When does it ship?',
+      locale: 'en',
+    },
     responseKey: 'explain',
     mapping: [
       { jsonPath: 'po, question, locale', ui: 'Browser body. The BFF adds lineId and planVersion when it calls David POST /batches/explain.' },

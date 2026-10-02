@@ -101,7 +101,7 @@ export function GuidedDemo({
           </p>
         </aside>
 
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-medium text-gray-500">
             {labels.step} {index + 1} {labels.of} {steps.length}
           </p>
@@ -115,6 +115,36 @@ export function GuidedDemo({
                 aria-hidden
               />
             ))}
+          </div>
+        </div>
+
+        <div className="sticky top-0 z-10 mb-6 flex flex-wrap justify-between gap-3 border-b border-gray-100 bg-white/95 py-3 backdrop-blur">
+          <button
+            type="button"
+            disabled={isFirst}
+            onClick={() => setIndex((i) => i - 1)}
+            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {labels.back}
+          </button>
+          <div className="flex gap-3">
+            {isLast ? (
+              <button
+                type="button"
+                onClick={() => setIndex(0)}
+                className="rounded-full border border-brand-blue/30 px-5 py-2 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5"
+              >
+                {labels.restart}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIndex((i) => i + 1)}
+                className="rounded-full bg-brand-green px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-green-dark"
+              >
+                {labels.next}
+              </button>
+            )}
           </div>
         </div>
 

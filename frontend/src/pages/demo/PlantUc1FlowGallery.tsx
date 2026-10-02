@@ -31,6 +31,8 @@ export function PlantUc1FlowGallery({ embedded = false }: { embedded?: boolean }
   const trigger = copy.triggers[step.titleKey];
   const response = snapshots[step.responseKey];
   const request = step.requestKey ? snapshots[step.requestKey] : step.request;
+  const isFirst = active === 0;
+  const isLast = active >= PLANT_FLOW_STEPS.length - 1;
 
   function goTo(index: number) {
     setActive(index);
@@ -67,27 +69,31 @@ export function PlantUc1FlowGallery({ embedded = false }: { embedded?: boolean }
               </button>
             );
           })}
-          <div className="ml-auto flex shrink-0 gap-1 pl-2">
-            <button
-              type="button"
-              disabled={active === 0}
-              onClick={() => goTo(active - 1)}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-medium disabled:opacity-40"
-              aria-label={copy.prev}
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              disabled={active >= PLANT_FLOW_STEPS.length - 1}
-              onClick={() => goTo(active + 1)}
-              className="rounded-lg border border-gray-300 px-2 py-1.5 text-xs font-medium disabled:opacity-40"
-              aria-label={copy.next}
-            >
-              →
-            </button>
-          </div>
         </nav>
+
+        <div className="sticky top-0 z-10 -mx-1 mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-white/95 px-1 py-3 backdrop-blur">
+          <button
+            type="button"
+            disabled={isFirst}
+            onClick={() => goTo(active - 1)}
+            className="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ← {copy.prev}
+          </button>
+          <p className="text-center text-xs font-medium text-gray-500 sm:text-sm">
+            <span className="font-mono text-brand-blue">{step.id}</span>
+            <span className="mx-2 text-gray-300">·</span>
+            {active + 1} / {PLANT_FLOW_STEPS.length}
+          </p>
+          <button
+            type="button"
+            disabled={isLast}
+            onClick={() => goTo(active + 1)}
+            className="rounded-full bg-brand-green px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-green-dark disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {copy.next} →
+          </button>
+        </div>
 
         <div className="mt-4 min-w-0">
           <h2 className="text-xl font-semibold text-brand-blue">{title}</h2>

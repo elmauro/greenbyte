@@ -75,7 +75,7 @@ export const en = {
     tourInjectNoteRush:
       'Picture after POST /demo/plant/ingest/sap-priority-change. Live call writes the new priority or finish and builds a proposed plan. The screen polls GET queue ~every 5s.',
     tourInjectNoteQa:
-      'Picture after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Live call needs an open PO (example 1002266350, Dent, Equipment ID Line 1).',
+      'Picture after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Demo BFF/MSW example PO 1001884747 (Line 1, Dent).',
     tourSapRefreshHint:
       'Surprise batch: POST /demo/plant/ingest/sap-queue-refresh inserts a new PO and replans that line — map: /demo/plant/flow?step=03c',
     steps: [
@@ -107,7 +107,7 @@ export const en = {
         plainLine:
           'A Fail row on a lot already in process — PO, line (Equipment ID), and reason (Dent, Discolored, …) — puts that batch on hold and re-sequences the line.',
         body:
-          'The live call stores the test and builds a proposed plan. Preview shows HOLD in Queue, then Scheduling with copilot copy. Use an open PO on the line (e.g. 1002266350 on Line 1).',
+          'The live call stores the test and builds a proposed plan. Preview shows HOLD in Queue, then Scheduling with copilot copy. Example PO 1001884747 on Line 1 (see flow step 03b).',
         highlight: 'Map: /demo/plant/flow?step=03b',
       },
       {
@@ -162,7 +162,8 @@ export const en = {
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operator posts a new COISPI PO — POST /demo/plant/ingest/sap-queue-refresh (insert + replan).',
-      s03b: 'Operator posts a Fail row — POST /demo/plant/ingest/pass-fail-log (open PO, Equipment ID, failedFor).',
+      s03b:
+        'Operator posts a Fail row — POST /demo/plant/ingest/pass-fail-log (example PO 1001884747 on Line 1, Equipment ID, failedFor).',
       s04: 'Private call after each ingest. This sample is the rush plan from step 03. queueSnapshot is that response queue, renamed. A new COISPI PO is eventType rush with the PO in diff.added. A Fail is eventType qa_fail with the PO in diff.held.',
       s05: 'Screen polls GET queue. While PROPOSED the response carries the proposed order, pendingDiff, and pendingExplanation.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',

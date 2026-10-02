@@ -243,7 +243,7 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
     tourInjectNoteRush:
       'Imagen tras POST /demo/plant/ingest/sap-priority-change. La llamada en vivo guarda la prioridad o la fecha y arma un plan propuesto. La pantalla consulta GET cola ~cada 5 s.',
     tourInjectNoteQa:
-      'Imagen tras POST /demo/plant/ingest/pass-fail-log — HOLD + replan. La llamada en vivo necesita un PO abierto (ejemplo 1002266350, Dent, Equipment ID Line 1).',
+      'Imagen tras POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Ejemplo BFF/MSW: PO 1001884747 (Línea 1, Dent).',
     tourSapRefreshHint:
       'Lote sorpresa: POST /demo/plant/ingest/sap-queue-refresh inserta un PO nuevo y replanifica esa línea — mapa: /demo/plant/flow?step=03c',
     steps: [
@@ -275,7 +275,7 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
         plainLine:
           'Una fila Fail sobre un lote que ya estaba en proceso — PO, línea (Equipment ID) y motivo (Dent, Discolored, …) — deja ese lote en hold y reordena la línea.',
         body:
-          'La llamada en vivo guarda la prueba y arma un plan propuesto. Vista previa: HOLD en Cola y copiloto en Programación. PO abierto en la línea (ej. 1002266350 Línea 1).',
+          'La llamada en vivo guarda la prueba y arma un plan propuesto. Vista previa: HOLD en Cola y copiloto en Programación. PO ejemplo 1001884747 en Línea 1 (paso flow 03b).',
         highlight: 'Mapa: /demo/plant/flow?step=03b',
       },
       {
@@ -330,7 +330,8 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
       s02: 'Misma respuesta GET — la UI usa finish, atRisk, reasonShort (sin segunda petición).',
       s03: 'Operador publica cambio de prioridad SAP — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operador publica un PO nuevo de COISPI — POST /demo/plant/ingest/sap-queue-refresh (inserta y replanifica).',
-      s03b: 'Operador publica una fila Fail — POST /demo/plant/ingest/pass-fail-log (PO abierto, Equipment ID, failedFor).',
+      s03b:
+        'Operador publica una fila Fail — POST /demo/plant/ingest/pass-fail-log (ejemplo PO 1001884747 en Línea 1, Equipment ID, failedFor).',
       s04: 'Llamada privada después de cada ingest. Este ejemplo es el plan rush del paso 03. queueSnapshot es la queue de esa respuesta, con otro nombre. Un PO nuevo de COISPI va como eventType rush y el PO en diff.added. Un Fail va como eventType qa_fail y el PO en diff.held.',
       s05: 'La pantalla consulta GET cola. Mientras está PROPOSED la respuesta trae el orden propuesto, pendingDiff y pendingExplanation.',
       s06: 'Clic Accept schedule — POST /demo/plant/schedule/accept.',
