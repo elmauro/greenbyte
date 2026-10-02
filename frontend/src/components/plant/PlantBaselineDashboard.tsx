@@ -46,6 +46,8 @@ type PlantBaselineDashboardProps = {
   defaultSection?: PlantNavSection;
   /** Flow gallery: fixed section per step, no live notification badges. */
   staticPreview?: boolean;
+  /** Tour/flow: show accept bar, timeline, and nav badges while still using snapshot data. */
+  staticPreviewFaithful?: boolean;
   /** Scheduling section layout when a replan is pending review. */
   schedulingLayout?: 'full' | 'timeline-only';
   /** UX experience — same GreenByte styles, richer flows. */
@@ -128,6 +130,7 @@ export function PlantBaselineDashboard({
   showProgramTimeline = true,
   defaultSection = 'dashboard',
   staticPreview = false,
+  staticPreviewFaithful = false,
   schedulingLayout = 'full',
   experience = 'baseline',
   section: controlledSection,
@@ -150,6 +153,7 @@ export function PlantBaselineDashboard({
   const copy = m.plantMvp;
   const paginationCopy = m.plantMvp.pagination;
   const isUx = experience === 'ux';
+  const faithfulStatic = staticPreview && staticPreviewFaithful;
   const remoteNotices = usePlantLineNotices(isUx && !staticPreview, locale);
   const schedule = m.plantMvp.scheduleShell;
   const enablePagination = !staticPreview && !compact;
@@ -165,7 +169,7 @@ export function PlantBaselineDashboard({
   const eventActive = Boolean(eventType && explanation && explanationHasCopy);
   /** Rush/QA still awaiting human accept — hide event chrome once accepted. */
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
-  const schedulingActionPending = !staticPreview && eventPendingReview;
+  const schedulingActionPending = eventPendingReview && (!staticPreview || faithfulStatic);
   const rushPo = eventHighlightPo;
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (!showProgramTimeline && item.id !== 'dashboard' && item.id !== 'queue') return false;
@@ -364,7 +368,7 @@ export function PlantBaselineDashboard({
   }
 
   function navBadgeKind(section: PlantNavSection): 'action' | 'info' | null {
-    if (staticPreview) return null;
+    if (staticPreview && !faithfulStatic) return null;
     if (section === 'scheduling' && schedulingActionPending && activeSection !== 'scheduling') {
       return 'action';
     }
@@ -860,7 +864,7 @@ export function PlantBaselineDashboard({
   }
 
   function renderAlerts(menuId: string) {
-    if (!showProgramTimeline || staticPreview) return null;
+    if (!showProgramTimeline || (staticPreview && !faithfulStatic)) return null;
     return (
       <div className="relative" data-bell-root>
         <button
@@ -1172,7 +1176,9 @@ export function PlantBaselineDashboard({
       {isUx && eventPendingReview && onAccept && (
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
           <div className={`mx-auto flex flex-wrap items-center gap-4 sm:justify-between ${
-            isUx && !compact && schedulingLayout === 'full' && !staticPreview ? 'lg:pr-20' : ''
+            isUx && !compact && schedulingLayout === 'full' && (!staticPreview || faithfulStatic)
+              ? 'lg:pr-20'
+              : ''
           }`}>
             <p className="flex-1 text-sm text-gray-600">
               {schedule.footerTotal
@@ -1200,7 +1206,11 @@ export function PlantBaselineDashboard({
         </div>
       )}
 
-      {isUx && !compact && schedulingLayout === 'full' && !staticPreview && !timelineOpen && (
+      {isUx &&
+        !compact &&
+        schedulingLayout === 'full' &&
+        (!staticPreview || faithfulStatic) &&
+        !timelineOpen && (
         <PlantCopilotChatDock
           queue={queue}
           lineId={selectedLineId}

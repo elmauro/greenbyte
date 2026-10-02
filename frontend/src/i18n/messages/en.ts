@@ -50,19 +50,28 @@ export const en = {
         'A car shop with six jobs booked. A walk-in says “I need my car today.” You shuffle the queue — but you want a clear reason before you bump someone else, especially if switching job types costs an hour of setup.',
       walkthroughHeading: 'What you will see in the six steps below',
       walkthroughSteps: [
-        'Pick Line 1 or Line 2. The list is that line’s open queue — active, not complete.',
-        'A job with a tight deadline (and demo customer-order proxies on key POs).',
-        'SAP priority changes — an existing PO moves up (ingest, not a UI button).',
-        'A failed pass/fail test puts a batch on HOLD and re-sequences the line.',
-        'Scheduling + copilot show the new order and plain-language reasons.',
-        'The planner accepts the proposed plan. That sign-off is stored and does not write to SAP.',
+        'Line Scheduler panel — pick Line 1 or Line 2 (same control as /demo/plant/ux).',
+        'Queue tab — filters, at-risk finish dates, and compare selected orders.',
+        'After SAP priority ingest — Scheduling shows the proposed plan, Gantt, copilot rail, and Accept.',
+        'After QA fail ingest — Queue shows HOLD; then Scheduling explains the re-sequence.',
+        'Scheduling + copilot — reasons per batch; help menu and decision history in the live app.',
+        'Accept schedule — sign-off is stored in the browser history; nothing writes to SAP.',
       ],
       tagline:
         'In one line: “What runs next when a rush order or a failed test hits the line — and why?”',
     },
-    tourLivePreview: 'Live UI — same components as /demo/plant',
+    tourLivePreview: 'Line Scheduler UX preview — same widgets as /demo/plant/ux',
+    tourTryUx: 'Open live Program Timeline',
+    tourUiNotes: [
+      'Panel: line selector and calm queue summary before any ingest.',
+      'Queue: spot near-term finish dates; use filters and row compare in the live app.',
+      'Scheduling after rush: proposed order, timeline, copilot summary, and Accept bar.',
+      'Queue after QA fail: HOLD row; live ingest uses an open PO on the selected line.',
+      'Scheduling: full replan story — open the copilot dock and program timeline toggle.',
+      'Accepted plan: decision is recorded under ··· → Decision history (browser only).',
+    ],
     tourLinePreviewNote:
-      'This picture stays the scripted Line 1 snapshot. On /demo/plant, Line 2 loads the open queue for LSVLN2.',
+      'Scripted snapshot for Line 1. On /demo/plant/ux, Line 2 loads the open queue for LSVLN2.',
     tourInjectNoteRush:
       'Picture after POST /demo/plant/ingest/sap-priority-change. Live call writes the new priority or finish and builds a proposed plan. The screen polls GET queue ~every 5s.',
     tourInjectNoteQa:
@@ -74,42 +83,46 @@ export const en = {
         title: '1. The normal queue',
         plainLine:
           'The scheduler picks a line. Only lines with a demo_line_id are in the list: Line 1 (Line 1 Schedule) and Line 2 (Line 2 Schedule).',
-        body: 'GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue — active, non-complete orders for that line. Each row is a batch: crop, weight, and scheduled finish.',
-        highlight: 'See UI ↔ API map: /demo/plant/flow?step=01',
+        body:
+          'GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue — active, non-complete orders for that line. The UX route adds panel, queue, and scheduling tabs.',
+        highlight: 'Live: /demo/plant/ux · Map: /demo/plant/flow?step=01',
       },
       {
         title: '2. A job that cannot wait much longer',
         plainLine: 'One order has a due date soon — if it keeps falling down the list, a grower may not get seed on time.',
-        body: 'The app highlights batches tied to near-term commitments. You are not solving math yet; you are spotting who is at risk.',
-        highlight: 'Example from demo data: sweet-corn batch, finish date 2026-07-06, high priority. Map: /demo/plant/flow?step=02',
+        body:
+          'The app highlights batches tied to near-term commitments. In UX, use queue filters (At risk, species) and compare two POs from the ··· menu.',
+        highlight: 'Example: sweet-corn finish 2026-07-06 · Map: /demo/plant/flow?step=02',
       },
       {
         title: '3. Rush — priority on an existing PO',
         plainLine:
           'An operator posts a priority or finish change for a lot already on the line. The scheduler UI has no rush button.',
         body:
-          'The live call writes that change and builds a proposed plan with a reason per position. PO 1002307551 is on Line 2 (LSVLN2), so the example uses line-2. This picture stays the scripted Line 1 move.',
-        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · New PO on COISPI refresh: sap-queue-refresh (step 03c), which also replans.',
+          'The live call writes that change and builds a proposed plan. The preview jumps to Scheduling with the Accept bar — same as polling GET queue after ingest.',
+        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · COISPI refresh: step=03c',
       },
       {
         title: '4. QA fail — pass/fail log',
         plainLine:
           'A Fail row on a lot already in process — PO, line (Equipment ID), and reason (Dent, Discolored, …) — puts that batch on hold and re-sequences the line.',
         body:
-          'The live call stores the test and builds a proposed plan. The picture stays the scripted Dent story. Use an open PO on the selected line, for example 1002266350 on Line 1.',
+          'The live call stores the test and builds a proposed plan. Preview shows HOLD in Queue, then Scheduling with copilot copy. Use an open PO on the line (e.g. 1002266350 on Line 1).',
         highlight: 'Map: /demo/plant/flow?step=03b',
       },
       {
         title: '5. Scheduling + copilot',
         plainLine: 'After a replan, the scheduler sees the proposed order, a reason on each batch, and the simulated copilot summary.',
-        body: 'GET /demo/plant/lines/{lineId}/queue returns that proposed plan while it waits for acceptance. The browser does not call the agent. The BFF writes the summary from the plan.',
-        highlight: '/demo/plant/flow?step=04 · Poll: step=05',
+        body:
+          'GET queue returns the proposed plan while it waits for acceptance. UX shows the Gantt, copilot dock, and help journeys — BFF supplies the summary, not a live agent call from the browser.',
+        highlight: '/demo/plant/flow?step=04 · Live scheduling: /demo/plant/ux?section=scheduling',
       },
       {
         title: '6. You sign off',
         plainLine: 'Accept schedule records the human sign-off on the proposed plan — no SAP write.',
-        body: 'Accept records the human decision. It does not write back to SAP. The proposed plan is already stored when the ingest ran.',
-        highlight: 'Architecture: /demo/architecture · Operator curl: docs/hackathon/uc1-demo-operator-ingest.md',
+        body:
+          'Accept records the human decision in the BFF and adds a row to Decision history (local browser). It does not write back to SAP.',
+        highlight: 'Try Accept on /demo/plant/ux · Operator curl: docs/hackathon/uc1-demo-operator-ingest.md',
       },
     ],
   },

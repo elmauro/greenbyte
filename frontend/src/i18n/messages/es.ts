@@ -218,19 +218,28 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
         'Un taller mecánico con seis trabajos en cola. Entra uno urgente: “necesito el carro hoy”. Reordenar tiene sentido, pero quieres saber por qué antes de dejar atrás a otro cliente — sobre todo si cambiar de tipo de trabajo cuesta una hora de preparación.',
       walkthroughHeading: 'Lo que verás en los seis pasos de abajo',
       walkthroughSteps: [
-        'Elige Línea 1 o Línea 2. La lista es la cola abierta de esa línea: activas, no completas.',
-        'Un trabajo con fecha límite y proxies de pedido cliente en POs clave.',
-        'Cambio de prioridad SAP — un PO existente sube (ingest, no botón en UI).',
-        'Un Fail en pass/fail pone un lote en HOLD y reordena la línea.',
-        'Programación + copiloto muestran el nuevo orden y el porqué.',
-        'El programador acepta el plan propuesto. Ese visto bueno queda guardado y no escribe en SAP.',
+        'Panel del planificador — elige Línea 1 o Línea 2 (igual que /demo/plant/ux).',
+        'Pestaña Cola — filtros, fechas en riesgo y comparar órdenes seleccionadas.',
+        'Tras ingest de prioridad SAP — Programación muestra plan propuesto, Gantt, copiloto y Aceptar.',
+        'Tras fail QA — Cola con HOLD; luego Programación explica el reorden.',
+        'Programación + copiloto — razones por lote; ayuda e historial de decisiones en la app en vivo.',
+        'Accept schedule — el visto bueno queda en historial del navegador; no escribe en SAP.',
       ],
       tagline:
         'En una frase: «¿Qué va primero cuando llega un rush o falla un test — y por qué?»',
     },
-    tourLivePreview: 'UI en vivo — mismos componentes que /demo/plant',
+    tourLivePreview: 'Vista previa UX del planificador — mismos widgets que /demo/plant/ux',
+    tourTryUx: 'Abrir línea de tiempo en vivo',
+    tourUiNotes: [
+      'Panel: selector de línea y resumen en calma antes de cualquier ingest.',
+      'Cola: detecta fechas cercanas; en vivo usa filtros y comparar filas.',
+      'Programación tras rush: orden propuesto, timeline, copiloto y barra Aceptar.',
+      'Cola tras fail QA: fila HOLD; el ingest en vivo usa un PO abierto en la línea.',
+      'Programación: historia completa del replan — dock del copiloto y toggle del timeline.',
+      'Plan aceptado: la decisión queda en ··· → Historial de decisiones (solo navegador).',
+    ],
     tourLinePreviewNote:
-      'Esta imagen sigue el snapshot del guion de la Línea 1. En /demo/plant, la Línea 2 carga la cola abierta de LSVLN2.',
+      'Snapshot del guion en Línea 1. En /demo/plant/ux, la Línea 2 carga la cola abierta de LSVLN2.',
     tourInjectNoteRush:
       'Imagen tras POST /demo/plant/ingest/sap-priority-change. La llamada en vivo guarda la prioridad o la fecha y arma un plan propuesto. La pantalla consulta GET cola ~cada 5 s.',
     tourInjectNoteQa:
@@ -242,42 +251,46 @@ El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
         title: '1. La cola de siempre',
         plainLine:
           'El programador elige la línea. Solo entran las que tienen demo_line_id: Línea 1 (Line 1 Schedule) y Línea 2 (Line 2 Schedule).',
-        body: 'GET /demo/plant/lines/{lineId}/queue lee gold.v_open_queue: órdenes activas y no completas de esa línea. Cada fila es un lote: cultivo, kilos y fin programado.',
-        highlight: 'Mapa UI ↔ API: /demo/plant/flow?step=01',
+        body:
+          'GET /demo/plant/lines/{lineId}/queue lee gold.v_open_queue. La ruta UX añade panel, cola y programación.',
+        highlight: 'En vivo: /demo/plant/ux · Mapa: /demo/plant/flow?step=01',
       },
       {
         title: '2. Un pedido que no puede esperar mucho',
         plainLine: 'Hay un pedido con fecha cercana: si sigue cayendo en la lista, el agricultor puede quedarse sin semilla a tiempo.',
-        body: 'La app marca los lotes con compromisos próximos. Aquí no hacemos magia numérica: solo detectamos quién está en riesgo.',
-        highlight: 'Ejemplo: maíz dulce, 2026-07-06. Mapa: /demo/plant/flow?step=02',
+        body:
+          'La app marca lotes con compromisos próximos. En UX usa filtros (En riesgo, especie) y comparar POs desde ···.',
+        highlight: 'Ejemplo: maíz dulce 2026-07-06 · Mapa: /demo/plant/flow?step=02',
       },
       {
         title: '3. Rush — prioridad en un PO existente',
         plainLine:
           'Un operador publica un cambio de prioridad o de fecha sobre un lote que ya está en la línea. La UI del programador no tiene botón rush.',
         body:
-          'La llamada en vivo guarda ese cambio y arma un plan propuesto, con una razón por posición. El PO 1002307551 está en la Línea 2 (LSVLN2), por eso el ejemplo usa line-2. Esta imagen sigue el movimiento del guion de la Línea 1.',
-        highlight: 'Mapa UI ↔ API: /demo/plant/flow?step=03 · PO nuevo en el refresh COISPI: sap-queue-refresh (paso 03c), que también replanifica.',
+          'La llamada en vivo guarda el cambio y arma un plan propuesto. La vista previa abre Programación con la barra Aceptar — igual que GET cola tras el ingest.',
+        highlight: 'Mapa UI ↔ API: /demo/plant/flow?step=03 · Refresh COISPI: paso=03c',
       },
       {
         title: '4. Fallo QA — log pass/fail',
         plainLine:
           'Una fila Fail sobre un lote que ya estaba en proceso — PO, línea (Equipment ID) y motivo (Dent, Discolored, …) — deja ese lote en hold y reordena la línea.',
         body:
-          'La llamada en vivo guarda la prueba y arma un plan propuesto. La imagen sigue el guion de Dent. Usa un PO abierto en la línea elegida, por ejemplo 1002266350 en la Línea 1.',
+          'La llamada en vivo guarda la prueba y arma un plan propuesto. Vista previa: HOLD en Cola y copiloto en Programación. PO abierto en la línea (ej. 1002266350 Línea 1).',
         highlight: 'Mapa: /demo/plant/flow?step=03b',
       },
       {
         title: '5. Programación + copiloto',
         plainLine: 'Después de un recálculo, el planificador ve el orden propuesto, la razón de cada lote y el resumen simulado del copiloto.',
-        body: 'GET /demo/plant/lines/{lineId}/queue devuelve ese plan propuesto mientras espera la aceptación. El navegador no llama al agente. El BFF arma el resumen a partir del plan.',
-        highlight: '/demo/plant/flow?step=04 · Poll: paso=05',
+        body:
+          'GET cola devuelve el plan propuesto hasta la aceptación. UX muestra Gantt, copiloto y ayuda — el BFF arma el resumen, no una llamada al agente desde el navegador.',
+        highlight: '/demo/plant/flow?step=04 · En vivo: /demo/plant/ux?section=scheduling',
       },
       {
         title: '6. Visto bueno',
         plainLine: 'Accept schedule registra el visto bueno humano sobre el plan propuesto — sin escritura SAP.',
-        body: 'Accept registra la decisión humana. No escribe en SAP. El plan propuesto ya quedó guardado cuando corrió el ingest.',
-        highlight: 'Arquitectura: /demo/architecture · curl operador: docs/hackathon/uc1-demo-operator-ingest.md',
+        body:
+          'Accept registra la decisión en el BFF y añade una fila al Historial de decisiones (navegador local). No escribe en SAP.',
+        highlight: 'Prueba Accept en /demo/plant/ux · curl operador: docs/hackathon/uc1-demo-operator-ingest.md',
       },
     ],
   },
