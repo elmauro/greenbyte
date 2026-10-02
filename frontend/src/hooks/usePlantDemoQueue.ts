@@ -51,6 +51,9 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [demoAction, setDemoAction] = useState<'reset' | 'plan' | null>(null);
+  const [demoActionError, setDemoActionError] = useState(false);
+  const [mandatoryPlanReview, setMandatoryPlanReview] = useState(false);
   const acceptedPlanVersionRef = useRef<number | null>(readAckPlanVersion(lineId));
   const acceptEpochRef = useRef(0);
   const shellReadyRef = useRef(false);
@@ -145,7 +148,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     [locale],
   );
 
-  const loadQueue = useCallback(async () => {
+  const loadQueue = useCallback(async (): Promise<PlantQueueResponse | null> => {
     const requestedLineId = lineId;
     setLoadError(false);
     const storedAck = readAckPlanVersion(requestedLineId);
@@ -155,13 +158,15 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     else setLoading(true);
     try {
       const res = await plantDemoApi.getQueue(requestedLineId, locale);
-      if (lineIdRef.current !== requestedLineId) return;
+      if (lineIdRef.current !== requestedLineId) return null;
       applyQueueSnapshot(res);
       shellReadyRef.current = true;
+      return res;
     } catch {
-      if (lineIdRef.current !== requestedLineId) return;
+      if (lineIdRef.current !== requestedLineId) return null;
       setQueue([]);
       setLoadError(true);
+      return null;
     } finally {
       if (lineIdRef.current === requestedLineId) {
         setLoading(false);
@@ -169,6 +174,15 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
       }
     }
   }, [applyQueueSnapshot, lineId, locale]);
+
+  useEffect(() => {
+    setMandatoryPlanReview(false);
+    setDemoActionError(false);
+    setEventType(null);
+    setExplanation(null);
+    setPendingDiff(null);
+    setEventHighlightPo(undefined);
+  }, [lineId]);
 
   const pollQueue = useCallback(async () => {
     if (!pollsRemoteQueue || busy) return;
@@ -200,6 +214,39 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [pollQueue, pollsRemoteQueue]);
+
+  const runDemoAction = useCallback(
+    async (action: 'reset' | 'plan') => {
+      setBusy(true);
+      setDemoAction(action);
+      setDemoActionError(false);
+      try {
+        clearManualOrder();
+        if (action === 'reset') {
+          setMandatoryPlanReview(false);
+          await plantDemoApi.stageRawLine(lineId);
+        } else await plantDemoApi.planLine(lineId);
+        const res = await loadQueue();
+        if (
+          action === 'plan' &&
+          res &&
+          shouldSurfacePendingNotice(
+            explanationFromQueue(res.pendingExplanation),
+            res.pendingDiff ?? null,
+            res.queue,
+          )
+        ) {
+          setMandatoryPlanReview(true);
+        }
+      } catch {
+        setDemoActionError(true);
+      } finally {
+        setBusy(false);
+        setDemoAction(null);
+      }
+    },
+    [lineId, loadQueue],
+  );
 
   const acceptPlan = useCallback(async () => {
     setBusy(true);
@@ -236,7 +283,13 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     refreshing,
     loadError,
     busy,
+    demoAction,
+    demoActionError,
     acceptPlan,
+    resetDemo: () => runDemoAction('reset'),
+    generatePlan: () => runDemoAction('plan'),
+    mandatoryPlanReview,
+    dismissMandatoryPlanReview: () => setMandatoryPlanReview(false),
     setManualOrder,
     connectionMode: plantDemoApi.connectionMode,
   };

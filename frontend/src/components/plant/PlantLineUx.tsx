@@ -44,6 +44,12 @@ export function PlantLineUx() {
     setManualOrder,
     loadError,
     planVersion,
+    demoAction,
+    demoActionError,
+    resetDemo,
+    generatePlan,
+    mandatoryPlanReview,
+    dismissMandatoryPlanReview,
   } = usePlantDemoQueue(locale, line.id);
 
   const onSectionChange = useCallback(
@@ -124,6 +130,12 @@ export function PlantLineUx() {
                 return params;
               }, { replace: true });
             }}
+            onResetDemo={() => void resetDemo()}
+            onGeneratePlan={() => void generatePlan()}
+            demoAction={demoAction}
+            demoActionError={demoActionError}
+            mandatoryPlanReview={mandatoryPlanReview}
+            onMandatoryPlanReviewAck={dismissMandatoryPlanReview}
           />
           </>
         )}

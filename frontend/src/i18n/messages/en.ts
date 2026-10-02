@@ -337,6 +337,22 @@ export const en = {
     actions: {
       accept: 'Accept schedule',
       accepted: 'Accepted',
+      resetDemo: 'Reset demo',
+      resettingDemo: 'Resetting…',
+      resetDemoHint: 'Clears the plan and shows these orders unordered.',
+      generatePlan: 'Generate plan',
+      generatingPlan: 'Generating…',
+      generatePlanHint: 'Runs the scheduler on the orders already on this line.',
+      demoActionError: 'That did not finish. Try again.',
+      planModalTitle: 'Generating the plan',
+      planModalSubtitle: 'The queue updates when this finishes. Nothing is written to SAP.',
+      planModalSteps: [
+        'Reading the orders already on this line',
+        'Reading notes for rush, hold, and not ready',
+        'Ordering the line. The batch already running stays first',
+        'Fitting changeovers between species',
+        'Writing a reason on every order',
+      ],
     },
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle:

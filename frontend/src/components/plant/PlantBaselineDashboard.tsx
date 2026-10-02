@@ -21,6 +21,7 @@ import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import { shouldShowScheduleLineNumber } from '../../demo/plant/plantManualOrder';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
+import { PlantPlanGeneratingModal } from './PlantPlanGeneratingModal';
 import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
 import { PlantPlanReviewModal } from './ux/PlantPlanReviewModal';
 import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
@@ -77,6 +78,14 @@ type PlantBaselineDashboardProps = {
   explainPo?: string;
   /** BFF plan version — schedule line numbers hide on calm baseline (v1) after demo reset. */
   planVersion?: number;
+  /** Demo controls: drop the plan, then run the scheduler on the orders already here. */
+  onResetDemo?: () => void;
+  onGeneratePlan?: () => void;
+  demoAction?: 'reset' | 'plan' | null;
+  demoActionError?: boolean;
+  /** When false, skip the blocking replan review modal (rush/QA use bell + scheduling). */
+  mandatoryPlanReview?: boolean;
+  onMandatoryPlanReviewAck?: () => void;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -150,6 +159,12 @@ export function PlantBaselineDashboard({
   onSelectOrder,
   explainPo,
   planVersion = 1,
+  onResetDemo,
+  onGeneratePlan,
+  demoAction = null,
+  demoActionError = false,
+  mandatoryPlanReview = false,
+  onMandatoryPlanReviewAck,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -267,6 +282,7 @@ export function PlantBaselineDashboard({
     setSelectedPo([]);
     setCompareOpen(false);
     setQueuePage(1);
+    setPlanReviewAckKey(null);
   }, [selectedLineId]);
 
   useEffect(() => {
@@ -319,6 +335,7 @@ export function PlantBaselineDashboard({
     isUx &&
     !compact &&
     !staticPreview &&
+    mandatoryPlanReview &&
     Boolean(planReviewGateKey) &&
     planReviewAckKey !== planReviewGateKey;
 
@@ -454,6 +471,7 @@ export function PlantBaselineDashboard({
   }
 
   function acknowledgePlanReviewModal() {
+    onMandatoryPlanReviewAck?.();
     openScheduleForLine(selectedLine.id);
   }
 
@@ -985,8 +1003,38 @@ export function PlantBaselineDashboard({
     );
   }
 
+  const showDemoActions = !compact && !staticPreview && Boolean(onResetDemo && onGeneratePlan);
+  const demoBusy = demoAction != null;
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-[#f8faf8] shadow-lg">
+      {showDemoActions && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 sm:px-4">
+          {demoActionError && (
+            <p className="mr-auto text-xs font-medium text-brand-red">{copy.actions.demoActionError}</p>
+          )}
+          <div className={`flex flex-wrap items-center gap-2 ${demoActionError ? '' : 'ml-auto'}`}>
+            <button
+              type="button"
+              onClick={onResetDemo}
+              disabled={demoBusy || acceptDisabled}
+              title={copy.actions.resetDemoHint}
+              className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {demoAction === 'reset' ? copy.actions.resettingDemo : copy.actions.resetDemo}
+            </button>
+            <button
+              type="button"
+              onClick={onGeneratePlan}
+              disabled={demoBusy || acceptDisabled}
+              title={copy.actions.generatePlanHint}
+              className="rounded-full bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {demoAction === 'plan' ? copy.actions.generatingPlan : copy.actions.generatePlan}
+            </button>
+          </div>
+        </div>
+      )}
       <div className={`flex min-h-[520px] flex-col ${isUx ? '' : 'md:flex-row'}`}>
       {!compact && !isUx && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
@@ -1289,6 +1337,14 @@ export function PlantBaselineDashboard({
             }}
           />
         </>
+      )}
+
+      {demoAction === 'plan' && (
+        <PlantPlanGeneratingModal
+          title={copy.actions.planModalTitle}
+          subtitle={copy.actions.planModalSubtitle}
+          steps={copy.actions.planModalSteps}
+        />
       )}
     </div>
   );
