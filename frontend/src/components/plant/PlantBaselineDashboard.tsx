@@ -21,10 +21,13 @@ import { PlantPlanGeneratingModal } from './PlantPlanGeneratingModal';
 import { PlantQueueNote } from './PlantQueueNote';
 import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
+import { shouldShowScheduleLineNumber } from '../../demo/plant/plantManualOrder';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
 import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
+import { PlantPlanReviewModal } from './ux/PlantPlanReviewModal';
 import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
 import { PlantUxHistoryDrawer } from './ux/PlantUxHistoryDrawer';
+import { RichParagraph, substitutePlaceholders } from './ux/RichMessage';
 
 export type PlantDashboardExperience = 'baseline' | 'ux';
 export type PlantQueueFilter = 'all' | 'risk' | 'hold' | 'SWCO' | 'CORN';
@@ -78,11 +81,16 @@ type PlantBaselineDashboardProps = {
   onCopilotPo?: (po: string) => void;
   /** Reload the line after the copilot sends a rush. */
   onQueueRefresh?: () => void | Promise<void>;
+  /** BFF plan version — schedule line numbers hide on calm baseline (v1) after demo reset. */
+  planVersion?: number;
   /** Demo controls: drop the plan, then run the scheduler on the orders already here. */
   onResetDemo?: () => void;
   onGeneratePlan?: () => void;
   demoAction?: 'reset' | 'plan' | null;
   demoActionError?: boolean;
+  /** When false, skip the blocking replan review modal (rush/QA use bell + scheduling). */
+  mandatoryPlanReview?: boolean;
+  onMandatoryPlanReviewAck?: () => void;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -157,10 +165,13 @@ export function PlantBaselineDashboard({
   explainPo,
   onCopilotPo,
   onQueueRefresh,
+  planVersion = 1,
   onResetDemo,
   onGeneratePlan,
   demoAction = null,
   demoActionError = false,
+  mandatoryPlanReview = false,
+  onMandatoryPlanReviewAck,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -220,6 +231,7 @@ export function PlantBaselineDashboard({
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [planReviewAckKey, setPlanReviewAckKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -285,6 +297,7 @@ export function PlantBaselineDashboard({
     setSelectedPo([]);
     setCompareOpen(false);
     setQueuePage(1);
+    setPlanReviewAckKey(null);
   }, [selectedLineId]);
 
   useEffect(() => {
@@ -328,6 +341,24 @@ export function PlantBaselineDashboard({
       })
     : [];
   const notificationCount = isUx ? scheduleNotices.length : showSchedulingNotification ? 1 : 0;
+
+  const planReviewGateKey =
+    eventType && eventPendingReview
+      ? `${selectedLine.id}:${eventType}:${planVersion}`
+      : null;
+  const showPlanReviewModal =
+    isUx &&
+    !compact &&
+    !staticPreview &&
+    mandatoryPlanReview &&
+    Boolean(planReviewGateKey) &&
+    planReviewAckKey !== planReviewGateKey;
+
+  useEffect(() => {
+    if (activeSection === 'scheduling' && planReviewGateKey && eventPendingReview) {
+      setPlanReviewAckKey(planReviewGateKey);
+    }
+  }, [activeSection, eventPendingReview, planReviewGateKey]);
 
   function statusPill(): { label: string; sub: string; className: string; dot: string } {
     if (eventPendingReview) {
@@ -443,12 +474,20 @@ export function PlantBaselineDashboard({
 
   function openScheduleForLine(lineId: string) {
     setBellOpen(false);
+    if (lineId === selectedLine.id && planReviewGateKey) {
+      setPlanReviewAckKey(planReviewGateKey);
+    }
     if (onOpenLine) {
       onOpenLine(lineId);
       return;
     }
     if (lineId !== selectedLine.id) onLineChange?.(lineId);
     goToSection('scheduling');
+  }
+
+  function acknowledgePlanReviewModal() {
+    onMandatoryPlanReviewAck?.();
+    openScheduleForLine(selectedLine.id);
   }
 
   function dismissScheduleNotice(lineId: string, eventTypeName: string) {
@@ -477,7 +516,12 @@ export function PlantBaselineDashboard({
           <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
         )}
         {isUx && (
-          <p className="mt-1 text-xs font-normal text-amber-900/80">{ux.amberBody}</p>
+          <RichParagraph
+            text={substitutePlaceholders(ux.amberBody, {
+              line: copy.lineNames[selectedLine.id],
+            })}
+            className="mt-1 text-xs font-normal text-amber-900/80"
+          />
         )}
         {activeSection === 'dashboard' && !isUx && (
           <p className="mt-1 text-xs font-normal text-amber-900/80">{b.eventBannerHint}</p>
@@ -597,6 +641,15 @@ export function PlantBaselineDashboard({
             const isHold = row.status === 'HOLD';
             const isPending = row.status === 'PENDING';
             const linePosition = queue.findIndex((r) => r.po === row.po) + 1;
+            const moveHighlight =
+              row.previousPosition != null && row.previousPosition !== linePosition;
+            const showLineNumber = shouldShowScheduleLineNumber(
+              planVersion,
+              eventPendingReview,
+              row,
+              linePosition,
+              locale,
+            );
             const isSelected = selectedPo.includes(row.po);
             const noteOpen = !isUx && !staticPreview && !isComplete && notePo === row.po;
             const copilotOpen = isUx && explainPo === row.po;
@@ -604,7 +657,7 @@ export function PlantBaselineDashboard({
             return (
               <Fragment key={row.po}>
               <tr
-                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${noteOpen ? 'bg-brand-green/5' : ''} ${row.previousPosition && isUx ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
+                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${noteOpen ? 'bg-brand-green/5' : ''} ${moveHighlight && isUx && showLineNumber ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
               >
                 {isUx && (
                   <td className="px-3 py-3">
@@ -618,9 +671,15 @@ export function PlantBaselineDashboard({
                   </td>
                 )}
                 <td className="px-4 py-3">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-green text-sm font-bold text-white">
-                    {linePosition}
-                  </span>
+                  {showLineNumber ? (
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-green text-sm font-bold text-white">
+                      {linePosition}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-300" aria-hidden="true">
+                      —
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">
                   <span className="inline-flex items-center gap-1.5">
@@ -868,6 +927,7 @@ export function PlantBaselineDashboard({
             selectedPo={isUx ? explainPo : undefined}
             onSelectRow={isUx ? revealScheduleOrder : undefined}
             hideSummary={isUx && eventPendingReview && Boolean(onAccept)}
+            lockExpandedClose={showPlanReviewModal}
           />
         );
         const showUxRail = isUx && schedulingLayout === 'full';
@@ -958,13 +1018,15 @@ export function PlantBaselineDashboard({
                         >
                           {ux.openSchedule}
                         </button>
-                        <button
-                          type="button"
-                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          onClick={() => dismissScheduleNotice(notice.lineId, notice.eventType)}
-                        >
-                          {ux.dismiss}
-                        </button>
+                        {notice.lineId !== selectedLine.id || !eventPendingReview ? (
+                          <button
+                            type="button"
+                            className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                            onClick={() => dismissScheduleNotice(notice.lineId, notice.eventType)}
+                          >
+                            {ux.dismiss}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1265,6 +1327,17 @@ export function PlantBaselineDashboard({
         />
       )}
 
+      {isUx && eventType && (
+        <PlantPlanReviewModal
+          open={showPlanReviewModal}
+          lineLabel={copy.lineNames[selectedLine.id]}
+          eventType={eventType}
+          summaryLine={explanation?.summary}
+          copy={ux.planReviewModal}
+          onReview={acknowledgePlanReviewModal}
+        />
+      )}
+
       {isUx && (
         <>
           <PlantHelpDrawer
@@ -1309,6 +1382,8 @@ export function PlantBaselineDashboard({
             locale={locale}
             queue={queue}
             selectedPo={selectedPo}
+            planVersion={planVersion}
+            eventPendingReview={eventPendingReview}
             formatFinish={(finish) => formatFinish(finish, locale, b.finishFormat)}
             copy={{
               title: ux.cmpTitle,

@@ -1,4 +1,5 @@
 import type { QueueRow } from '../../../demo/plant/plantDemoTypes';
+import { shouldShowScheduleLineNumber } from '../../../demo/plant/plantManualOrder';
 import type { Locale } from '../../../i18n/LocaleContext';
 
 type PlantUxCompareDrawerProps = {
@@ -8,6 +9,8 @@ type PlantUxCompareDrawerProps = {
   queue: QueueRow[];
   selectedPo: string[];
   formatFinish: (finish: string) => string;
+  planVersion: number;
+  eventPendingReview: boolean;
   copy: {
     title: string;
     subtitle: string;
@@ -42,6 +45,8 @@ export function PlantUxCompareDrawer({
   queue,
   selectedPo,
   formatFinish,
+  planVersion,
+  eventPendingReview,
   copy,
 }: PlantUxCompareDrawerProps) {
   if (!open) return null;
@@ -114,7 +119,11 @@ export function PlantUxCompareDrawer({
               <tbody className="divide-y divide-gray-100">
                 {picked.map(({ r, pos }) => (
                   <tr key={r.po}>
-                    <td className="px-3 py-2 font-semibold">{pos}</td>
+                    <td className="px-3 py-2 font-semibold">
+                      {shouldShowScheduleLineNumber(planVersion, eventPendingReview, r, pos, locale)
+                        ? pos
+                        : '—'}
+                    </td>
                     <td className="px-3 py-2 font-mono text-xs">
                       {r.po}
                       <span className="block font-sans text-gray-500">{r.species}</span>

@@ -133,6 +133,21 @@ async function postIngestSapQueueRefresh(
   return data;
 }
 
+/** Drops the line's plan. Orders stay, in open-queue order, with no schedule. */
+async function stageRawLine(lineId: string): Promise<void> {
+  if (!useHttp) {
+    plantDemoServer.reset();
+    return;
+  }
+  await axiosApp.post('/demo/plant/demo/stage-raw', { lineId });
+}
+
+/** One scheduler run over the orders already on the line. */
+async function planLine(lineId: string): Promise<void> {
+  if (!useHttp) return;
+  await axiosApp.post('/demo/plant/demo/plan-line', { lineId }, { timeout: 120_000 });
+}
+
 async function postBatchExplain(
   po: string,
   question: string,
@@ -159,21 +174,6 @@ async function sendCopilotRush(locale: Locale, lineId: string | undefined, po: s
 async function sendCopilotFail(locale: Locale, lineId: string | undefined, po: string, failedFor: string) {
   const equipmentId = lineId === 'line-2' ? 'Line 2' : 'Line 1';
   return postIngestPassFailLog(locale, lineId, { po, passFail: 'Fail', failedFor, equipmentId });
-}
-
-/** Drops the line's plan. Orders stay, in open-queue order, with no schedule. */
-async function stageRawLine(lineId: string): Promise<void> {
-  if (!useHttp) {
-    plantDemoServer.reset();
-    return;
-  }
-  await axiosApp.post('/demo/plant/demo/stage-raw', { lineId });
-}
-
-/** One scheduler run over the orders already on the line. */
-async function planLine(lineId: string): Promise<void> {
-  if (!useHttp) return;
-  await axiosApp.post('/demo/plant/demo/plan-line', { lineId }, { timeout: 120_000 });
 }
 
 export const plantDemoApi = {

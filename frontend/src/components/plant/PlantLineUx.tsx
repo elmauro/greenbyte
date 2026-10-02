@@ -48,6 +48,9 @@ export function PlantLineUx() {
     reloadQueue,
     setManualOrder,
     loadError,
+    planVersion,
+    mandatoryPlanReview,
+    dismissMandatoryPlanReview,
   } = usePlantDemoQueue(locale, line.id);
 
   const onSectionChange = useCallback(
@@ -107,6 +110,7 @@ export function PlantLineUx() {
             section={section}
             onSectionChange={onSectionChange}
             queue={queue}
+            planVersion={planVersion}
             eventType={eventType}
             explanation={explanation}
             eventHighlightPo={eventHighlightPo}
@@ -124,12 +128,10 @@ export function PlantLineUx() {
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void handleAccept()}
-            onResetDemo={() => void resetDemo()}
-            onGeneratePlan={() => void generatePlan()}
-            demoAction={demoAction}
-            demoActionError={demoActionError}
             onManualOrder={setManualOrder}
-            onQueueRefresh={reloadQueue}
+            onQueueRefresh={async () => {
+              await reloadQueue();
+            }}
             onSelectOrder={selectOrder}
             onCopilotPo={focusCopilot}
             explainPo={searchParams.get('po') ?? undefined}
@@ -142,6 +144,12 @@ export function PlantLineUx() {
                 return params;
               }, { replace: true });
             }}
+            onResetDemo={() => void resetDemo()}
+            onGeneratePlan={() => void generatePlan()}
+            demoAction={demoAction}
+            demoActionError={demoActionError}
+            mandatoryPlanReview={mandatoryPlanReview}
+            onMandatoryPlanReviewAck={dismissMandatoryPlanReview}
           />
           </>
         )}

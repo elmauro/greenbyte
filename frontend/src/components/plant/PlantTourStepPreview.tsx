@@ -101,6 +101,7 @@ export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPrev
   const eventData =
     cfg.mode === 'rush' ? snapshots.rush : cfg.mode === 'qa' ? snapshots.qa : null;
   const queue = eventData?.queue ?? snapshots.load.queue;
+  const planVersion = eventData?.planVersion ?? snapshots.load.planVersion;
   const eventType = cfg.mode === 'rush' ? 'rush' : cfg.mode === 'qa' ? 'qa_fail' : undefined;
   const explanation = eventData?.explanation;
   const eventHighlightPo =
@@ -133,6 +134,7 @@ export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPrev
         key={`tour-dashboard-${stepIndex}`}
         experience="ux"
         queue={queue}
+        planVersion={planVersion}
         selectedLineId={showLineControl ? lineId : 'line-1'}
         onLineChange={
           showLineControl ? (nextId) => setLineId(plantLineById(nextId).id) : undefined

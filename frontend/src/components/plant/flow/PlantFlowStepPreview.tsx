@@ -79,6 +79,7 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
           key={step.id}
           {...flowShell}
           queue={snapshots.load.queue}
+          planVersion={snapshots.load.planVersion}
           selectedLineId={lineId}
           onLineChange={(nextId) => setLineId(plantLineById(nextId).id)}
         />
@@ -92,6 +93,7 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
         key={step.id}
         {...flowShell}
         queue={snapshots.load.queue}
+        planVersion={snapshots.load.planVersion}
         highlightColumns={['finish', 'status']}
       />
     );
@@ -115,6 +117,7 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
         key={step.id}
         {...flowShell}
         queue={data.queue}
+        planVersion={data.planVersion}
         eventType={eventType}
         explanation={data.explanation}
         eventHighlightPo={highlightPo}
@@ -125,5 +128,12 @@ export function PlantFlowStepPreview({ step, snapshots }: PlantFlowStepPreviewPr
     );
   }
 
-  return <PlantBaselineDashboard key={step.id} {...flowShell} queue={snapshots.load.queue} />;
+  return (
+    <PlantBaselineDashboard
+      key={step.id}
+      {...flowShell}
+      queue={snapshots.load.queue}
+      planVersion={snapshots.load.planVersion}
+    />
+  );
 }

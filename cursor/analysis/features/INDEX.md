@@ -37,6 +37,7 @@ Path:
 | GREENBYTE-013 | n/a | `nav-pasco-conditioning-label` | Nav label Pasco conditioning | frontend | done |
 | GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | frontend | done |
 | GREENBYTE-015 | n/a | `plant-hub-horizontal-scheduler-ux` | Align Pasco hub with horizontal scheduler UX | frontend | done |
+| GREENBYTE-016 | n/a | `nav-syngenta-labels` | Demo nav Syngenta labels | frontend | done |
 
 ## How to update
 

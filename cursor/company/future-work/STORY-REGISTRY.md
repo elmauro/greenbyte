@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-016` (update when assigning).
+**Next free execution ID:** `GREENBYTE-017` (update when assigning).
 
 ---
 

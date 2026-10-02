@@ -29,11 +29,14 @@ export function SiteHeader() {
 
   const demoItems = session
     ? [
-        { label: m.nav.demoPlant, to: paths.demoPlant },
-        { label: m.nav.demoPlantUx, to: paths.demoPlantUx },
+        { label: m.nav.demoPlantUx, to: paths.demoPlantUx, title: m.nav.demoPlantUxTitle },
+        { label: m.nav.demoPlant, to: paths.demoPlant, title: m.nav.demoPlantTitle },
         { label: m.nav.howItWorks, to: paths.demoHowItWorks },
       ]
     : [];
+
+  const onSchedulerWorkspace =
+    location.pathname === paths.demoPlantUx || location.pathname === paths.demoPlant;
 
   function handleSignOut() {
     signOutPlantUx();
@@ -81,6 +84,7 @@ export function SiteHeader() {
             <Link
               key={item.to}
               to={item.to}
+              title={'title' in item ? item.title : undefined}
               className={`nav-link ${location.pathname === item.to ? 'text-brand-green' : ''}`}
             >
               {item.label}
@@ -108,7 +112,7 @@ export function SiteHeader() {
               {m.header.demoSignIn}
             </Link>
           )}
-          {location.pathname === paths.demoPlantUx && (
+          {onSchedulerWorkspace && (
             <button
               type="button"
               onClick={openPlantHelp}
