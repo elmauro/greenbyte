@@ -145,6 +145,7 @@ When `VITE_API_BASE_APP` is set, the same paths hit **core-api**; when empty, **
 
 ## References
 
+- UX test matrix: [uc1-scheduler-ux-test-cases.md](./uc1-scheduler-ux-test-cases.md)
 - [syngenta-demo-architecture.md](./syngenta-demo-architecture.md)
 - [mockups/uc1-plant-capacity-wow.png](./mockups/uc1-plant-capacity-wow.png)
 - Syngenta `2026_Use_Case_Briefs.pdf` (local `Hackathon 2026 - Use Cases/`)

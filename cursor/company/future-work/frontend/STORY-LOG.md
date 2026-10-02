@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-009 — UC1 scheduler UX test cases
+
+- FW: `n/a` · Slug: `uc1-scheduler-ux-test-cases` · Stack: frontend
+- Change type: `test` · Branch: `feature/greenbyte-009` · PR: `GREENBYTE-009: UC1 scheduler UX test cases`
+- Status: shipped · Shipped: 2026-10-02 · Package: [`frontend/uc1-scheduler-ux-test-cases/`](../../../analysis/features/frontend/uc1-scheduler-ux-test-cases/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: uc1-scheduler-ux-test-cases
+Feature name: UC1 scheduler UX test cases
+Ticket/story: GREENBYTE-009
+Backlog ID: n/a
+Change type: test
+Stack scope: frontend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-008 — Copilot placeholder order fix
 
 - FW: `n/a` · Slug: `copilot-placeholder-order-fix` · Stack: full-stack
