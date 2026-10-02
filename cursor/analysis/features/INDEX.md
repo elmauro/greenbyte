@@ -30,6 +30,7 @@ Path:
 | GREENBYTE-006 | n/a | `uc1-manual-schedule-adjust` | UC1 manual schedule adjust | frontend | done |
 | GREENBYTE-007 | n/a | `how-it-works-reference` | How it works reference | frontend | done |
 | GREENBYTE-008 | n/a | `copilot-placeholder-order-fix` | Copilot placeholder order fix | frontend | done |
+| GREENBYTE-009 | n/a | `uc1-scheduler-ux-test-cases` | UC1 scheduler UX test cases | frontend | done |
 
 ## How to update
 
