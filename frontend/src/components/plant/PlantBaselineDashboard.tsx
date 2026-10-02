@@ -15,6 +15,7 @@ import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { PlantListPagination } from './PlantListPagination';
+import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
 import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
@@ -657,18 +658,20 @@ export function PlantBaselineDashboard({
                   <label className="sr-only" htmlFor="queue-filter">
                     {ux.filterLabel}
                   </label>
-                  <select
+                  <PlantSelect
                     id="queue-filter"
+                    size="sm"
+                    ariaLabel={ux.filterLabel}
                     value={queueFilter}
-                    onChange={(e) => setQueueFilter(e.target.value as PlantQueueFilter)}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
-                  >
-                    <option value="all">{ux.fAll}</option>
-                    <option value="risk">{ux.fRisk}</option>
-                    <option value="hold">{ux.fHold}</option>
-                    <option value="SWCO">{ux.fSwco}</option>
-                    <option value="CORN">{ux.fCorn}</option>
-                  </select>
+                    onChange={(value) => setQueueFilter(value as PlantQueueFilter)}
+                    options={[
+                      { value: 'all', label: ux.fAll },
+                      { value: 'risk', label: ux.fRisk },
+                      { value: 'hold', label: ux.fHold },
+                      { value: 'SWCO', label: ux.fSwco },
+                      { value: 'CORN', label: ux.fCorn },
+                    ]}
+                  />
                   {queueFilter !== 'all' && (
                     <button
                       type="button"
@@ -818,18 +821,16 @@ export function PlantBaselineDashboard({
                   <label htmlFor={lineSelectId} className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {copy.lineSelectLabel}
                   </label>
-                  <select
+                  <PlantSelect
                     id={lineSelectId}
-                    className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900"
+                    className="mt-1 w-full max-w-md"
                     value={selectedLine.id}
-                    onChange={(event) => onLineChange(event.target.value)}
-                  >
-                    {PLANT_LINES.map((line) => (
-                      <option key={line.id} value={line.id}>
-                        {copy.lineNames[line.id]} — {line.sheet}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={onLineChange}
+                    options={PLANT_LINES.map((line) => ({
+                      value: line.id,
+                      label: copy.lineNames[line.id],
+                    }))}
+                  />
                   <p className="mt-1 text-xs text-gray-500">{selectedLine.workCenter}</p>
                 </div>
               ) : (
@@ -1065,10 +1066,11 @@ export function PlantBaselineDashboard({
               close: ux.helpClose,
               glossaryTitle: ux.glossaryTitle,
               journeysTitle: ux.journeysTitle,
-              presenterTitle: ux.presenterTitle,
+              timelineTitle: ux.timelineTitle,
               glossary: ux.glossary,
               journeys: ux.journeys,
-              talkTrack: ux.talkTrack,
+              timelineLegend: ux.timelineLegend,
+              timelineRules: ux.timelineRules,
             }}
           />
           <PlantUxHistoryDrawer

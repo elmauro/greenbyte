@@ -195,7 +195,7 @@ export function PlantProgramGantt({
   const [zoomIndex, setZoomIndex] = useState(1);
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
   const dragRef = useRef<{ from: number; over: number } | null>(null);
-  const listRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLElement | null>(null);
   const zoom = ZOOM_STEPS[zoomIndex];
   const scale = dateScale(rows, zoom.ms);
   const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
@@ -431,7 +431,12 @@ export function PlantProgramGantt({
               </div>
             </div>
 
-            <ul ref={listRef} className="space-y-0 divide-y divide-gray-100 border-y border-gray-100">
+            <ul
+              ref={(node) => {
+                listRef.current = node;
+              }}
+              className="space-y-0 divide-y divide-gray-100 border-y border-gray-100"
+            >
               {rows.map((row, index) => {
                 const isRush = row.po === rushPo;
                 const isHold = row.status === 'HOLD';
@@ -507,7 +512,9 @@ export function PlantProgramGantt({
         </div>
       ) : layout === 'horizontal' ? (
         <div
-          ref={listRef}
+          ref={(node) => {
+            listRef.current = node;
+          }}
           className={expanded ? 'min-h-0 flex-1 overflow-auto p-4' : `${GANTT_SCROLL_MAX_CLASS} overflow-x-auto overflow-y-auto p-3`}
           tabIndex={0}
           role="region"
