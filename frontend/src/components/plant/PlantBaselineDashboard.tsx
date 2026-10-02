@@ -15,6 +15,7 @@ import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
 import { PlantCopilotChatDock, PlantScheduleCopilot } from './PlantScheduleCopilot';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
+import { usePlantLineNotices } from '../../hooks/usePlantLineNotices';
 import { PlantListPagination } from './PlantListPagination';
 import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
@@ -59,6 +60,8 @@ type PlantBaselineDashboardProps = {
   /** Lines with a valid demo_line_id. Omit on tour and flow previews. */
   selectedLineId?: string;
   onLineChange?: (lineId: string) => void;
+  /** Open that line's schedule and select it in the line control. */
+  onOpenLine?: (lineId: string) => void;
   /** Line switch in flight — dim the data area, keep nav and the line control. */
   dataRefreshing?: boolean;
   /** Scheduler reorders the proposed plan. The running batch and holds stay put. */
@@ -133,6 +136,7 @@ export function PlantBaselineDashboard({
   eventHighlightPo,
   selectedLineId,
   onLineChange,
+  onOpenLine,
   dataRefreshing = false,
   onManualOrder,
   onSelectOrder,
@@ -146,6 +150,7 @@ export function PlantBaselineDashboard({
   const copy = m.plantMvp;
   const paginationCopy = m.plantMvp.pagination;
   const isUx = experience === 'ux';
+  const remoteNotices = usePlantLineNotices(isUx && !staticPreview, locale);
   const schedule = m.plantMvp.scheduleShell;
   const enablePagination = !staticPreview && !compact;
   const hi = new Set(highlightColumns);
@@ -197,6 +202,7 @@ export function PlantBaselineDashboard({
   const [selectedPo, setSelectedPo] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [notificationDismissed, setNotificationDismissed] = useState(false);
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<string[]>([]);
   const displayQueue = isUx ? filterQueueRows(queue, queueFilter) : queue;
   const shownPo = displayQueue.map((r) => r.po);
   const allShownSelected =
@@ -290,8 +296,20 @@ export function PlantBaselineDashboard({
 
   const showSchedulingNotification =
     schedulingActionPending && !(isUx && notificationDismissed);
+  const scheduleNotices = isUx
+    ? PLANT_LINES.flatMap((line) => {
+        const remote = remoteNotices.find((notice) => notice.lineId === line.id);
+        const isCurrent = line.id === selectedLine.id;
+        if (isCurrent) {
+          if (!showSchedulingNotification || !eventType) return [];
+          return [{ lineId: line.id, eventType, summary: explanation?.summary }];
+        }
+        if (!remote || dismissedNoticeIds.includes(`${remote.lineId}:${remote.eventType}`)) return [];
+        return [remote];
+      })
+    : [];
   const notificationCount =
-    (showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
+    (isUx ? scheduleNotices.length : showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
 
   function statusPill(): { label: string; sub: string; className: string; dot: string } {
     if (eventPendingReview) {
@@ -414,6 +432,25 @@ export function PlantBaselineDashboard({
   function goToSection(section: PlantNavSection) {
     setActiveSection(section);
     setBellOpen(false);
+  }
+
+  function openScheduleForLine(lineId: string) {
+    setBellOpen(false);
+    if (onOpenLine) {
+      onOpenLine(lineId);
+      return;
+    }
+    if (lineId !== selectedLine.id) onLineChange?.(lineId);
+    goToSection('scheduling');
+  }
+
+  function dismissScheduleNotice(lineId: string, eventTypeName: string) {
+    if (lineId === selectedLine.id) {
+      setNotificationDismissed(true);
+      return;
+    }
+    const id = `${lineId}:${eventTypeName}`;
+    setDismissedNoticeIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
   }
 
   const eventBanner = eventPendingReview && explanation && (
@@ -846,37 +883,39 @@ export function PlantBaselineDashboard({
                 {ux.notifTitle} ({notificationCount})
               </li>
             )}
-            {showSchedulingNotification && (
-              <li role="none" className="border-b px-3 py-3 last:border-0">
-                <div className="flex gap-2">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">
-                      {explanation?.summary ?? (eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
-                        onClick={() => goToSection('scheduling')}
-                      >
-                        {ux.openSchedule}
-                      </button>
-                      {isUx && (
+            {isUx &&
+              scheduleNotices.map((notice) => (
+                <li key={notice.lineId} role="none" className="border-b px-3 py-3 last:border-0">
+                  <div className="flex gap-2">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <div className="flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        {copy.lineNames[notice.lineId as keyof typeof copy.lineNames]}
+                      </p>
+                      <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        {notice.summary ?? (notice.eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                          onClick={() => openScheduleForLine(notice.lineId)}
+                        >
+                          {ux.openSchedule}
+                        </button>
                         <button
                           type="button"
                           className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          onClick={() => setNotificationDismissed(true)}
+                          onClick={() => dismissScheduleNotice(notice.lineId, notice.eventType)}
                         >
                           {ux.dismiss}
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            )}
+                </li>
+              ))}
             {!isUx && schedulingActionPending && (
               <li role="none">
                 <button
@@ -952,12 +991,7 @@ export function PlantBaselineDashboard({
       {!compact && !isUx && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
-            <p className="mt-8 px-2 text-[10px] text-gray-500">
-              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
-              {b.systemsOk}
-              <br />
-              {b.lastUpdated}
-            </p>
+            <p className="mt-8 px-2 text-[10px] text-gray-500">{b.lastUpdated}</p>
           </aside>
         )}
 
@@ -998,10 +1032,6 @@ export function PlantBaselineDashboard({
                     </span>
                   )}
                 </button>
-                <p className="ml-2 text-[11px] text-gray-500">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
-                  {b.systemsOk}
-                </p>
                 <div className="ml-2 flex items-center gap-2 border-l border-gray-200 pl-3">
                   {renderAlerts(`${bellMenuId}-bar`)}
                   <img src="/demo/syngenta-logo.png" alt="Syngenta" className="h-8 w-auto" />
