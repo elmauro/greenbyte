@@ -13,7 +13,7 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
-import { PlantScheduleCopilot } from './PlantScheduleCopilot';
+import { PlantCopilotChatDock, PlantScheduleCopilot } from './PlantScheduleCopilot';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { PlantListPagination } from './PlantListPagination';
 import { PlantSelect } from './PlantSelect';
@@ -177,14 +177,12 @@ export function PlantBaselineDashboard({
 
   function revealScheduleOrder(po: string) {
     onSelectOrder?.(po);
-    setCopilotOpenTick((n) => n + 1);
   }
 
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [copilotOpenTick, setCopilotOpenTick] = useState(0);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -785,6 +783,7 @@ export function PlantBaselineDashboard({
             onPlaceRow={onManualOrder ? placeRunnable : undefined}
             selectedPo={isUx ? explainPo : undefined}
             onSelectRow={isUx ? revealScheduleOrder : undefined}
+            hideSummary={isUx && eventPendingReview && Boolean(onAccept)}
           />
         );
         const showUxRail = isUx && schedulingLayout === 'full';
@@ -796,13 +795,7 @@ export function PlantBaselineDashboard({
               {showUxRail ? (
                 <div className="flex flex-col lg:flex-row">
                   {timeline}
-                  <PlantScheduleCopilot
-                    explanation={eventPendingReview ? explanation : null}
-                    queue={queue}
-                    focusPo={explainPo}
-                    onFocusPo={revealScheduleOrder}
-                    openRequest={copilotOpenTick}
-                  />
+                  <PlantScheduleCopilot explanation={eventPendingReview ? explanation : null} />
                 </div>
               ) : showClassicRail ? (
                 <div className="flex flex-col lg:flex-row">
@@ -1141,7 +1134,9 @@ export function PlantBaselineDashboard({
 
       {isUx && eventPendingReview && onAccept && (
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
-          <div className="mx-auto flex flex-wrap items-center gap-4 sm:justify-between">
+          <div className={`mx-auto flex flex-wrap items-center gap-4 sm:justify-between ${
+            isUx && !compact && schedulingLayout === 'full' && !staticPreview ? 'lg:pr-20' : ''
+          }`}>
             <p className="flex-1 text-sm text-gray-600">
               {schedule.footerTotal
                 .replace('{count}', String(active.length))
@@ -1166,6 +1161,15 @@ export function PlantBaselineDashboard({
             </button>
           </div>
         </div>
+      )}
+
+      {isUx && !compact && schedulingLayout === 'full' && !staticPreview && !timelineOpen && (
+        <PlantCopilotChatDock
+          queue={queue}
+          focusPo={explainPo ?? eventHighlightPo}
+          onFocusPo={revealScheduleOrder}
+          raised={Boolean(eventPendingReview && onAccept)}
+        />
       )}
 
       {isUx && (

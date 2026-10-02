@@ -38,6 +38,14 @@ provider:
             - dynamodb:UpdateItem
           Resource:
             - arn:aws:dynamodb:${aws:region}:${aws:accountId}:table/greenbyte-${sls:stage}-demo-plant-state
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource:
+            - arn:aws:bedrock:us-east-1::foundation-model/*
+            - arn:aws:bedrock:us-east-2::foundation-model/*
+            - arn:aws:bedrock:us-west-2::foundation-model/*
+            - arn:aws:bedrock:${aws:region}:${aws:accountId}:inference-profile/*
 
 functions:
   health:
