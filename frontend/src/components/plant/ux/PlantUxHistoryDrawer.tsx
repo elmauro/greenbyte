@@ -1,4 +1,8 @@
-import type { PlantUxHistoryEntry } from '../../../demo/plant/plantUxApprovalHistory';
+import {
+  formatPlantHistoryWhen,
+  type PlantUxHistoryEntry,
+} from '../../../demo/plant/plantUxApprovalHistory';
+import { plantLineById } from '../../../demo/plant/plantLines';
 import type { Locale } from '../../../i18n/LocaleContext';
 import { PlantSideDrawer } from './PlantSideDrawer';
 
@@ -14,17 +18,16 @@ type PlantUxHistoryDrawerProps = {
     close: string;
     priority: string;
     quality: string;
-    byLine: string;
+    metaLine: string;
+    todayAt: string;
+    yesterdayAt: string;
+    onDate: string;
   };
 };
 
-function formatTime(iso: string, locale: Locale) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleTimeString(locale === 'es' ? 'es-ES' : 'en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function lineLabel(lineId: string): string {
+  const line = plantLineById(lineId);
+  return line.sheet.replace(/ Schedule$/i, '');
 }
 
 export function PlantUxHistoryDrawer({
@@ -35,6 +38,12 @@ export function PlantUxHistoryDrawer({
   copy,
 }: PlantUxHistoryDrawerProps) {
   if (!open) return null;
+
+  const whenCopy = {
+    todayAt: copy.todayAt,
+    yesterdayAt: copy.yesterdayAt,
+    onDate: copy.onDate,
+  };
 
   return (
     <PlantSideDrawer
@@ -50,12 +59,25 @@ export function PlantUxHistoryDrawer({
         {entries.length === 0 ? (
           <li className="text-gray-600">{copy.empty}</li>
         ) : (
-          entries.map((e) => (
-            <li key={e.at} className="mb-4 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2">
-              <p className="font-medium text-gray-900">{e.kind === 'priority' ? copy.priority : copy.quality}</p>
-              <p className="mt-1 text-xs text-gray-500">{copy.byLine.replace('{t}', formatTime(e.at, locale))}</p>
-            </li>
-          ))
+          entries.map((e) => {
+            const title =
+              e.kind === 'priority'
+                ? copy.priority.replace('{po}', e.po)
+                : copy.quality.replace('{po}', e.po);
+            const when = formatPlantHistoryWhen(e.at, locale, whenCopy);
+            const meta = copy.metaLine
+              .replace('{line}', lineLabel(e.lineId))
+              .replace('{when}', when);
+            return (
+              <li
+                key={e.id}
+                className="mb-4 rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-2"
+              >
+                <p className="font-medium text-gray-900">{title}</p>
+                <p className="mt-1 text-xs text-gray-500">{meta}</p>
+              </li>
+            );
+          })
         )}
       </ul>
     </PlantSideDrawer>

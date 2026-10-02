@@ -65,11 +65,16 @@ export function PlantLineUx() {
   );
 
   const handleAccept = useCallback(async () => {
-    if (eventType === 'rush') appendPlantUxApprovalHistory('priority');
-    else if (eventType === 'qa_fail') appendPlantUxApprovalHistory('quality');
+    if (eventType === 'rush' || eventType === 'qa_fail') {
+      appendPlantUxApprovalHistory({
+        kind: eventType === 'rush' ? 'priority' : 'quality',
+        po: eventHighlightPo,
+        lineId: line.id,
+      });
+    }
     await acceptPlan();
     setApprovalHistory(readPlantUxApprovalHistory());
-  }, [acceptPlan, eventType]);
+  }, [acceptPlan, eventHighlightPo, eventType, line.id]);
 
   if (!session) {
     return null;

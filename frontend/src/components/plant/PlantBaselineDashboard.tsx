@@ -1242,7 +1242,10 @@ export function PlantBaselineDashboard({
               close: ux.helpClose,
               priority: ux.histPriority,
               quality: ux.histQuality,
-              byLine: ux.histBy,
+              metaLine: ux.histMeta,
+              todayAt: ux.histTodayAt,
+              yesterdayAt: ux.histYesterdayAt,
+              onDate: ux.histOnDate,
             }}
           />
           <PlantUxCompareDrawer
