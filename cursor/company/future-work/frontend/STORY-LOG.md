@@ -7,6 +7,12 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-011 — Copilot order select placeholder
+
+- FW: `n/a` · Slug: `copilot-select-order-placeholder` · Stack: frontend
+- Change type: `fix` · Branch: `feature/greenbyte-011-copilot-select-placeholder` · PR: `fix(frontend): copilot order select shows Select an order`
+- Status: shipped · Shipped: 2026-10-02 · Package: n/a (small fix)
+
 ### GREENBYTE-010 — Pending replan PO highlight
 
 - FW: `n/a` · Slug: `pending-po-highlight` · Stack: frontend
