@@ -2,10 +2,12 @@ import {
   loadSnapshot,
   PlannerNotReadyError,
   plannerPayloadForPlan,
+  readNotesWithJev,
   savePlan,
 } from '../semanticEngine/db/goldGateway.js';
+import { entryPackets, explainEntries } from '../semanticEngine/explain/explainEntries.js';
 import { explainPlan, templateExplanation } from '../semanticEngine/explain/explainPlan.js';
-import { explainClients } from '../semanticEngine/models/clients.js';
+import { createJevClassifier, explainClients, jevEnabled } from '../semanticEngine/models/clients.js';
 import { zonedTimeToUtc } from '../semanticEngine/planner/calendar.js';
 import { applyPlannerEvent, computePlan } from '../semanticEngine/planner/index.js';
 import { normalizePlanDiff, normalizePlanQueue } from './planExplanation.js';
@@ -51,14 +53,30 @@ function packetFor(plan, payload) {
   };
 }
 
+async function snapshotWithJevReadings(query, change) {
+  const snapshot = await loadSnapshot(query);
+  if (!jevEnabled()) return snapshot;
+  const rows = snapshot.orders
+    .filter((order) => !change.onlyLine || order.lineId === change.lineId)
+    .map((order) => order.lineScheduleItemId);
+  try {
+    const read = await readNotesWithJev(query, rows, createJevClassifier());
+    return read ? loadSnapshot(query) : snapshot;
+  } catch (err) {
+    console.warn('jev classification skipped:', err.message);
+    return snapshot;
+  }
+}
+
 /**
  * Runs the semantic planner after a gold ingest, saves one plan per large-seed line,
- * and returns the focus line's event_response with the planner explanation.
+ * and returns the focus line's event_response with the planner explanation and a
+ * Bedrock comment per scheduled order (poNotes, keyed by PO).
  * @param {(text: string, params?: unknown[]) => Promise<{ rows: object[] }>} query
- * @param {{ lineId: string, kind: string, po?: string, shipBy?: string, failedFor?: string }} change
+ * @param {{ lineId: string, kind: string, po?: string, shipBy?: string, failedFor?: string, onlyLine?: boolean }} change
  */
 export async function replanWithSemanticEngine(query, change) {
-  const snapshot = await loadSnapshot(query);
+  const snapshot = await snapshotWithJevReadings(query, change);
   const result = plannerResult(snapshot, change);
   const trigger = change.kind === 'qa_fail_finished' ? 'qa_fail' : change.kind;
   const event = { kind: trigger, po: change.po ?? null, failedFor: change.failedFor ?? null };
@@ -80,20 +98,26 @@ export async function replanWithSemanticEngine(query, change) {
   const response = await query('SELECT gold.event_response($1) AS result', [target.schedulePlanId]);
   const plan = response.rows[0]?.result;
   const payload = payloads[target.lineId];
-  const { explanation, source } = await explainPlan(packetFor(plan, payload), await explainClients());
+  const clients = await explainClients();
+  const lineOrders = snapshot.orders.filter((order) => order.lineId === target.lineId);
+  const [{ explanation, source }, { poNotes }] = await Promise.all([
+    explainPlan(packetFor(plan, payload), clients),
+    explainEntries(entryPackets(payload.entries, lineOrders), clients),
+  ]);
   await query(
     `UPDATE gold.plan_event
-     SET payload = payload || jsonb_build_object('explanation', $2::jsonb)
+     SET payload = payload || jsonb_build_object('explanation', $2::jsonb, 'poNotes', $3::jsonb)
      WHERE plan_event_id = $1`,
-    [target.planEventId, JSON.stringify(explanation)],
+    [target.planEventId, JSON.stringify(explanation), JSON.stringify(poNotes)],
   );
   return {
     ...plan,
     eventType: trigger,
-    queue: normalizePlanQueue(plan.queue),
+    queue: normalizePlanQueue(plan.queue, poNotes),
     diff: normalizePlanDiff(plan.diff),
     explanation,
     explanationSource: source,
+    poNotes,
     impact: payload.impact,
     proposals: payload.proposals,
     violations: payload.violations,
@@ -118,9 +142,10 @@ export async function withSemanticPlan(query, change, fallback) {
  */
 export async function plannerExplanationForPoll(query, schedulePlanId, plan) {
   const payload = await plannerPayloadForPlan(query, schedulePlanId);
-  if (!payload) return { explanation: null, eventType: plan.eventType };
+  if (!payload) return { explanation: null, eventType: plan.eventType, poNotes: {} };
   return {
     explanation: payload.explanation ?? templateExplanation(packetFor(plan, payload)),
     eventType: payload.trigger ?? plan.eventType,
+    poNotes: payload.poNotes ?? {},
   };
 }

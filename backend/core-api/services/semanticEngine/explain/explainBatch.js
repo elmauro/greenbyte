@@ -1,3 +1,5 @@
+import { parseModelJson } from './explainPlan.js';
+
 const PO_PATTERN = /\b\d{7,12}\b/g;
 const INTENTS = ['WHY_WAITING', 'WHEN_FINISH', 'MOVE_UP', 'OTHER'];
 
@@ -170,7 +172,7 @@ export async function explainBatchQuestion({ packet, question, history, locale, 
   if (!complete) return template;
   try {
     const raw = await complete(answerPrompt(packet, intent, question, history));
-    const parsed = JSON.parse(String(raw).replace(/^```json\s*|\s*```$/g, ''));
+    const parsed = parseModelJson(raw);
     if (typeof parsed?.answer === 'string' && batchAnswerGuard(parsed.answer, packet).ok) {
       return { ...template, answer: parsed.answer, source: 'bedrock' };
     }

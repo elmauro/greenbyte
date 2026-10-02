@@ -37,6 +37,23 @@ function reasonsFor(order, meta) {
   const add = (code, params, factIds = []) => {
     reasons.push({ seq: reasons.length + 1, code, params, factIds });
   };
+  // gold renders the first reason as the row's reasonShort, so a held order leads with why it is held.
+  if (order.isHold && order.qualityTestId != null) {
+    add('QA_HOLD', { quality_test_id: String(order.qualityTestId), source: 'pass_fail_log' });
+  }
+  if (order.isHold && order.holdFact) {
+    add('NOTE_HOLD', {
+      semantic_fact_id: order.holdFact.id,
+      note_text: order.holdFact.noteText,
+    }, [order.holdFact.id]);
+  }
+  if (order.isHold && order.notReadyFact && !order.readyBy) {
+    add('NOT_READY_HOLD', {
+      fact_label: order.notReadyFact.label,
+      semantic_fact_id: order.notReadyFact.id,
+      note_text: order.notReadyFact.noteText,
+    }, [order.notReadyFact.id]);
+  }
   if (order.statusCode === 'ONLINE') {
     add('ALREADY_RUNNING', { work_center_code: meta.workCenterCode, status_code: order.statusCode });
   }
@@ -81,9 +98,6 @@ function reasonsFor(order, meta) {
       to_position: meta.position,
       event_type: meta.eventType,
     });
-  }
-  if (order.isHold && order.qualityTestId != null) {
-    add('QA_HOLD', { quality_test_id: String(order.qualityTestId), source: 'pass_fail_log' });
   }
   if (order.notReadyFact && order.statusCode === 'ONLINE') {
     add('NOT_READY_WARNING', {

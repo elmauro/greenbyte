@@ -682,7 +682,7 @@ function ApprovalTimeline({
                       ? 'bg-brand-green text-white ring-2 ring-green-800'
                       : 'bg-indigo-100 text-indigo-950'
                 }`}
-                title={bar.row.reasonShort ?? bar.row.finish}
+                title={bar.row.aiNote ?? bar.row.reasonShort ?? bar.row.finish}
               >
                 {bar.row.po} · {bar.row.species}
               </div>
@@ -718,7 +718,7 @@ function ApprovalTimeline({
                     backgroundImage:
                       'repeating-linear-gradient(-45deg, rgba(254,226,226,0.95), rgba(254,226,226,0.95) 6px, rgba(252,165,165,0.55) 6px, rgba(252,165,165,0.55) 8px)',
                   }}
-                  title={row.reasonShort}
+                  title={row.aiNote ?? row.reasonShort}
                 >
                   {row.po} · {row.species} · {labels.holdShort}
                 </li>

@@ -67,6 +67,9 @@ export function snapshotFromGold(input) {
     const facts = factsByPo.get(po) || [];
     const notReadyRow = facts.find((fact) => fact.fact_type === 'NOT_READY' && ['AUTO', 'CONFIRMED'].includes(fact.status));
     const rushRow = facts.find((fact) => fact.fact_type === 'RUSH' && ['AUTO', 'CONFIRMED'].includes(fact.status));
+    const holdRow = facts.find((fact) => fact.fact_type === 'HOLD' && ['AUTO', 'CONFIRMED'].includes(fact.status));
+    const rowFacts = facts.filter((fact) => fact.line_schedule_item_id == null
+      || Number(fact.line_schedule_item_id) === Number(row.line_schedule_item_id));
     const notReady = notReadyRow
       ? withReadyBy([{ fact_type: 'NOT_READY', fact_value: notReadyRow.fact_value || {} }], input.asOf)[0].fact_value
       : null;
@@ -99,6 +102,12 @@ export function snapshotFromGold(input) {
       rushFact: rushRow
         ? { id: Number(rushRow.semantic_fact_id), noteText: rushRow.note_text || '' }
         : null,
+      holdFact: row.hold_reason === 'NOTE_HOLD' && holdRow
+        ? { id: Number(holdRow.semantic_fact_id), noteText: holdRow.note_text || '' }
+        : null,
+      noteFacts: rowFacts
+        .filter((fact) => fact.note_text)
+        .map((fact) => ({ type: fact.fact_type, text: fact.note_text })),
       isGmo: gmo ? true : null,
       isCertifiedNonGmo: certified ? true : null,
     });

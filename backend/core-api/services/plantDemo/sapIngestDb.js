@@ -199,12 +199,12 @@ export async function fetchSchedulerQueue(lineId, locale) {
     const plan = rows[0]?.result;
     if (plan) {
       if (row.status === 'PROPOSED' && row.created_by === 'planner-v2') {
-        const { explanation, eventType } = await plannerExplanationForPoll(
+        const { explanation, eventType, poNotes } = await plannerExplanationForPoll(
           queryOpenQueue,
           row.schedule_plan_id,
           plan,
         );
-        return queueResponseFromPlan({ ...plan, eventType }, explanation);
+        return queueResponseFromPlan({ ...plan, eventType }, explanation, poNotes);
       }
       if (row.status === 'PROPOSED') {
         const hints = await reasonHints(row.schedule_plan_id);
@@ -212,9 +212,12 @@ export async function fetchSchedulerQueue(lineId, locale) {
         return queueResponseFromPlan(explained, explained.explanation ?? null);
       }
       const version = Number(plan.planVersion) || Number(row.plan_version) || 1;
+      const poNotes = row.created_by === 'planner-v2'
+        ? (await plannerExplanationForPoll(queryOpenQueue, row.schedule_plan_id, plan)).poNotes
+        : {};
       return {
         lineId: plan.lineId ?? lineId,
-        queue: normalizePlanQueue(plan.queue),
+        queue: normalizePlanQueue(plan.queue, poNotes),
         planVersion: version,
         lastEvent: null,
         acceptedPlanVersion: version,

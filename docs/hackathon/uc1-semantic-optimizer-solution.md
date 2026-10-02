@@ -128,9 +128,9 @@ Turns free-text SAP notes into typed facts. Runs on new or changed note text onl
 **Pipeline**
 
 1. **Normalize + hash** the note (trim, collapse whitespace, upper-case). Cache hit on `hash + modelId + promptVersion` → return stored fact.
-2. **Regex pre-pass** for obvious cases (`RUSH`, `FUMI`, `HOLD`, dates). High-confidence hits skip the model.
-3. **JEV classify** (primary): one call to the OpenRouter Decisions API (`POST https://openrouter.ai/api/alpha/decisions`, not chat completions) with the note as `state` and two Choice questions: `fact_type` (NOT_READY, HOLD, RELEASE, RUSH, DEADLINE, INFO) and `not_ready_reason` (FUMIGATION, RAW_GERM_PENDING, OTHER). The Choice `confidence` is the fact confidence; code turns the reason into `ready_by`. Measured on the 30 live notes: about 250 ms per note.
-4. **Bedrock extract** (secondary): only when a value is needed (dates, kg, ship-by) or JEV is unavailable. Converse API with a JSON schema output; temperature 0.
+2. **JEV classify** on every schedule-row note of the lines being planned, once per distinct text: one call to the OpenRouter Decisions API (`POST https://openrouter.ai/api/alpha/decisions`, not chat completions) with the note as `state` and two Choice questions: `fact_type` (NOT_READY, HOLD, RELEASE, RUSH, DEADLINE, INFO) and `not_ready_reason` (FUMIGATION, RAW_GERM_PENDING, OTHER). The Choice `confidence` is the fact confidence; code turns the reason into `ready_by`. Measured on the 30 live notes: about 250 ms per note. The reading is stored in `raw.note_reading` (reader `BEDROCK`, the model-reader slot, so it outranks rules-v1 in `gold.v_note_reading_current`) and `gold.refresh_semantic_facts()` runs once, so every fact the planner cites has a real `semantic_fact_id`. Texts JEV already read are not sent again.
+3. **Regex fallback** (`RUSH`, `FUMI`, `HOLD`, dates): when a JEV call fails, the rules-v1 reading is stored instead and JEV retries that text on the next run.
+4. **Bedrock explains** the finished plan and the chat answer in plain sentences. It does not classify the note. Converse API, temperature 0. If the model is off or the answer fails the citation check, the screen keeps the template.
 5. **Confidence gate:** below the policy floor (default 0.70) → `NEEDS_CONFIRMATION`; the fact is shown in the UI but not applied until a person confirms.
 6. **Return** typed fact with provider, model ID, prompt version and confidence.
 
@@ -207,9 +207,10 @@ Computed on every plan version vs the previous one:
 
 Input packet (from Data API `agent_context` or the replan response): event, diff, reason codes with parameters, facts used, impact, and the list of **citable IDs** (PO numbers, lots, lines).
 
-- Bedrock Converse, Claude Sonnet 4.5 (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`), temperature 0, JSON output matching `PlantExplanation { alertBanner, summary, bullets, impact }`.
+- Bedrock Converse, Kimi K3 (`us.moonshotai.kimi-k3`; the bare `moonshotai.kimi-k3` id has no on-demand throughput), temperature 0, JSON output matching `PlantExplanation { alertBanner, summary, bullets, impact }`.
 - System prompt: plain planner language, ≤ 4 bullets, lead with what is late, cite only IDs from the packet, never invent numbers — use the impact fields verbatim.
 - **Guard:** parse JSON; every PO/lot mentioned must be in the citable set and every number must match an impact field. On failure, retry once, then fall back to the reason-code templates (`explanationBuilder.js` behavior).
+- **Comment per PO:** after each planner run the BFF sends Bedrock one packet per scheduled order on the focus line (position, status, species, priority, SAP finish, planned start/end, ready-by, slack, reason codes, and the trusted notes with what JEV read them as), 8 orders per call, in parallel with the plan explanation. Each comment is one or two plain sentences; a comment that names a PO or date not in the packet is dropped. Comments are stored as `plan_event.payload.poNotes` and returned as `queue[].aiNote` on the replan response and the scheduler poll (proposed and accepted planner-v2 plans). Without Bedrock no comment is shown and the gold `reasonShort` stays.
 - **Explain my batch:** `POST /demo/plant/batches/explain` reads the latest plan (`gold.agent_context`, `gold.batch_detail`) for the selected PO and its two neighbors. JEV routes the question (`WHY_WAITING`, `WHEN_FINISH`, `MOVE_UP`, `OTHER`); the browser sends the last 4 turns so a follow-up can say "it". Bedrock phrases the answer when enabled. A PO that is not in that packet is rejected and the template is used. History stays in the browser.
 
 ### 5.9 Accept and override
@@ -341,6 +342,8 @@ Add `BEDROCK_ENABLED=true` (AWS credentials with `bedrock:InvokeModel`) to get t
 **Lambdas** (`serverless offline` or deployed): `POST /plan/compute` (`{ "loadFromGold": true, "event": {...}, "save": false }`), `POST /facts/extract` (`{ "notes": [...] }`), `POST /explain-replan` (`{ "payload": {...} }`).
 
 **End to end through the BFF:** set `SEMANTIC_PLANNER_ENABLED=true`. Pass/fail, priority change and new-order ingests then run the planner, save through `gold.replan`, and return the planner explanation. If `gold.replan` cannot read `payload.entries` yet, the BFF logs a warning and keeps the existing heuristic, so the flag is safe to turn on early.
+
+**Simulated SAP batch** (demo, writes to the shared database): `POST /demo/plant/demo/sap-batch` with `{ "lineId": "line-1", "plan": false, "orders": [{ "po", "species", "variety", "kg", "priority", "scheduledFinish", "comment", "status" }] }` (1–20 orders, PO 7–12 digits) inserts the orders and their comments (`source_csv = demo_sap_batch.csv`), registers the comments with `gold.refresh_source_notes()`, and clears that line's plans so the raw queue shows. `plan: true`, or a following `POST /demo/plant/demo/plan-line`, runs the engine once on the line: JEV reads the comments, the planner orders the line, Bedrock comments every PO. `POST /demo/plant/demo/sap-batch-reset` with `{ "lineId" }` deletes the batch orders, their notes, facts and JEV readings, and the line's plans. The sample batch and a runner are in `backend/core-api/scripts/sap-batch-demo.mjs` (`load`, `load --plan`, `plan`, `reset`; `--base` for the API Gateway URL).
 
 **Gated on the gold handoff** (`uc1-gold-planner-handoff.md`): `--save`, `save: true` and the BFF path need the `replan` entries branch. `planner_rules` and policy v2 are optional for testing because the engine falls back to built-in defaults (Lines 1 and 2, Monday–Saturday, 24 hours).
 

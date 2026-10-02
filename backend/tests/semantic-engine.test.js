@@ -3,11 +3,13 @@ import { handler as factsHandler } from '../core-api/functions/agent-facts-extra
 import { handler as planHandler } from '../core-api/functions/agent-plan-compute/handler.js';
 import { jest } from '@jest/globals';
 import { replanWithSemanticEngine, withSemanticPlan } from '../core-api/services/plantDemo/semanticReplan.js';
-import { loadSnapshot, PlannerNotReadyError, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
+import { loadSnapshot, PlannerNotReadyError, readNotesWithJev, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
 import { batchAnswerGuard, explainBatchQuestion, packetFromGold, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
+import { entryPackets, explainEntries, notesFromReply, poNoteGuard } from '../core-api/services/semanticEngine/explain/explainEntries.js';
 import { explainPlan, explanationGuard } from '../core-api/services/semanticEngine/explain/explainPlan.js';
 import { createJevClassifier, createJevQuestionRouter } from '../core-api/services/semanticEngine/models/clients.js';
 import { extractFacts } from '../core-api/services/semanticEngine/notes/extractFacts.js';
+import { computePlan } from '../core-api/services/semanticEngine/planner/index.js';
 import { rankLine } from '../core-api/services/semanticEngine/planner/rank.js';
 import { snapshotFromGold } from '../core-api/services/semanticEngine/snapshot/mapSnapshot.js';
 
@@ -38,7 +40,7 @@ describe('note reader', () => {
     expect(request.body).toMatchObject({ model: 'typesafe/jev-1.13', state: { note: 'germ pending pls' } });
     expect(Object.keys(request.body.questions)).toEqual(['fact_type', 'not_ready_reason']);
     const [note] = result.notes;
-    expect(note).toMatchObject({ reader: 'BEDROCK', modelId: 'typesafe/jev-1.13-20260917' });
+    expect(note).toMatchObject({ reader: 'JEV', modelId: 'typesafe/jev-1.13-20260917' });
     expect(note.facts[0]).toMatchObject({ fact_type: 'NOT_READY', status: 'AUTO', confidence: 0.93 });
     expect(Date.parse(note.facts[0].fact_value.ready_by)).toBe(Date.parse(asOf) + 14 * 24 * 3600 * 1000);
   });
@@ -60,15 +62,105 @@ describe('note reader', () => {
     expect(byPo['1004'].facts[0].status).toBe('NEEDS_CONFIRMATION');
   });
 
-  it('asks the classifier only when the rules are unsure', async () => {
+  it('asks JEV for every note, including ones the rules already recognize', async () => {
     const calls = [];
     const result = await extractFacts(
       [{ po: '1001', text: 'Needs fumi!!' }, { po: '1009', text: 'call the lab before noon' }],
       { classify: async (text) => { calls.push(text); return { fact_type: 'HOLD', confidence: 0.82, modelId: 'typesafe/jev-1.13' }; } },
     );
-    expect(calls).toEqual(['call the lab before noon']);
-    expect(result.notes[1]).toMatchObject({ reader: 'BEDROCK', modelId: 'typesafe/jev-1.13' });
+    expect(calls).toEqual(['Needs fumi!!', 'call the lab before noon']);
+    expect(result.notes[0]).toMatchObject({ reader: 'JEV' });
+    expect(result.notes[0].facts[0].fact_type).toBe('HOLD');
     expect(result.notes[1].facts[0].fact_type).toBe('HOLD');
+  });
+
+  it('stores a JEV reading per unread note and the rules reading when JEV fails', async () => {
+    const calls = [];
+    const query = async (sql, params) => {
+      calls.push({ sql, params });
+      if (sql.includes('FROM gold.source_note')) {
+        return { rows: [{ note_text: 'push this one up' }, { note_text: 'RUSH - Priority 1' }] };
+      }
+      return { rows: [] };
+    };
+    const classify = async (text) => {
+      if (text.startsWith('RUSH')) throw new Error('JEV 503');
+      return { fact_type: 'RUSH', fact_value: {}, applies_to: 'PO', confidence: 0.91, modelId: 'typesafe/jev-1.13' };
+    };
+    expect(await readNotesWithJev(query, [11, 12], classify)).toBe(2);
+    const insert = calls.find((call) => call.sql.includes('INSERT INTO raw.note_reading'));
+    expect(JSON.parse(insert.params[0])).toEqual([
+      {
+        text: 'push this one up', reader: 'BEDROCK', model_id: 'typesafe/jev-1.13', prompt_version: 'facts-v1',
+        facts: [{ fact_type: 'RUSH', fact_value: {}, applies_to: 'PO', confidence: 0.91 }],
+      },
+      { text: 'RUSH - Priority 1', reader: 'RULE', model_id: 'rules-v1', prompt_version: 'v1', facts: null },
+    ]);
+    expect(calls.at(-1).sql).toContain('gold.refresh_semantic_facts()');
+  });
+
+  it('skips the write when every note already has a JEV reading', async () => {
+    const calls = [];
+    const query = async (sql) => {
+      calls.push(sql);
+      return { rows: [] };
+    };
+    expect(await readNotesWithJev(query, [11], async () => ({ fact_type: 'INFO' }))).toBe(0);
+    expect(calls).toHaveLength(1);
+  });
+});
+
+describe('per-PO notes', () => {
+  const entries = [
+    {
+      poNumber: '1009900001', position: 1, entryStatus: 'PLANNED', dueDate: '2026-10-09',
+      plannedStartAt: '2026-09-28T06:00:00-07:00', plannedEndAt: '2026-09-28T20:00:00-07:00', slackDays: 11, isAtRisk: false,
+      reasons: [{ code: 'NOTE_RUSH', params: { semantic_fact_id: 5, note_text: 'push this one up' } }],
+    },
+    {
+      poNumber: '1009900005', position: 2, entryStatus: 'HOLD', dueDate: '2026-10-14',
+      reasons: [{ code: 'NOTE_HOLD', params: { semantic_fact_id: 6, note_text: 'keep it parked' } }],
+    },
+  ];
+  const orders = [
+    { poNumber: '1009900001', speciesCode: 'PECO', varietyCode: 'IDALGO', inputKg: 14000, priorityRank: 4, noteFacts: [{ type: 'RUSH', text: 'push this one up' }] },
+    { poNumber: '1009900005', speciesCode: 'SWCO', inputKg: 11000, noteFacts: [{ type: 'HOLD', text: 'keep it parked' }] },
+  ];
+
+  it('builds one packet per entry with the note meaning and no fact ids', () => {
+    const [first] = entryPackets(entries, orders);
+    expect(first).toMatchObject({
+      po: '1009900001', position: 1, species: 'PECO', priority: 4, sapFinishDate: '2026-10-09',
+      notes: [{ text: 'push this one up', means: 'RUSH' }],
+    });
+    expect(first.reasons).toEqual([{ code: 'NOTE_RUSH', note_text: 'push this one up' }]);
+  });
+
+  it('reads both the line reply and a JSON reply', () => {
+    const wanted = new Set(['1009900001']);
+    expect(notesFromReply('1009900001 || Runs first.', wanted)).toEqual({ '1009900001': 'Runs first.' });
+    expect(notesFromReply('{"notes":[{"po":"1009900001","text":"Runs first."}]}', wanted)).toEqual({ '1009900001': 'Runs first.' });
+  });
+
+  it('keeps grounded comments and drops ones with an invented order or date', async () => {
+    let options;
+    const complete = async (_prompt, opts) => {
+      options = opts;
+      return [
+        '1009900001 || Runs first because the customer asked to expedite it; done well before 2026-10-09.',
+        '1009900005 || Held until QA retest, like 1009999999.',
+      ].join('\n');
+    };
+    const { poNotes } = await explainEntries(entryPackets(entries, orders), { complete });
+    expect(options).toMatchObject({ maxTokens: 3000, timeoutMs: 20000 });
+    expect(poNotes).toEqual({ '1009900001': expect.stringContaining('expedite') });
+    expect(poNoteGuard({ text: 'Finishes 2026-12-01.' }, new Set(['1009900001']), '{}').ok).toBe(false);
+  });
+
+  it('returns no comments without a model, and survives a model error', async () => {
+    expect(await explainEntries(entryPackets(entries, orders), {})).toEqual({ poNotes: {}, source: 'none' });
+    const failed = await explainEntries(entryPackets(entries, orders), { complete: async () => 'not json' });
+    expect(failed.poNotes).toEqual({});
   });
 });
 
@@ -254,6 +346,25 @@ describe('gold snapshot', () => {
     expect(Date.parse(fumigation.readyBy)).toBe(Date.parse(asOf) + 3 * 24 * 3600 * 1000);
     expect(failed).toMatchObject({ isHold: true, qualityTestId: 77 });
   });
+
+  it('cites the note that holds an order', () => {
+    const snapshot = snapshotFromGold({
+      asOf,
+      rules: { season: 'HARVEST', timeZone: 'America/Los_Angeles', calendar: { LSVLN2: { weekdays: [1, 2, 3, 4, 5, 6], start: '00:00', end: '24:00' } }, cleanoutTriggers: [] },
+      rows: [
+        { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 5, process_order_id: 5, po_number: '1005', species_code: 'PECO', input_kg: 1000, sap_finish_date: '2026-10-20', status_code: 'NEW', is_hold: true, hold_reason: 'NOTE_HOLD' },
+      ],
+      facts: [{ po_number: '1005', line_schedule_item_id: 5, fact_type: 'HOLD', status: 'AUTO', semantic_fact_id: 41, note_text: 'keep it parked until the retest' }],
+    });
+    expect(snapshot.orders[0]).toMatchObject({
+      isHold: true,
+      holdFact: { id: 41, noteText: 'keep it parked until the retest' },
+      noteFacts: [{ type: 'HOLD', text: 'keep it parked until the retest' }],
+    });
+    const [entry] = computePlan(snapshot).payloads['line-2'].entries;
+    expect(entry.entryStatus).toBe('HOLD');
+    expect(entry.reasons).toEqual([expect.objectContaining({ code: 'NOTE_HOLD', factIds: [41] })]);
+  });
 });
 
 describe('BFF semantic replan', () => {
@@ -282,6 +393,11 @@ describe('BFF semantic replan', () => {
     return { query, calls };
   }
 
+  beforeEach(() => {
+    delete process.env.BEDROCK_ENABLED;
+    delete process.env.JEV_ENABLED;
+  });
+
   afterEach(() => {
     delete process.env.SEMANTIC_PLANNER_ENABLED;
   });
@@ -299,6 +415,8 @@ describe('BFF semantic replan', () => {
     expect(JSON.parse(insert.params[1]).event).toEqual({ kind: 'qa_fail', po: '8888', failedFor: 'Discolored' });
     const stored = calls.find((call) => call.text.includes('UPDATE gold.plan_event'));
     expect(stored.params[0]).toBe(20);
+    expect(JSON.parse(stored.params[2])).toEqual({});
+    expect(calls.some((call) => call.text.includes('raw.note_reading'))).toBe(false);
   });
 
   it('plans one line from the orders already on it', async () => {
