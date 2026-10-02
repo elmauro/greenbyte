@@ -33,6 +33,7 @@ Path:
 | GREENBYTE-009 | n/a | `uc1-scheduler-ux-test-cases` | UC1 scheduler UX test cases | frontend | done |
 | GREENBYTE-010 | n/a | `pending-po-highlight` | Pending replan PO highlight (not running slot) | frontend | done |
 | GREENBYTE-011 | n/a | `copilot-select-order-placeholder` | Copilot order select placeholder (not em dash) | frontend | done |
+| GREENBYTE-012 | n/a | `remove-post-accept-queue-bell-notification` | Remove post-accept queue bell notification | frontend | done |
 
 ## How to update
 

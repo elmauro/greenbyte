@@ -192,7 +192,6 @@ export function PlantBaselineDashboard({
     onSelectOrder?.(po);
   }
 
-  const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
@@ -274,21 +273,8 @@ export function PlantBaselineDashboard({
   const bellMenuId = useId();
 
   useEffect(() => {
-    if (staticPreview) return;
-    setQueueUpdateUnread(acceptNotice);
-  }, [acceptNotice, staticPreview]);
-
-  useEffect(() => {
-    if (eventPendingReview) setQueueUpdateUnread(false);
-  }, [eventPendingReview]);
-
-  useEffect(() => {
     if (eventPendingReview) setNotificationDismissed(false);
   }, [eventType, explanation?.alertBanner, eventPendingReview]);
-
-  useEffect(() => {
-    if (activeSection === 'queue') setQueueUpdateUnread(false);
-  }, [activeSection]);
 
   useEffect(() => {
     if (!bellOpen) return;
@@ -316,8 +302,7 @@ export function PlantBaselineDashboard({
         return [remote];
       })
     : [];
-  const notificationCount =
-    (isUx ? scheduleNotices.length : showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
+  const notificationCount = isUx ? scheduleNotices.length : showSchedulingNotification ? 1 : 0;
 
   function statusPill(): { label: string; sub: string; className: string; dot: string } {
     if (eventPendingReview) {
@@ -326,14 +311,6 @@ export function PlantBaselineDashboard({
         sub: ux.pillActionSub,
         className: 'border-amber-200 bg-amber-50 text-amber-950',
         dot: 'bg-amber-500',
-      };
-    }
-    if (isUx && (accepted || planAcknowledged) && queueUpdateUnread) {
-      return {
-        label: ux.pillApproved,
-        sub: ux.pillApprovedSub,
-        className: 'border-brand-blue/30 bg-brand-blue/5 text-brand-blue',
-        dot: 'bg-brand-blue',
       };
     }
     return {
@@ -371,9 +348,6 @@ export function PlantBaselineDashboard({
     if (staticPreview && !faithfulStatic) return null;
     if (section === 'scheduling' && schedulingActionPending && activeSection !== 'scheduling') {
       return 'action';
-    }
-    if (section === 'queue' && queueUpdateUnread && activeSection !== 'queue') {
-      return 'info';
     }
     return null;
   }
@@ -939,40 +913,6 @@ export function PlantBaselineDashboard({
                   <span>
                     <span className="font-semibold text-gray-900">{b.notificationSchedulingTitle}</span>
                     <span className="mt-0.5 block text-xs text-gray-600">{b.notificationSchedulingBody}</span>
-                  </span>
-                </button>
-              </li>
-            )}
-            {queueUpdateUnread && isUx && (
-              <li role="none" className="px-3 py-3">
-                <div className="flex gap-2">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-2 border-brand-blue bg-transparent" aria-hidden />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{ux.confirmTitle}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">{ux.confirmBody}</p>
-                    <button
-                      type="button"
-                      className="mt-2 rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
-                      onClick={() => goToSection('queue')}
-                    >
-                      {ux.openQueue}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            )}
-            {queueUpdateUnread && !isUx && (
-              <li role="none">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-gray-50"
-                  onClick={() => goToSection('queue')}
-                >
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-blue" aria-hidden />
-                  <span>
-                    <span className="font-semibold text-gray-900">{b.notificationQueueTitle}</span>
-                    <span className="mt-0.5 block text-xs text-gray-600">{b.notificationQueueBody}</span>
                   </span>
                 </button>
               </li>
