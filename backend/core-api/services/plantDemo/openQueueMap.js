@@ -150,3 +150,15 @@ export function mapOpenQueue(rawRows, lineId) {
 
   return selected.map(toPublicRow);
 }
+
+/** No plan yet: every order waits. Status, rush and reasons come back from the next plan. */
+export function pendingQueue(queue) {
+  return queue.map((row) => ({
+    po: row.po,
+    species: row.species,
+    kg: row.kg,
+    finish: row.finish,
+    status: 'PENDING',
+    ...(row.customerOrderId ? { customerOrderId: row.customerOrderId } : {}),
+  }));
+}

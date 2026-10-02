@@ -1,4 +1,4 @@
-import { mapOpenQueue, mapOpenQueueRow } from '../core-api/services/plantDemo/openQueueMap.js';
+import { mapOpenQueue, mapOpenQueueRow, pendingQueue } from '../core-api/services/plantDemo/openQueueMap.js';
 
 describe('gold.v_open_queue mapping', () => {
   it('maps a schedule row onto the queue contract', () => {
@@ -62,6 +62,16 @@ describe('gold.v_open_queue mapping', () => {
     const rows = [{ po_number: '100', species_code: 'SWCO', kg: 1, status: 'NEW' }];
     expect(mapOpenQueue(rows, 'line-1')).toHaveLength(1);
     expect(mapOpenQueue(rows, 'line-2')).toEqual([]);
+  });
+
+  it('shows an unplanned line as pending, without rush or plan reasons', () => {
+    expect(pendingQueue([
+      { po: '100', species: 'SWCO', kg: 10, finish: '2026-11-01', status: 'HOLD', atRisk: true, rush: 'priority', reasonShort: 'Rush: priority 7 → 1 (SAP change)', aiNote: 'Late.' },
+      { po: '101', species: 'PECO', kg: 20, finish: '2026-11-02', status: 'PLANNED', customerOrderId: 'CO-1' },
+    ])).toEqual([
+      { po: '100', species: 'SWCO', kg: 10, finish: '2026-11-01', status: 'PENDING' },
+      { po: '101', species: 'PECO', kg: 20, finish: '2026-11-02', status: 'PENDING', customerOrderId: 'CO-1' },
+    ]);
   });
 
   it('drops rows that have no process order', () => {

@@ -1,5 +1,6 @@
 import { PLANT_DEMO_LINE_ID } from './constants.js';
 import { fetchOpenQueue, queryOpenQueue, withOpenQueueClient } from './openQueueDb.js';
+import { pendingQueue } from './openQueueMap.js';
 import {
   attachPlanExplanation,
   localeOf,
@@ -73,6 +74,7 @@ export function parsePriorityChange(body) {
     po: poOf(body.po),
     priority,
     scheduledFinish,
+    rush: body.rush === true,
   };
 }
 
@@ -249,7 +251,7 @@ export async function fetchSchedulerQueue(lineId, locale) {
     }
   }
 
-  const queue = await fetchOpenQueue(lineId);
+  const queue = pendingQueue(await fetchOpenQueue(lineId));
   const version = row?.plan_version != null ? Number(row.plan_version) : 1;
   return {
     lineId,
@@ -326,6 +328,35 @@ export async function acceptProposedPlan(body) {
   }
 }
 
+/**
+ * A copilot rush is an instruction, not only a lower rank. Priority 1 on an order that is
+ * already 1 would otherwise be stored as a normal change and the plan would not move.
+ */
+async function flagLatestChangeAsRush(po) {
+  await queryOpenQueue(
+    `WITH latest AS (
+       SELECT c.ingest_event_id
+       FROM silver.process_order_change c
+       JOIN silver.process_order po ON po.process_order_id = c.process_order_id
+       WHERE po.po_number = $1
+       ORDER BY c.ingest_event_id DESC
+       LIMIT 1
+     ),
+     marked AS (
+       UPDATE silver.process_order_change c
+       SET is_rush = true
+       FROM latest
+       WHERE c.ingest_event_id = latest.ingest_event_id
+       RETURNING c.ingest_event_id
+     )
+     UPDATE raw.ingest_event e
+     SET payload = e.payload || jsonb_build_object('rush', true)
+     FROM marked
+     WHERE e.ingest_event_id = marked.ingest_event_id`,
+    [po],
+  );
+}
+
 /** Urgency on a lot already in the open queue. Writes raw.ingest_event and silver.process_order_change, then replans. */
 export async function recordPriorityChange(body) {
   const parsed = parsePriorityChange(body);
@@ -339,11 +370,12 @@ export async function recordPriorityChange(body) {
   } catch (err) {
     throw mapPgError(err);
   }
+  if (parsed.rush) await flagLatestChangeAsRush(parsed.po);
   return withSemanticPlan(
     queryOpenQueue,
     {
       lineId: parsed.lineId,
-      kind: result?.eventType === 'rush' ? 'rush' : 'priority_change',
+      kind: parsed.rush || result?.eventType === 'rush' ? 'rush' : 'priority_change',
       po: parsed.po,
       shipBy: parsed.scheduledFinish,
     },

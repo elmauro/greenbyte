@@ -3,6 +3,8 @@ import { parseModelJson } from './explainPlan.js';
 const PO_PATTERN = /\b\d{7,12}\b/g;
 const DATE_PATTERN = /\b\d{4}-\d{2}-\d{2}\b/g;
 const CHUNK = 4;
+// API Gateway stops the request at 30s. 25s leaves the plan save and the reply a few seconds.
+const NOTE_TIMEOUT_MS = 25000;
 
 const SYSTEM = 'You explain a seed-plant production schedule to the scheduler who runs it. Reply with JSON only.';
 
@@ -118,12 +120,12 @@ function keptNotes(raw, chunk, allowedPos, known) {
 }
 
 async function askChunk(chunk, allowedPos, known, complete) {
-  const raw = await complete(prompt(chunk), { system: SYSTEM, maxTokens: 3000, timeoutMs: 20000 });
+  const raw = await complete(prompt(chunk), { system: SYSTEM, maxTokens: 3000, timeoutMs: NOTE_TIMEOUT_MS });
   return keptNotes(raw, chunk, allowedPos, known);
 }
 
 async function askOne(packet, allowedPos, known, complete) {
-  const raw = await complete(singlePrompt(packet), { system: SYSTEM, maxTokens: 3000, timeoutMs: 20000 });
+  const raw = await complete(singlePrompt(packet), { system: SYSTEM, maxTokens: 3000, timeoutMs: NOTE_TIMEOUT_MS });
   return keptNotes(raw, [packet], allowedPos, known);
 }
 

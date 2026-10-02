@@ -3,6 +3,7 @@ import {
   appendCopilotTurn,
   askCopilot,
   readCopilotThreads,
+  subscribeCopilotThreads,
   writeCopilotThreads,
   type CopilotTurn,
 } from '../../demo/plant/copilotThread';
@@ -17,10 +18,12 @@ type PlantCopilotThreadProps = {
   onPoChange?: (po: string) => void;
   /** Reload the line after the copilot sends a rush. */
   onQueueRefresh?: () => void | Promise<void>;
+  /** Focus the question box when a note opens this order. */
+  focusToken?: number;
 };
 
 /** Chat for one production order. The thread is kept for the browser session. */
-export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueueRefresh }: PlantCopilotThreadProps) {
+export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueueRefresh, focusToken = 0 }: PlantCopilotThreadProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
   const shell = m.plantMvp.scheduleShell;
@@ -31,10 +34,17 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
   const [threads, setThreads] = useState(readCopilotThreads);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<'thinking' | 'replanning' | 'holding'>('thinking');
   const logRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const selected = selectable.find((row) => row.po === po) ?? null;
   const position = selected ? queue.findIndex((row) => row.po === selected.po) + 1 : 0;
   const turns = po ? (threads[po] ?? []) : [];
+
+  useEffect(() => subscribeCopilotThreads(() => {
+    setThreads({});
+    setQuestion('');
+  }), []);
 
   useEffect(() => {
     if (!focusPo || focusPo === po) return;
@@ -42,6 +52,11 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
     setPo(focusPo);
     setQuestion('');
   }, [focusPo, selectable, po]);
+
+  useEffect(() => {
+    if (!focusToken) return;
+    inputRef.current?.focus();
+  }, [focusToken]);
 
   useEffect(() => {
     const log = logRef.current;
@@ -65,6 +80,7 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
     remember(order, { role: 'user', text: asked });
     if (!preset) setQuestion('');
     setBusy(true);
+    setPhase('thinking');
     try {
       remember(order, await askCopilot({
         po: order,
@@ -73,12 +89,15 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
         lineId,
         history,
         onQueueRefresh,
+        onReplanning: (kind) => setPhase(kind === 'hold' ? 'holding' : 'replanning'),
         rushError: copy.rushError,
+        failError: copy.failError,
       }));
     } catch {
       remember(order, { role: 'copilot', text: copy.askError });
     } finally {
       setBusy(false);
+      setPhase('thinking');
     }
   }
 
@@ -147,7 +166,18 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
             </article>
           ))
         )}
-        {busy && <p className="text-xs text-gray-500">{copy.thinking}</p>}
+        {busy && (
+          <article className="mr-auto max-w-[95%] rounded-2xl rounded-bl-sm border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{copy.copilotLabel}</p>
+            <p className="mt-1 flex items-center gap-2 text-gray-600">
+              <span
+                aria-hidden="true"
+                className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-brand-green/25 border-t-brand-green"
+              />
+              {phase === 'holding' ? copy.holding : phase === 'replanning' ? copy.replanning : copy.thinking}
+            </p>
+          </article>
+        )}
       </div>
 
       <form
@@ -172,6 +202,7 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueue
         </div>
         <div className="mt-2 flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}

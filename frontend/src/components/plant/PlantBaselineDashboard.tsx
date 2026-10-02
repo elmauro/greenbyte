@@ -74,6 +74,8 @@ type PlantBaselineDashboardProps = {
   onSelectOrder?: (po: string) => void;
   /** Order the copilot should explain. Comes from the schedule row. */
   explainPo?: string;
+  /** Open the copilot on this order without leaving the current section. */
+  onCopilotPo?: (po: string) => void;
   /** Reload the line after the copilot sends a rush. */
   onQueueRefresh?: () => void | Promise<void>;
   /** Demo controls: drop the plan, then run the scheduler on the orders already here. */
@@ -153,6 +155,7 @@ export function PlantBaselineDashboard({
   onManualOrder,
   onSelectOrder,
   explainPo,
+  onCopilotPo,
   onQueueRefresh,
   onResetDemo,
   onGeneratePlan,
@@ -192,6 +195,7 @@ export function PlantBaselineDashboard({
   });
 
   const [notePo, setNotePo] = useState('');
+  const [copilotOpenToken, setCopilotOpenToken] = useState(0);
   const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
     return defaultSection;
@@ -205,6 +209,12 @@ export function PlantBaselineDashboard({
 
   function revealScheduleOrder(po: string) {
     onSelectOrder?.(po);
+  }
+
+  function openCopilot(po: string) {
+    setTimelineOpen(false);
+    setCopilotOpenToken((token) => token + 1);
+    onCopilotPo?.(po);
   }
 
   const [bellOpen, setBellOpen] = useState(false);
@@ -585,9 +595,11 @@ export function PlantBaselineDashboard({
             const sp = speciesDisplay(row.species, locale);
             const isComplete = row.status === 'COMPLETE';
             const isHold = row.status === 'HOLD';
+            const isPending = row.status === 'PENDING';
             const linePosition = queue.findIndex((r) => r.po === row.po) + 1;
             const isSelected = selectedPo.includes(row.po);
-            const noteOpen = !staticPreview && !isComplete && notePo === row.po;
+            const noteOpen = !isUx && !staticPreview && !isComplete && notePo === row.po;
+            const copilotOpen = isUx && explainPo === row.po;
             const noteColumns = (isUx ? 8 : 7);
             return (
               <Fragment key={row.po}>
@@ -625,18 +637,25 @@ export function PlantBaselineDashboard({
                     {!staticPreview && !isComplete && (
                       <button
                         type="button"
-                        aria-label={noteOpen ? copy.salesChat.noteClose : copy.salesChat.noteOpen}
-                        aria-pressed={noteOpen}
-                        onClick={() => setNotePo(noteOpen ? '' : row.po)}
+                        data-copilot-launcher={isUx ? '' : undefined}
+                        aria-label={isUx ? copy.salesChat.noteOpen : noteOpen ? copy.salesChat.noteClose : copy.salesChat.noteOpen}
+                        aria-pressed={isUx ? copilotOpen : noteOpen}
+                        onClick={() => {
+                          if (isUx) {
+                            openCopilot(row.po);
+                            return;
+                          }
+                          setNotePo(noteOpen ? '' : row.po);
+                        }}
                         className={`inline-flex h-6 w-6 items-center justify-center rounded ${
-                          noteOpen
+                          (isUx ? copilotOpen : noteOpen)
                             ? 'bg-amber-100 text-amber-700'
                             : 'text-amber-500 hover:bg-amber-50 hover:text-amber-700'
                         }`}
                       >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
-                          <path fill="currentColor" d="M6 3h8l6 6v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-                          <path fill="white" fillOpacity="0.7" d="M14 3v5a1 1 0 0 0 1 1h5z" />
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M8 9.5h8M8 13h5" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M6.5 18.2 4.8 21v-14A2.2 2.2 0 0 1 7 4.8h10a2.2 2.2 0 0 1 2.2 2.2v8.2A2.2 2.2 0 0 1 17 17.4H8.4L6.5 18.2z" />
                         </svg>
                       </button>
                     )}
@@ -657,39 +676,45 @@ export function PlantBaselineDashboard({
                 <td className={`px-4 py-3 ${hi.has('status') ? 'bg-brand-green/5' : ''}`}>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      isHold
-                        ? 'bg-red-50 text-red-900'
-                        : isComplete
-                          ? 'bg-brand-green/10 text-brand-green-dark'
-                          : row.atRisk
-                            ? 'bg-amber-50 text-amber-900'
-                            : 'bg-brand-green/10 text-brand-green-dark'
+                      isPending
+                        ? 'bg-gray-100 text-gray-700'
+                        : isHold
+                          ? 'bg-red-50 text-red-900'
+                          : isComplete
+                            ? 'bg-brand-green/10 text-brand-green-dark'
+                            : row.atRisk
+                              ? 'bg-amber-50 text-amber-900'
+                              : 'bg-brand-green/10 text-brand-green-dark'
                     }`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isHold
-                          ? 'bg-red-500'
-                          : isComplete
-                            ? 'bg-brand-green/60'
-                            : row.atRisk
-                              ? 'bg-amber-500'
-                              : 'bg-brand-green'
+                        isPending
+                          ? 'bg-gray-400'
+                          : isHold
+                            ? 'bg-red-500'
+                            : isComplete
+                              ? 'bg-brand-green/60'
+                              : row.atRisk
+                                ? 'bg-amber-500'
+                                : 'bg-brand-green'
                       }`}
                     />
-                    {isHold
-                      ? copy.statusLabels.hold
-                      : isComplete
-                        ? copy.statusLabels.complete
-                        : row.atRisk
-                          ? copy.statusLabels.atRisk
-                          : copy.statusLabels.planned}
+                    {isPending
+                      ? copy.statusLabels.pending
+                      : isHold
+                        ? copy.statusLabels.hold
+                        : isComplete
+                          ? copy.statusLabels.complete
+                          : row.atRisk
+                            ? copy.statusLabels.atRisk
+                            : copy.statusLabels.planned}
                   </span>
                 </td>
                 <td
                   className={`${row.aiNote ? 'min-w-[16rem] max-w-[24rem]' : 'max-w-[12rem]'} px-4 py-3 text-xs leading-snug text-gray-600 ${hi.has('reason') ? 'bg-brand-green/5' : ''}`}
                 >
-                  {row.reasonShort ?? '—'}
+                  {isPending ? copy.statusLabels.pendingReason : (row.reasonShort ?? '—')}
                   {row.aiNote && (
                     <p className="mt-1 text-[11px] leading-snug text-gray-500">
                       <span className="mr-1 font-semibold text-brand-green">AI</span>
@@ -1235,6 +1260,7 @@ export function PlantBaselineDashboard({
           focusPo={explainPo ?? eventHighlightPo}
           onFocusPo={revealScheduleOrder}
           onQueueRefresh={onQueueRefresh}
+          openToken={copilotOpenToken}
           raised={Boolean(eventPendingReview && onAccept)}
         />
       )}
@@ -1303,6 +1329,7 @@ export function PlantBaselineDashboard({
               statusAtRisk: copy.statusLabels.atRisk,
               statusComplete: copy.statusLabels.complete,
               statusHold: copy.statusLabels.hold,
+              statusPending: copy.statusLabels.pending,
             }}
           />
         </>

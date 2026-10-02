@@ -62,7 +62,13 @@ class PlantDemoServer {
   private pendingDiff: PlantEventResponse['diff'] | null = null;
 
   reset() {
-    this.queue = cloneQueue(BASE_QUEUE);
+    this.queue = cloneQueue(BASE_QUEUE).map((row) => ({
+      po: row.po,
+      species: row.species,
+      kg: row.kg,
+      finish: row.finish,
+      status: 'PENDING',
+    }));
     this.planVersion = 1;
     this.lastEvent = null;
     this.acceptedPlanVersion = null;

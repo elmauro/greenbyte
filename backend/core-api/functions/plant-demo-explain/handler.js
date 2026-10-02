@@ -51,6 +51,7 @@ export async function handler(event) {
         citations: result.citations,
         suggestedFollowUps: result.suggestedFollowUps,
         ...(result.action ? { action: result.action } : {}),
+        ...(result.failedFor ? { failedFor: result.failedFor } : {}),
       });
     }
 

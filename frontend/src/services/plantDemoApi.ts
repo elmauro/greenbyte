@@ -150,9 +150,15 @@ async function postBatchExplain(
   return data;
 }
 
-/** Same SAP priority ingest the operator uses. Priority 1 is a rush when it is higher than the order's current rank. */
+/** Copilot rush. Priority 1, and rush so an order already at 1 still moves. */
 async function sendCopilotRush(locale: Locale, lineId: string | undefined, po: string) {
-  return postIngestSapPriorityChange(locale, lineId, { po, priority: 1 });
+  return postIngestSapPriorityChange(locale, lineId, { po, priority: 1, rush: true });
+}
+
+/** Copilot QA fail. The pass/fail log holds the order for this reason. */
+async function sendCopilotFail(locale: Locale, lineId: string | undefined, po: string, failedFor: string) {
+  const equipmentId = lineId === 'line-2' ? 'Line 2' : 'Line 1';
+  return postIngestPassFailLog(locale, lineId, { po, passFail: 'Fail', failedFor, equipmentId });
 }
 
 /** Drops the line's plan. Orders stay, in open-queue order, with no schedule. */
@@ -178,6 +184,7 @@ export const plantDemoApi = {
   postAccept,
   postBatchExplain,
   sendCopilotRush,
+  sendCopilotFail,
   stageRawLine,
   planLine,
   /** @deprecated use connectionMode === 'bff' */

@@ -60,6 +60,54 @@ export function batchAnswerGuard(answer, packet) {
   return unknown ? { ok: false, reason: `unknown po ${unknown}` } : { ok: true };
 }
 
+const FAIL_REASONS = [
+  [/discolor/, 'Discolored'],
+  [/off[\s-]?type/, 'Off-type'],
+  [/\bdent\b/, 'Dent'],
+  [/\bcob\b/, 'Cob'],
+  [/\bbroken\b/, 'Broken'],
+  [/\bsmut\b/, 'Smut'],
+  [/\bweed\b/, 'Weed'],
+  [/\binert\b/, 'Inert'],
+  [/\btare\b/, 'Tare'],
+];
+
+/** An instruction to record a QA fail. A question about a fail is not one. */
+export function failCommand(question) {
+  const text = String(question || '').trim().toLowerCase();
+  if (!text || /[?¿]/.test(text)) return false;
+  if (/\b(what|why|how|when|which|would|could|qu[eé]|por qu[eé]|c[oó]mo|cu[aá]ndo)\b/.test(text)) return false;
+  return /\b(fail|failed|failure|falla|fall[oó])\b/.test(text);
+}
+
+/** A Pasco fail reason named in the text, or null when the scheduler still has to say which. */
+export function failReasonFromQuestion(question) {
+  const text = String(question || '').toLowerCase();
+  const match = FAIL_REASONS.find(([pattern]) => pattern.test(text));
+  return match ? match[1] : null;
+}
+
+function awaitingFailReason(history) {
+  const last = [...(history || [])].reverse().find((turn) => turn?.role === 'copilot' && typeof turn.text === 'string');
+  return Boolean(last && /fail reason|motivo de la falla/i.test(last.text));
+}
+
+/**
+ * A fail instruction, or the reason that follows one.
+ * ask_fail_reason does not touch the plan. qa_fail carries failedFor for the pass/fail log.
+ */
+export function resolveFail(question, history) {
+  if (failCommand(question)) {
+    const failedFor = failReasonFromQuestion(question);
+    return failedFor ? { action: 'qa_fail', failedFor } : { action: 'ask_fail_reason' };
+  }
+  if (awaitingFailReason(history) && !/[?¿]/.test(String(question || ''))) {
+    const failedFor = failReasonFromQuestion(question);
+    return failedFor ? { action: 'qa_fail', failedFor } : { action: 'ask_fail_reason' };
+  }
+  return null;
+}
+
 /** An instruction to rush the selected order. A question about moving it up is not one. */
 export function rushCommand(question) {
   const text = String(question || '').trim().toLowerCase();
@@ -177,6 +225,28 @@ export async function explainBatchQuestion({ packet, question, history, locale, 
   }
   if (!intent) intent = intentFromQuestion(question);
   const template = templateBatchAnswer(packet, intent, locale);
+  const fail = resolveFail(question, history);
+  if (fail?.action === 'ask_fail_reason') {
+    const es = locale === 'es';
+    return {
+      ...template,
+      action: 'ask_fail_reason',
+      answer: es
+        ? `PO ${packet.po} puede quedar en hold de QA cuando tenga el motivo de la falla. ¿Cuál es: Dent, Discolored, Cob, Off-type, Broken, Smut, Weed, Inert o Tare?`
+        : `PO ${packet.po} can go on QA hold once I have the fail reason. Which one: Dent, Discolored, Cob, Off-type, Broken, Smut, Weed, Inert, or Tare?`,
+    };
+  }
+  if (fail?.action === 'qa_fail') {
+    const es = locale === 'es';
+    return {
+      ...template,
+      action: 'qa_fail',
+      failedFor: fail.failedFor,
+      answer: es
+        ? `Falla registrada para PO ${packet.po} (${fail.failedFor}). Queda en hold en el plan nuevo, esperando su aceptación. Nada se escribe en SAP.`
+        : `Fail recorded for PO ${packet.po} (${fail.failedFor}). It is on hold in the new plan, waiting for you to accept. Nothing is written to SAP.`,
+    };
+  }
   if (rushCommand(question)) {
     const es = locale === 'es';
     return {

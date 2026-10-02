@@ -68,6 +68,15 @@ export function PlantLineMvp() {
     [searchParams, setSearchParams],
   );
 
+  const focusCopilot = useCallback(
+    (po: string) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('po', po);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   const handleAccept = useCallback(async () => {
     if (eventType === 'rush' || eventType === 'qa_fail') {
       appendPlantUxApprovalHistory({
@@ -168,6 +177,7 @@ export function PlantLineMvp() {
             onManualOrder={setManualOrder}
             onQueueRefresh={reloadQueue}
             onSelectOrder={selectOrder}
+            onCopilotPo={focusCopilot}
             explainPo={searchParams.get('po') ?? undefined}
             onOpenLine={(lineId) => {
               setSearchParams((prev) => {

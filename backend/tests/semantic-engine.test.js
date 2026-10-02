@@ -4,7 +4,7 @@ import { handler as planHandler } from '../core-api/functions/agent-plan-compute
 import { jest } from '@jest/globals';
 import { replanWithSemanticEngine, withSemanticPlan } from '../core-api/services/plantDemo/semanticReplan.js';
 import { loadSnapshot, PlannerNotReadyError, readNotesWithJev, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
-import { batchAnswerGuard, explainBatchQuestion, packetFromGold, rushCommand, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
+import { batchAnswerGuard, explainBatchQuestion, failCommand, packetFromGold, resolveFail, rushCommand, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
 import { entryPackets, explainEntries, notesFromReply, poNoteGuard } from '../core-api/services/semanticEngine/explain/explainEntries.js';
 import { explainPlan, explanationGuard } from '../core-api/services/semanticEngine/explain/explainPlan.js';
 import { createJevClassifier, createJevQuestionRouter } from '../core-api/services/semanticEngine/models/clients.js';
@@ -153,7 +153,7 @@ describe('per-PO notes', () => {
       ].join('\n');
     };
     const { poNotes } = await explainEntries(entryPackets(entries, orders), { complete });
-    expect(options).toMatchObject({ maxTokens: 3000, timeoutMs: 20000 });
+    expect(options).toMatchObject({ maxTokens: 3000, timeoutMs: 25000 });
     expect(poNotes).toEqual({ '1009900001': expect.stringContaining('expedite') });
     expect(poNoteGuard({ text: 'Finishes 2026-12-01.' }, new Set(['1009900001']), '{}').ok).toBe(false);
   });
@@ -266,6 +266,21 @@ describe('batch chat', () => {
     const asked = await explainBatchQuestion({ packet, question: 'What would move it up?', locale: 'en' });
     expect(asked.action).toBeUndefined();
     expect(asked.answer).toMatch(/does not change the plan/);
+  });
+
+  it('asks for a fail reason, then records the reason on the next turn', async () => {
+    const packet = packetFromGold(context, {}, '1002266913');
+    expect(failCommand('This order failed')).toBe(true);
+    expect(failCommand('Why did it fail?')).toBe(false);
+    const ask = await explainBatchQuestion({ packet, question: 'This order failed', locale: 'en' });
+    expect(ask.action).toBe('ask_fail_reason');
+    expect(ask.answer).toMatch(/fail reason/);
+    expect(ask.failedFor).toBeUndefined();
+    const named = await explainBatchQuestion({ packet, question: 'It failed for dent', locale: 'en' });
+    expect(named.action).toBe('qa_fail');
+    expect(named.failedFor).toBe('Dent');
+    const followUp = resolveFail('Discolored', [{ role: 'copilot', text: ask.answer }]);
+    expect(followUp).toEqual({ action: 'qa_fail', failedFor: 'Discolored' });
   });
 
   it('asks JEV which kind of question this is', async () => {

@@ -44,6 +44,19 @@ export function writeCopilotThreads(threads: Record<string, CopilotTurn[]>) {
   }
 }
 
+const THREADS_CLEARED = 'greenbyte-copilot-threads-cleared';
+
+/** Drops every order's copilot thread. Open chats hear the same event. */
+export function clearCopilotThreads() {
+  writeCopilotThreads({});
+  window.dispatchEvent(new Event(THREADS_CLEARED));
+}
+
+export function subscribeCopilotThreads(onChange: () => void) {
+  window.addEventListener(THREADS_CLEARED, onChange);
+  return () => window.removeEventListener(THREADS_CLEARED, onChange);
+}
+
 export function appendCopilotTurn(
   threads: Record<string, CopilotTurn[]>,
   po: string,
@@ -59,6 +72,28 @@ export function plainCopilotText(value: string) {
   return value.replace(/\*\*(.*?)\*\*/g, '$1');
 }
 
+let queueHold = 0;
+
+/** The 5s queue poll must not move a row while a rush replan is still running. */
+export function holdQueueUpdates() {
+  queueHold += 1;
+}
+
+export function releaseQueueUpdates() {
+  queueHold = Math.max(0, queueHold - 1);
+}
+
+export function queueUpdatesHeld() {
+  return queueHold > 0;
+}
+
+function afterPaint() {
+  if (typeof requestAnimationFrame !== 'function') return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
 /** One copilot turn. A rush instruction also posts the SAP priority change. */
 export async function askCopilot(input: {
   po: string;
@@ -67,19 +102,31 @@ export async function askCopilot(input: {
   lineId?: string;
   history: { role: 'user' | 'copilot'; text: string }[];
   onQueueRefresh?: () => void | Promise<void>;
+  onReplanning?: (kind: 'rush' | 'hold') => void;
   rushError: string;
+  failError: string;
 }): Promise<CopilotTurn> {
   const res = await plantDemoApi.postBatchExplain(input.po, input.question, input.locale, {
     lineId: input.lineId,
     history: input.history,
   });
   let text = res.answer;
-  if (res.action === 'rush') {
+  if (res.action === 'rush' || (res.action === 'qa_fail' && res.failedFor)) {
+    const kind = res.action === 'qa_fail' ? 'hold' : 'rush';
+    holdQueueUpdates();
+    input.onReplanning?.(kind);
     try {
-      await plantDemoApi.sendCopilotRush(input.locale, input.lineId, input.po);
+      await afterPaint();
+      if (kind === 'hold') {
+        await plantDemoApi.sendCopilotFail(input.locale, input.lineId, input.po, res.failedFor as string);
+      } else {
+        await plantDemoApi.sendCopilotRush(input.locale, input.lineId, input.po);
+      }
       await input.onQueueRefresh?.();
     } catch {
-      text = input.rushError;
+      text = kind === 'hold' ? input.failError : input.rushError;
+    } finally {
+      releaseQueueUpdates();
     }
   }
   return {
