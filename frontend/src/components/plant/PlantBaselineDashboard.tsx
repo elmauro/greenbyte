@@ -1,7 +1,7 @@
 export type QueueColumnHighlight = 'finish' | 'status' | 'reason';
 export type PlantNavSection = 'dashboard' | 'queue' | 'scheduling' | 'copilot';
 
-import { useEffect, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useState } from 'react';
 import type {
   PlantEventType,
   PlantExplanation,
@@ -17,11 +17,12 @@ import { PlantCopilotChatDock, PlantScheduleCopilot } from './PlantScheduleCopil
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { usePlantLineNotices } from '../../hooks/usePlantLineNotices';
 import { PlantListPagination } from './PlantListPagination';
+import { PlantPlanGeneratingModal } from './PlantPlanGeneratingModal';
+import { PlantQueueNote } from './PlantQueueNote';
 import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import { shouldShowScheduleLineNumber } from '../../demo/plant/plantManualOrder';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
-import { PlantPlanGeneratingModal } from './PlantPlanGeneratingModal';
 import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
 import { PlantPlanReviewModal } from './ux/PlantPlanReviewModal';
 import { PlantUxCompareDrawer } from './ux/PlantUxCompareDrawer';
@@ -76,6 +77,10 @@ type PlantBaselineDashboardProps = {
   onSelectOrder?: (po: string) => void;
   /** Order the copilot should explain. Comes from the schedule row. */
   explainPo?: string;
+  /** Open the copilot on this order without leaving the current section. */
+  onCopilotPo?: (po: string) => void;
+  /** Reload the line after the copilot sends a rush. */
+  onQueueRefresh?: () => void | Promise<void>;
   /** BFF plan version — schedule line numbers hide on calm baseline (v1) after demo reset. */
   planVersion?: number;
   /** Demo controls: drop the plan, then run the scheduler on the orders already here. */
@@ -158,6 +163,8 @@ export function PlantBaselineDashboard({
   onManualOrder,
   onSelectOrder,
   explainPo,
+  onCopilotPo,
+  onQueueRefresh,
   planVersion = 1,
   onResetDemo,
   onGeneratePlan,
@@ -198,6 +205,8 @@ export function PlantBaselineDashboard({
     return true;
   });
 
+  const [notePo, setNotePo] = useState('');
+  const [copilotOpenToken, setCopilotOpenToken] = useState(0);
   const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
     return defaultSection;
@@ -211,6 +220,12 @@ export function PlantBaselineDashboard({
 
   function revealScheduleOrder(po: string) {
     onSelectOrder?.(po);
+  }
+
+  function openCopilot(po: string) {
+    setTimelineOpen(false);
+    setCopilotOpenToken((token) => token + 1);
+    onCopilotPo?.(po);
   }
 
   const [bellOpen, setBellOpen] = useState(false);
@@ -624,6 +639,7 @@ export function PlantBaselineDashboard({
             const sp = speciesDisplay(row.species, locale);
             const isComplete = row.status === 'COMPLETE';
             const isHold = row.status === 'HOLD';
+            const isPending = row.status === 'PENDING';
             const linePosition = queue.findIndex((r) => r.po === row.po) + 1;
             const moveHighlight =
               row.previousPosition != null && row.previousPosition !== linePosition;
@@ -635,10 +651,13 @@ export function PlantBaselineDashboard({
               locale,
             );
             const isSelected = selectedPo.includes(row.po);
+            const noteOpen = !isUx && !staticPreview && !isComplete && notePo === row.po;
+            const copilotOpen = isUx && explainPo === row.po;
+            const noteColumns = (isUx ? 8 : 7);
             return (
+              <Fragment key={row.po}>
               <tr
-                key={row.po}
-                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${moveHighlight && isUx && showLineNumber ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
+                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${noteOpen ? 'bg-brand-green/5' : ''} ${moveHighlight && isUx && showLineNumber ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
               >
                 {isUx && (
                   <td className="px-3 py-3">
@@ -662,7 +681,45 @@ export function PlantBaselineDashboard({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">{formatPo(row.po)}</td>
+                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">
+                  <span className="inline-flex items-center gap-1.5">
+                    {row.rush && (
+                      <span
+                        title={row.rush === 'note' ? copy.table.rushNote : copy.table.rushPriority}
+                        aria-label={row.rush === 'note' ? copy.table.rushNote : copy.table.rushPriority}
+                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold leading-none text-amber-700"
+                      >
+                        !
+                      </span>
+                    )}
+                    {formatPo(row.po)}
+                    {!staticPreview && !isComplete && (
+                      <button
+                        type="button"
+                        data-copilot-launcher={isUx ? '' : undefined}
+                        aria-label={isUx ? copy.salesChat.noteOpen : noteOpen ? copy.salesChat.noteClose : copy.salesChat.noteOpen}
+                        aria-pressed={isUx ? copilotOpen : noteOpen}
+                        onClick={() => {
+                          if (isUx) {
+                            openCopilot(row.po);
+                            return;
+                          }
+                          setNotePo(noteOpen ? '' : row.po);
+                        }}
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded ${
+                          (isUx ? copilotOpen : noteOpen)
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'text-amber-500 hover:bg-amber-50 hover:text-amber-700'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M8 9.5h8M8 13h5" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.75" d="M6.5 18.2 4.8 21v-14A2.2 2.2 0 0 1 7 4.8h10a2.2 2.2 0 0 1 2.2 2.2v8.2A2.2 2.2 0 0 1 17 17.4H8.4L6.5 18.2z" />
+                        </svg>
+                      </button>
+                    )}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <p className="font-semibold text-gray-900">{sp.common}</p>
                   <p className="text-xs italic text-gray-500">{sp.scientific}</p>
@@ -678,39 +735,45 @@ export function PlantBaselineDashboard({
                 <td className={`px-4 py-3 ${hi.has('status') ? 'bg-brand-green/5' : ''}`}>
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                      isHold
-                        ? 'bg-red-50 text-red-900'
-                        : isComplete
-                          ? 'bg-brand-green/10 text-brand-green-dark'
-                          : row.atRisk
-                            ? 'bg-amber-50 text-amber-900'
-                            : 'bg-brand-green/10 text-brand-green-dark'
+                      isPending
+                        ? 'bg-gray-100 text-gray-700'
+                        : isHold
+                          ? 'bg-red-50 text-red-900'
+                          : isComplete
+                            ? 'bg-brand-green/10 text-brand-green-dark'
+                            : row.atRisk
+                              ? 'bg-amber-50 text-amber-900'
+                              : 'bg-brand-green/10 text-brand-green-dark'
                     }`}
                   >
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        isHold
-                          ? 'bg-red-500'
-                          : isComplete
-                            ? 'bg-brand-green/60'
-                            : row.atRisk
-                              ? 'bg-amber-500'
-                              : 'bg-brand-green'
+                        isPending
+                          ? 'bg-gray-400'
+                          : isHold
+                            ? 'bg-red-500'
+                            : isComplete
+                              ? 'bg-brand-green/60'
+                              : row.atRisk
+                                ? 'bg-amber-500'
+                                : 'bg-brand-green'
                       }`}
                     />
-                    {isHold
-                      ? copy.statusLabels.hold
-                      : isComplete
-                        ? copy.statusLabels.complete
-                        : row.atRisk
-                          ? copy.statusLabels.atRisk
-                          : copy.statusLabels.planned}
+                    {isPending
+                      ? copy.statusLabels.pending
+                      : isHold
+                        ? copy.statusLabels.hold
+                        : isComplete
+                          ? copy.statusLabels.complete
+                          : row.atRisk
+                            ? copy.statusLabels.atRisk
+                            : copy.statusLabels.planned}
                   </span>
                 </td>
                 <td
                   className={`${row.aiNote ? 'min-w-[16rem] max-w-[24rem]' : 'max-w-[12rem]'} px-4 py-3 text-xs leading-snug text-gray-600 ${hi.has('reason') ? 'bg-brand-green/5' : ''}`}
                 >
-                  {row.reasonShort ?? '—'}
+                  {isPending ? copy.statusLabels.pendingReason : (row.reasonShort ?? '—')}
                   {row.aiNote && (
                     <p className="mt-1 text-[11px] leading-snug text-gray-500">
                       <span className="mr-1 font-semibold text-brand-green">AI</span>
@@ -719,30 +782,24 @@ export function PlantBaselineDashboard({
                   )}
                 </td>
               </tr>
+              {noteOpen && (
+                <tr>
+                  <td colSpan={noteColumns} className="p-0">
+                    <PlantQueueNote
+                      po={row.po}
+                      lineId={selectedLineId}
+                      locale={locale}
+                      onQueueRefresh={onQueueRefresh}
+                      copy={copy.salesChat}
+                    />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             );
           })}
         </tbody>
       </table>
-    </div>
-  );
-
-  const acceptFooter = eventPendingReview && onAccept && (
-    <div className="mt-4 flex flex-col items-stretch justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center">
-      <p className="text-sm text-gray-600">
-        {schedule.footerTotal
-          .replace('{count}', String(active.length))
-          .replace('{runtime}', schedule.demoRuntime)}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={acceptDisabled || accepted}
-          onClick={onAccept}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-green px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-green-dark disabled:opacity-40"
-        >
-          ✓ {accepted ? copy.actions.accepted : copy.actions.accept}
-        </button>
-      </div>
     </div>
   );
 
@@ -893,12 +950,19 @@ export function PlantBaselineDashboard({
                 timeline
               )}
             </div>
-            {!isUx && acceptFooter}
           </>
         );
       }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded lineId={selectedLineId} focusPo={explainPo} />;
+        return (
+          <PlantBatchExplainChat
+            queue={queue}
+            embedded
+            lineId={selectedLineId}
+            focusPo={explainPo}
+            onQueueRefresh={onQueueRefresh}
+          />
+        );
     }
   }
 
@@ -1210,8 +1274,12 @@ export function PlantBaselineDashboard({
         </nav>
       )}
 
-      {isUx && eventPendingReview && onAccept && (
-        <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
+      {eventPendingReview && onAccept && (
+        <div className={`fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 ${
+          isUx
+            ? 'bottom-14 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none'
+            : 'bottom-0'
+        }`}>
           <div className={`mx-auto flex flex-wrap items-center gap-4 sm:justify-between ${
             isUx && !compact && schedulingLayout === 'full' && (!staticPreview || faithfulStatic)
               ? 'lg:pr-20'
@@ -1253,6 +1321,8 @@ export function PlantBaselineDashboard({
           lineId={selectedLineId}
           focusPo={explainPo ?? eventHighlightPo}
           onFocusPo={revealScheduleOrder}
+          onQueueRefresh={onQueueRefresh}
+          openToken={copilotOpenToken}
           raised={Boolean(eventPendingReview && onAccept)}
         />
       )}
@@ -1334,6 +1404,7 @@ export function PlantBaselineDashboard({
               statusAtRisk: copy.statusLabels.atRisk,
               statusComplete: copy.statusLabels.complete,
               statusHold: copy.statusLabels.hold,
+              statusPending: copy.statusLabels.pending,
             }}
           />
         </>

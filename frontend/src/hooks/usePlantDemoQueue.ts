@@ -22,6 +22,7 @@ import { PLANT_DEMO_LINE_ID } from '../demo/plant/plantDemoServer';
 import type { PlantPlanDiff } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n/LocaleContext';
 import { getApiConnectionMode } from '../services/apiConfig';
+import { clearCopilotThreads, queueUpdatesHeld } from '../demo/plant/copilotThread';
 import {
   applyManualOrder,
   clearManualOrder,
@@ -185,13 +186,14 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
   }, [lineId]);
 
   const pollQueue = useCallback(async () => {
-    if (!pollsRemoteQueue || busy) return;
+    if (!pollsRemoteQueue || busy || queueUpdatesHeld()) return;
     const epochAtStart = acceptEpochRef.current;
     const requestedLineId = lineId;
     try {
       const res = await plantDemoApi.getQueue(requestedLineId, locale);
       if (epochAtStart !== acceptEpochRef.current) return;
       if (lineIdRef.current !== requestedLineId) return;
+      if (queueUpdatesHeld()) return;
       applyQueueSnapshot(res);
     } catch {
       /* ignore transient poll errors */
@@ -225,6 +227,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
         if (action === 'reset') {
           setMandatoryPlanReview(false);
           await plantDemoApi.stageRawLine(lineId);
+          clearCopilotThreads();
         } else await plantDemoApi.planLine(lineId);
         const res = await loadQueue();
         if (
@@ -288,6 +291,7 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     acceptPlan,
     resetDemo: () => runDemoAction('reset'),
     generatePlan: () => runDemoAction('plan'),
+    reloadQueue: loadQueue,
     mandatoryPlanReview,
     dismissMandatoryPlanReview: () => setMandatoryPlanReview(false),
     setManualOrder,

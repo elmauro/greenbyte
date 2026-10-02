@@ -4,7 +4,7 @@ import { handler as planHandler } from '../core-api/functions/agent-plan-compute
 import { jest } from '@jest/globals';
 import { replanWithSemanticEngine, withSemanticPlan } from '../core-api/services/plantDemo/semanticReplan.js';
 import { loadSnapshot, PlannerNotReadyError, readNotesWithJev, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
-import { batchAnswerGuard, explainBatchQuestion, packetFromGold, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
+import { batchAnswerGuard, explainBatchQuestion, failCommand, packetFromGold, resolveFail, rushCommand, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
 import { entryPackets, explainEntries, notesFromReply, poNoteGuard } from '../core-api/services/semanticEngine/explain/explainEntries.js';
 import { explainPlan, explanationGuard } from '../core-api/services/semanticEngine/explain/explainPlan.js';
 import { createJevClassifier, createJevQuestionRouter } from '../core-api/services/semanticEngine/models/clients.js';
@@ -139,6 +139,7 @@ describe('per-PO notes', () => {
   it('reads both the line reply and a JSON reply', () => {
     const wanted = new Set(['1009900001']);
     expect(notesFromReply('1009900001 || Runs first.', wanted)).toEqual({ '1009900001': 'Runs first.' });
+    expect(notesFromReply('1. 1009900001: Runs first.', wanted)).toEqual({ '1009900001': 'Runs first.' });
     expect(notesFromReply('{"notes":[{"po":"1009900001","text":"Runs first."}]}', wanted)).toEqual({ '1009900001': 'Runs first.' });
   });
 
@@ -152,9 +153,27 @@ describe('per-PO notes', () => {
       ].join('\n');
     };
     const { poNotes } = await explainEntries(entryPackets(entries, orders), { complete });
-    expect(options).toMatchObject({ maxTokens: 3000, timeoutMs: 20000 });
+    expect(options).toMatchObject({ maxTokens: 3000, timeoutMs: 25000 });
     expect(poNotes).toEqual({ '1009900001': expect.stringContaining('expedite') });
     expect(poNoteGuard({ text: 'Finishes 2026-12-01.' }, new Set(['1009900001']), '{}').ok).toBe(false);
+  });
+
+  it('asks again, one order at a time, when the group reply leaves some out', async () => {
+    const calls = [];
+    const complete = async (prompt) => {
+      calls.push(prompt);
+      if (calls.length === 1) return '1009900001 || Runs first because the customer asked to expedite it';
+      return '1009900005 || It stays on hold because the note says to keep it parked.';
+    };
+    const { poNotes } = await explainEntries(entryPackets(entries, orders), { complete });
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toContain('order 1009900005 only');
+    expect(poNotes['1009900001']).toBe('Runs first because the customer asked to expedite it.');
+    const quoted = await explainEntries(entryPackets(entries, orders), {
+      complete: async () => '1009900001 || "Runs first because the customer asked to expedite it.",',
+    });
+    expect(quoted.poNotes['1009900001']).toBe('Runs first because the customer asked to expedite it.');
+    expect(poNotes['1009900005']).toContain('parked');
   });
 
   it('returns no comments without a model, and survives a model error', async () => {
@@ -229,6 +248,39 @@ describe('batch chat', () => {
     expect(result.source).toBe('template');
     expect(batchAnswerGuard(result.answer, packet).ok).toBe(true);
     expect(result.answer).toMatch(/1002266913/);
+  });
+
+  it('marks an instruction to rush and leaves a question about moving up alone', async () => {
+    const packet = packetFromGold(context, {}, '1002266913');
+    expect(rushCommand('Rush this order')).toBe(true);
+    expect(rushCommand('What would move it up?')).toBe(false);
+    const sent = await explainBatchQuestion({
+      packet,
+      question: 'Rush this order',
+      locale: 'en',
+      classify: async () => 'MOVE_UP',
+      complete: async () => JSON.stringify({ answer: 'This chat does not change the plan.' }),
+    });
+    expect(sent.action).toBe('rush');
+    expect(sent.answer).toMatch(/Rush sent for PO 1002266913/);
+    const asked = await explainBatchQuestion({ packet, question: 'What would move it up?', locale: 'en' });
+    expect(asked.action).toBeUndefined();
+    expect(asked.answer).toMatch(/does not change the plan/);
+  });
+
+  it('asks for a fail reason, then records the reason on the next turn', async () => {
+    const packet = packetFromGold(context, {}, '1002266913');
+    expect(failCommand('This order failed')).toBe(true);
+    expect(failCommand('Why did it fail?')).toBe(false);
+    const ask = await explainBatchQuestion({ packet, question: 'This order failed', locale: 'en' });
+    expect(ask.action).toBe('ask_fail_reason');
+    expect(ask.answer).toMatch(/fail reason/);
+    expect(ask.failedFor).toBeUndefined();
+    const named = await explainBatchQuestion({ packet, question: 'It failed for dent', locale: 'en' });
+    expect(named.action).toBe('qa_fail');
+    expect(named.failedFor).toBe('Dent');
+    const followUp = resolveFail('Discolored', [{ role: 'copilot', text: ask.answer }]);
+    expect(followUp).toEqual({ action: 'qa_fail', failedFor: 'Discolored' });
   });
 
   it('asks JEV which kind of question this is', async () => {

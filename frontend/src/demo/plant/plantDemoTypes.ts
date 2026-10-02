@@ -5,11 +5,15 @@ export type QueueRow = {
   species: string;
   kg: number;
   finish: string;
-  status: 'PLANNED' | 'COMPLETE' | 'HOLD';
+  /** Planned start from the schedule entry, when the plan has one. */
+  start?: string;
+  status: 'PLANNED' | 'COMPLETE' | 'HOLD' | 'PENDING';
   atRisk?: boolean;
   reasonShort?: string;
   /** Bedrock comment for this order from the planner run (planner-v2 plans only). */
   aiNote?: string;
+  /** Set when the plan tagged this order as a rush. Priority wins over a note. */
+  rush?: 'priority' | 'note';
   previousPosition?: number;
   /** Demo proxy for Syngenta open customer orders (ETL later). */
   customerOrderId?: string;
@@ -76,6 +80,8 @@ export type PlantIngestSapPriorityRequest = {
   po?: string;
   priority?: number;
   scheduledFinish?: string;
+  /** Copilot instruction. Marks the change as rush even when the rank does not drop. */
+  rush?: boolean;
 };
 
 /** Operator / Data API — LSV pass/fail log row (demo primary trigger for QA fail). */
@@ -114,4 +120,7 @@ export type PlantBatchExplainResponse = {
   answer: string;
   citations: string[];
   suggestedFollowUps?: string[];
+  /** rush posts a priority change. qa_fail posts the pass/fail log. ask_fail_reason only asks which reason. */
+  action?: 'rush' | 'qa_fail' | 'ask_fail_reason';
+  failedFor?: string;
 };

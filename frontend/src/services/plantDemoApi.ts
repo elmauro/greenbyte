@@ -165,6 +165,17 @@ async function postBatchExplain(
   return data;
 }
 
+/** Copilot rush. Priority 1, and rush so an order already at 1 still moves. */
+async function sendCopilotRush(locale: Locale, lineId: string | undefined, po: string) {
+  return postIngestSapPriorityChange(locale, lineId, { po, priority: 1, rush: true });
+}
+
+/** Copilot QA fail. The pass/fail log holds the order for this reason. */
+async function sendCopilotFail(locale: Locale, lineId: string | undefined, po: string, failedFor: string) {
+  const equipmentId = lineId === 'line-2' ? 'Line 2' : 'Line 1';
+  return postIngestPassFailLog(locale, lineId, { po, passFail: 'Fail', failedFor, equipmentId });
+}
+
 export const plantDemoApi = {
   getQueue,
   postIngestPassFailLog,
@@ -172,6 +183,8 @@ export const plantDemoApi = {
   postIngestSapQueueRefresh,
   postAccept,
   postBatchExplain,
+  sendCopilotRush,
+  sendCopilotFail,
   stageRawLine,
   planLine,
   /** @deprecated use connectionMode === 'bff' */

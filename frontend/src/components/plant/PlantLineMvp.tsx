@@ -39,14 +39,15 @@ export function PlantLineMvp() {
     loading,
     refreshing,
     busy,
+    demoAction,
+    demoActionError,
     acceptPlan,
+    resetDemo,
+    generatePlan,
+    reloadQueue,
     setManualOrder,
     loadError,
     planVersion,
-    demoAction,
-    demoActionError,
-    resetDemo,
-    generatePlan,
     mandatoryPlanReview,
     dismissMandatoryPlanReview,
   } = usePlantDemoQueue(locale, line.id);
@@ -64,6 +65,15 @@ export function PlantLineMvp() {
     (po: string) => {
       const params = new URLSearchParams(searchParams);
       params.set('section', 'scheduling');
+      params.set('po', po);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const focusCopilot = useCallback(
+    (po: string) => {
+      const params = new URLSearchParams(searchParams);
       params.set('po', po);
       setSearchParams(params, { replace: true });
     },
@@ -165,7 +175,11 @@ export function PlantLineMvp() {
             }}
             onAccept={() => void handleAccept()}
             onManualOrder={setManualOrder}
+            onQueueRefresh={async () => {
+              await reloadQueue();
+            }}
             onSelectOrder={selectOrder}
+            onCopilotPo={focusCopilot}
             explainPo={searchParams.get('po') ?? undefined}
             onOpenLine={(lineId) => {
               setSearchParams((prev) => {

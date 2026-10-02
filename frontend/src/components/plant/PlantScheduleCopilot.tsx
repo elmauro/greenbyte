@@ -17,6 +17,9 @@ type PlantCopilotChatDockProps = {
   lineId?: string;
   focusPo?: string;
   onFocusPo?: (po: string) => void;
+  onQueueRefresh?: () => void | Promise<void>;
+  /** Increments when a queue note asks the dock to open on focusPo. */
+  openToken?: number;
   /** Lift the dock above the mobile accept bar. Desktop stays in the viewport corner. */
   raised?: boolean;
 };
@@ -135,6 +138,8 @@ export function PlantCopilotChatDock({
   lineId,
   focusPo,
   onFocusPo,
+  onQueueRefresh,
+  openToken = 0,
   raised = false,
 }: PlantCopilotChatDockProps) {
   const { messages: m } = useLocale();
@@ -149,9 +154,15 @@ export function PlantCopilotChatDock({
   }
 
   useEffect(() => {
+    if (openToken > 0) persist(true);
+  }, [openToken]);
+
+  useEffect(() => {
     if (!open) return;
     function onPointerDown(event: MouseEvent) {
-      if (!dockRef.current?.contains(event.target as Node)) persist(false);
+      const target = event.target;
+      if (target instanceof Element && target.closest('[data-copilot-launcher]')) return;
+      if (!dockRef.current?.contains(target as Node)) persist(false);
     }
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
@@ -179,7 +190,14 @@ export function PlantCopilotChatDock({
               {focusPo ?? shell.selectRowHint}
             </p>
           </div>
-          <PlantCopilotThread queue={queue} lineId={lineId} focusPo={focusPo} onPoChange={onFocusPo} />
+          <PlantCopilotThread
+            queue={queue}
+            lineId={lineId}
+            focusPo={focusPo}
+            onPoChange={onFocusPo}
+            onQueueRefresh={onQueueRefresh}
+            focusToken={openToken}
+          />
         </section>
       )}
       <button

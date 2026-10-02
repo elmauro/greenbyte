@@ -4,6 +4,8 @@ describe('sap ingest body', () => {
   it('accepts a priority or a finish date on an existing PO', () => {
     expect(parsePriorityChange({ po: '1002266350', priority: 2 }).priority).toBe(2);
     expect(parsePriorityChange({ po: '1002266350', scheduledFinish: '2026-10-01 08:00' }).scheduledFinish).toBe('2026-10-01');
+    expect(parsePriorityChange({ po: '1002266350', priority: 1, rush: true }).rush).toBe(true);
+    expect(parsePriorityChange({ po: '1002266350', priority: 1 }).rush).toBe(false);
   });
 
   it('rejects an urgency with neither priority nor date', () => {

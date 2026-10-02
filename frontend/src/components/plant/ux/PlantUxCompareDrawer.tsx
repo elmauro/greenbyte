@@ -30,6 +30,7 @@ type PlantUxCompareDrawerProps = {
     statusAtRisk: string;
     statusComplete: string;
     statusHold: string;
+    statusPending: string;
   };
 };
 
@@ -59,6 +60,7 @@ export function PlantUxCompareDrawer({
   const crops = Array.from(new Set(picked.map(({ r }) => r.species))).join(' · ');
 
   function statusLabel(row: QueueRow) {
+    if (row.status === 'PENDING') return copy.statusPending;
     if (row.status === 'HOLD') return copy.statusHold;
     if (row.status === 'COMPLETE') return copy.statusComplete;
     if (row.atRisk) return copy.statusAtRisk;

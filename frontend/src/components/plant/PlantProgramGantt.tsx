@@ -59,18 +59,91 @@ function formatDay(ms: number, locale: Locale) {
   });
 }
 
-function dateScale(rows: QueueRow[], stepMs: number) {
-  const times = rows
-    .map((row) => parseFinish(row.finish))
-    .filter((value): value is number => value != null);
-  if (!times.length) return null;
-  const start = Math.floor(Math.min(...times) / stepMs) * stepMs;
-  const end = Math.max(Math.ceil(Math.max(...times) / stepMs) * stepMs, start + stepMs);
-  const ticks: { pct: number; at: number }[] = [];
-  for (let at = start; at <= end; at += stepMs) {
-    ticks.push({ at, pct: ((at - start) / (end - start)) * 100 });
+function rowWindow(row: QueueRow): { start: number; end: number } | null {
+  const end = parseFinish(row.finish);
+  if (end == null) return null;
+  const start = row.start ? parseFinish(row.start) : null;
+  if (start != null && start < end) return { start, end };
+  return { start: end, end };
+}
+
+const AXIS_LEAD_PX = 12;
+const AXIS_GAP_PX = 48;
+const AXIS_TAIL_PX = 180;
+const TICK_MIN_PX = 72;
+
+function pxPerStep(stepMs: number) {
+  if (stepMs >= 7 * DAY_MS) return 180;
+  if (stepMs >= DAY_MS) return 140;
+  if (stepMs >= 6 * HOUR_MS) return 96;
+  return 64;
+}
+
+type TimeAxis = {
+  width: number;
+  ticks: { x: number; at: number; segmentStart: boolean }[];
+  gaps: { x: number; ms: number }[];
+  x: (at: number) => number;
+};
+
+/**
+ * Pixel axis that starts at the first planned batch. Idle stretches longer than
+ * two zoom steps fold into a fixed-width break so later batches stay close.
+ */
+function timeAxis(rows: QueueRow[], stepMs: number): TimeAxis | null {
+  const windows = rows
+    .filter((row) => row.status !== 'HOLD')
+    .map(rowWindow)
+    .filter((value): value is { start: number; end: number } => value != null)
+    .sort((a, b) => a.start - b.start);
+  if (!windows.length) return null;
+  const pxPerMs = pxPerStep(stepMs) / stepMs;
+  const foldAfter = Math.max(2 * stepMs, 12 * HOUR_MS);
+  const busy: { start: number; end: number }[] = [];
+  for (const window of windows) {
+    const last = busy[busy.length - 1];
+    if (last && window.start - last.end <= foldAfter) last.end = Math.max(last.end, window.end);
+    else busy.push({ ...window });
   }
-  return { start, end, ticks, stepMs };
+  const segments: { start: number; end: number; x: number }[] = [];
+  const gaps: { x: number; ms: number }[] = [];
+  let cursor = AXIS_LEAD_PX;
+  busy.forEach((segment, index) => {
+    if (index > 0) {
+      gaps.push({ x: cursor, ms: segment.start - busy[index - 1].end });
+      cursor += AXIS_GAP_PX;
+    }
+    segments.push({ ...segment, x: cursor });
+    cursor += Math.max((segment.end - segment.start) * pxPerMs, 14);
+  });
+  const x = (at: number) => {
+    const segment = segments.find((item) => at <= item.end) ?? segments[segments.length - 1];
+    return segment.x + Math.max(0, at - segment.start) * pxPerMs;
+  };
+  const ticks: TimeAxis['ticks'] = [];
+  for (const segment of segments) {
+    const candidates = [segment.start];
+    for (let at = Math.ceil(segment.start / stepMs) * stepMs; at <= segment.end; at += stepMs) {
+      if (at > segment.start) candidates.push(at);
+    }
+    candidates.forEach((at, index) => {
+      const tickX = x(at);
+      const segmentStart = index === 0;
+      const previous = ticks[ticks.length - 1];
+      if (previous && tickX - previous.x < TICK_MIN_PX) {
+        if (!segmentStart || previous.segmentStart) return;
+        ticks.pop();
+      }
+      ticks.push({ x: tickX, at, segmentStart });
+    });
+  }
+  return { width: cursor + AXIS_TAIL_PX, ticks, gaps, x };
+}
+
+function formatGap(ms: number) {
+  const days = Math.round(ms / DAY_MS);
+  if (days >= 1) return `${days}d`;
+  return `${Math.max(1, Math.round(ms / HOUR_MS))}h`;
 }
 
 function formatTick(ms: number, stepMs: number, locale: Locale) {
@@ -90,6 +163,22 @@ function formatBarWhen(finish: string, stepMs: number, locale: Locale) {
   const hh = String(date.getUTCHours()).padStart(2, '0');
   const mm = String(date.getUTCMinutes()).padStart(2, '0');
   return `${formatDay(at, locale)} ${hh}:${mm}`;
+}
+
+function formatClock(ms: number) {
+  const date = new Date(ms);
+  const hh = String(date.getUTCHours()).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Start and finish when the plan has both. A finish-only row keeps the end label. */
+function formatWindow(row: QueueRow, stepMs: number, locale: Locale) {
+  const window = rowWindow(row);
+  if (!row.start || !window || window.start === window.end) return formatBarWhen(row.finish, stepMs, locale);
+  const sameDay = new Date(window.start).toISOString().slice(0, 10) === new Date(window.end).toISOString().slice(0, 10);
+  if (sameDay) return `${formatDay(window.start, locale)} ${formatClock(window.start)} – ${formatClock(window.end)}`;
+  return `${formatDay(window.start, locale)} ${formatClock(window.start)} – ${formatDay(window.end, locale)} ${formatClock(window.end)}`;
 }
 
 function moveNote(
@@ -129,15 +218,15 @@ function buildApproval(rows: QueueRow[], showMoves: boolean) {
   const runnable = indexed.filter(
     (item) => item.row.status !== 'HOLD' && parseFinish(item.row.finish) != null,
   );
-  const times = runnable.map((item) => parseFinish(item.row.finish) as number);
-  const startDay = times.length
+  const windows = runnable.map((item) => rowWindow(item.row)).filter((value): value is { start: number; end: number } => value != null);
+  const startDay = windows.length
     ? Date.UTC(
-        new Date(Math.min(...times)).getUTCFullYear(),
-        new Date(Math.min(...times)).getUTCMonth(),
-        new Date(Math.min(...times)).getUTCDate(),
+        new Date(Math.min(...windows.map((window) => window.start))).getUTCFullYear(),
+        new Date(Math.min(...windows.map((window) => window.start))).getUTCMonth(),
+        new Date(Math.min(...windows.map((window) => window.start))).getUTCDate(),
       )
     : Date.UTC(2026, 8, 29);
-  const endStamp = times.length ? Math.max(...times) : startDay;
+  const endStamp = windows.length ? Math.max(...windows.map((window) => window.end)) : startDay;
   const endDay = Date.UTC(
     new Date(endStamp).getUTCFullYear(),
     new Date(endStamp).getUTCMonth(),
@@ -146,38 +235,40 @@ function buildApproval(rows: QueueRow[], showMoves: boolean) {
   const dayCount = Math.max(1, Math.round((endDay - startDay) / DAY_MS) + 1);
   const days = Array.from({ length: dayCount }, (_, index) => startDay + index * DAY_MS);
   const span = dayCount * DAY_MS;
-  const barDays = 1.5;
   const lanes: number[] = [];
   const placed = [...runnable]
-    .sort((a, b) => (parseFinish(a.row.finish) as number) - (parseFinish(b.row.finish) as number))
+    .sort((a, b) => (rowWindow(a.row)?.start ?? 0) - (rowWindow(b.row)?.start ?? 0))
     .map((item) => {
-      const at = parseFinish(item.row.finish) as number;
-      const start = at - barDays * DAY_MS * 0.45;
-      const end = at + barDays * DAY_MS * 0.55;
-      let lane = lanes.findIndex((laneEnd) => laneEnd <= start);
+      const window = rowWindow(item.row) as { start: number; end: number };
+      let lane = lanes.findIndex((laneEnd) => laneEnd <= window.start);
       if (lane < 0) {
         lane = lanes.length;
-        lanes.push(end);
+        lanes.push(window.end);
       } else {
-        lanes[lane] = end;
+        lanes[lane] = window.end;
       }
       const previous = item.row.previousPosition;
       const current = item.index + 1;
       const kind = showMoves && previous != null && previous > current ? 'up' : 'quiet';
-      const left = ((at - startDay) / span) * 100;
-      return { ...item, at, lane, kind, left: Math.min(Math.max(left, 0), 92) };
+      const left = ((window.start - startDay) / span) * 100;
+      const width = Math.max(((window.end - window.start) / span) * 100, 2);
+      return {
+        ...item,
+        at: window.end,
+        lane,
+        kind,
+        left: Math.min(Math.max(left, 0), 98),
+        width: Math.min(width, 100 - Math.min(Math.max(left, 0), 98)),
+      };
     });
   return { days, held, placed, laneCount: Math.max(lanes.length, 1) };
 }
 
-function barPlacement(finish: string, scale: NonNullable<ReturnType<typeof dateScale>>) {
-  const at = parseFinish(finish);
-  if (at == null) return { left: 2, width: 16 };
-  const span = scale.end - scale.start;
-  const width = Math.min(28, Math.max(3.5, (scale.stepMs / span) * 100 * 0.9));
-  const center = ((at - scale.start) / span) * 100;
-  const left = Math.min(Math.max(center - width / 2, 0), 100 - width);
-  return { left, width };
+function barPlacement(row: QueueRow, axis: TimeAxis | null) {
+  const window = rowWindow(row);
+  if (!axis || !window || row.status === 'HOLD') return { left: AXIS_LEAD_PX, width: 72 };
+  const left = axis.x(window.start);
+  return { left, width: Math.max(axis.x(window.end) - left, 12) };
 }
 
 export function PlantProgramGantt({
@@ -209,9 +300,9 @@ export function PlantProgramGantt({
   const dragRef = useRef<{ from: number; over: number } | null>(null);
   const listRef = useRef<HTMLElement | null>(null);
   const zoom = ZOOM_STEPS[zoomIndex];
-  const scale = dateScale(rows, zoom.ms);
-  const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
-  const chartMinPx = Math.max(640, (scale?.ticks.length ?? 1) * tickPx);
+  const axis = timeAxis(rows, zoom.ms);
+  const chartPx = axis?.width ?? 480;
+  const columns = { gridTemplateColumns: `14rem ${chartPx}px` };
 
   useEffect(() => {
     if (!expanded || !lockExpandedClose) return;
@@ -343,6 +434,11 @@ export function PlantProgramGantt({
         <p className="mt-0.5 text-[9px] leading-snug text-gray-600">
           {reason ?? `${row.species === 'CORN' ? '🌽' : '🌿'} ${meta.client}`}
         </p>
+        {!isHold && (
+          <p className="mt-0.5 text-[10px] font-medium tabular-nums text-gray-800">
+            {formatWindow(row, HOUR_MS, locale)}
+          </p>
+        )}
       </>
     );
   }
@@ -462,21 +558,32 @@ export function PlantProgramGantt({
           role="region"
           aria-label={s.ganttScrollRegionVertical}
         >
-          <div style={{ minWidth: chartMinPx }}>
-            <div className="sticky top-0 z-10 mb-1 grid grid-cols-[14rem_1fr] gap-2 bg-white pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
-              <span />
-              <div className="relative h-4">
-                {scale?.ticks.map((tick) => (
+          <div className="w-max min-w-full">
+            <div
+              className="sticky top-0 z-20 mb-1 grid gap-2 bg-white text-[10px] font-semibold uppercase tracking-wide text-gray-500 shadow-[0_1px_0_0_rgba(0,0,0,0.06)]"
+              style={columns}
+            >
+              <span className="sticky left-0 z-30 bg-white" />
+              <div className="relative h-6">
+                {axis?.ticks.map((tick) => (
                   <span
                     key={tick.at}
-                    className="absolute top-0 whitespace-nowrap"
-                    style={{
-                      left: `${tick.pct}%`,
-                      transform:
-                        tick.pct < 8 ? 'none' : tick.pct > 92 ? 'translateX(-100%)' : 'translateX(-50%)',
-                    }}
+                    className="absolute top-0 flex h-6 items-center whitespace-nowrap border-l border-gray-200 pl-1"
+                    style={{ left: tick.x }}
                   >
-                    {formatTick(tick.at, zoom.ms, locale)}
+                    {tick.segmentStart && zoom.ms < DAY_MS
+                      ? `${formatDay(tick.at, locale)} ${formatClock(tick.at)}`
+                      : formatTick(tick.at, zoom.ms, locale)}
+                  </span>
+                ))}
+                {axis?.gaps.map((gap) => (
+                  <span
+                    key={gap.x}
+                    className="absolute top-0 flex h-6 items-center justify-center whitespace-nowrap text-[9px] normal-case text-gray-400"
+                    style={{ left: gap.x, width: AXIS_GAP_PX }}
+                    title={s.ganttIdleGap.replace('{d}', formatGap(gap.ms))}
+                  >
+                    ⋯ {formatGap(gap.ms)}
                   </span>
                 ))}
               </div>
@@ -492,12 +599,18 @@ export function PlantProgramGantt({
                 const isRush = row.po === rushPo;
                 const isHold = row.status === 'HOLD';
                 const tone = barTone(row, index);
-                const place = scale ? barPlacement(row.finish, scale) : { left: 2, width: 16 };
+                const place = barPlacement(row, axis);
                 const color = toneTrack(tone);
                 const note = showMoves ? moveNote(row, index, s) : null;
                 const barEnd = place.left + place.width;
-                const roomRight = 100 - barEnd;
-                const noteOnLeft = roomRight < 22;
+                const rowTint = isHold ? 'bg-red-50' : isRush ? 'bg-orange-50' : 'bg-white';
+                const barLabel = isHold
+                  ? s.holdShort
+                  : place.width >= 170
+                    ? formatWindow(row, HOUR_MS, locale)
+                    : place.width >= 84 && row.start
+                      ? `${formatClock(rowWindow(row)?.start ?? 0)} – ${formatClock(rowWindow(row)?.end ?? 0)}`
+                      : null;
 
                 return (
                   <li
@@ -508,11 +621,13 @@ export function PlantProgramGantt({
                     onKeyDown={(event) => selectRowFromKey(row.po, event)}
                     tabIndex={onSelectRow ? 0 : undefined}
                     aria-selected={onSelectRow ? selectedPo === row.po : undefined}
-                    className={`grid grid-cols-[14rem_minmax(0,1fr)] items-center gap-2 py-2 ${
-                      isHold ? 'bg-red-50/80' : isRush ? 'bg-orange-50/80' : ''
-                    } ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
+                    style={columns}
+                    className={`grid items-center gap-2 py-2 ${rowTint} ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
                   >
-                    <div className="min-w-0 px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
+                    <div
+                      className={`sticky left-0 z-10 min-w-0 self-stretch px-1 ${rowTint}`}
+                      title={s.queuePosition.replace('{n}', String(index + 1))}
+                    >
                       {canDragRow(index) && (
                         <span className="mr-1 text-gray-400" aria-hidden="true" title={s.adjustDrag}>
                           ⋮⋮
@@ -527,29 +642,32 @@ export function PlantProgramGantt({
                         labels={s}
                       />
                     </div>
-                    <div className="relative h-11 min-w-0">
+                    <div className="relative h-11">
+                      {axis?.gaps.map((gap) => (
+                        <span
+                          key={gap.x}
+                          aria-hidden="true"
+                          className="absolute inset-y-0 border-x border-dashed border-gray-200"
+                          style={{
+                            left: gap.x,
+                            width: AXIS_GAP_PX,
+                            backgroundImage:
+                              'repeating-linear-gradient(-45deg, rgba(243,244,246,0.9), rgba(243,244,246,0.9) 4px, transparent 4px, transparent 8px)',
+                          }}
+                        />
+                      ))}
                       <div
-                        className={`absolute top-1.5 flex h-8 items-center rounded px-2 text-[10px] font-medium shadow ${color}`}
-                        style={{ left: `${place.left}%`, width: `${place.width}%` }}
-                        title={isHold ? s.holdShort : row.finish}
+                        className={`absolute top-1.5 flex h-8 items-center overflow-hidden whitespace-nowrap rounded px-2 text-[10px] font-medium shadow ${color}`}
+                        style={{ left: place.left, width: place.width }}
+                        title={isHold ? s.holdShort : formatWindow(row, HOUR_MS, locale)}
                       >
                         {isRush && !isHold && <span className="mr-1">✦</span>}
-                        {isHold ? s.holdShort : formatBarWhen(row.finish, zoom.ms, locale)}
+                        {barLabel}
                       </div>
                       {note && (
                         <span
-                          className="absolute top-1.5 flex h-8 items-center truncate whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
-                          style={
-                            noteOnLeft
-                              ? {
-                                  right: `calc(${100 - place.left}% + 8px)`,
-                                  maxWidth: `calc(${Math.max(place.left - 4, 12)}% - 8px)`,
-                                }
-                              : {
-                                  left: `calc(${barEnd}% + 8px)`,
-                                  maxWidth: `calc(${Math.max(roomRight - 2, 12)}% - 12px)`,
-                                }
-                          }
+                          className="absolute top-1.5 flex h-8 max-w-[11rem] items-center truncate whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
+                          style={{ left: barEnd + 8 }}
                         >
                           {note}
                         </span>
@@ -598,7 +716,7 @@ export function PlantProgramGantt({
                   <span className={`mb-2 h-1.5 w-10 rounded-full ${toneFill(tone)}`} />
                   {renderRowMeta(row, index, isRush, isHold)}
                   <p className="mt-auto pt-2 text-[11px] font-medium text-gray-700">
-                    {isHold ? s.holdShort : row.finish}
+                    {isHold ? s.holdShort : formatWindow(row, DAY_MS, locale)}
                   </p>
                   {note && (
                     <p className="mt-1 rounded-md border border-dashed border-gray-300 bg-white/80 px-2 py-1 text-[11px] leading-snug text-gray-700">
@@ -677,8 +795,8 @@ function ApprovalTimeline({
           {model.placed.map((bar) => (
             <div
               key={bar.row.po}
-              className="absolute flex max-w-[16rem] items-center"
-              style={{ top: 8 + bar.lane * 52, left: `${bar.left}%` }}
+              className="absolute flex min-w-0 items-center"
+              style={{ top: 8 + bar.lane * 52, left: `${bar.left}%`, width: `${bar.width}%` }}
             >
               <div
                 role={onSelectRow ? 'button' : undefined}
@@ -691,7 +809,7 @@ function ApprovalTimeline({
                   event.preventDefault();
                   onSelectRow(bar.row.po);
                 }}
-                className={`truncate rounded-lg px-2.5 py-2 text-[11px] font-semibold shadow-sm ${
+                className={`w-full truncate rounded-lg px-2.5 py-2 text-[11px] font-semibold shadow-sm ${
                   onSelectRow ? 'cursor-pointer' : ''
                 } ${
                   selectedPo === bar.row.po
@@ -700,7 +818,7 @@ function ApprovalTimeline({
                       ? 'bg-brand-green text-white ring-2 ring-green-800'
                       : 'bg-indigo-100 text-indigo-950'
                 }`}
-                title={bar.row.aiNote ?? bar.row.reasonShort ?? bar.row.finish}
+                title={formatWindow(bar.row, HOUR_MS, locale)}
               >
                 {bar.row.po} · {bar.row.species}
               </div>

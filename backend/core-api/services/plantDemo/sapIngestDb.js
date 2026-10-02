@@ -1,10 +1,12 @@
 import { PLANT_DEMO_LINE_ID } from './constants.js';
 import { fetchOpenQueue, queryOpenQueue, withOpenQueueClient } from './openQueueDb.js';
+import { pendingQueue } from './openQueueMap.js';
 import {
   attachPlanExplanation,
   localeOf,
   normalizePlanQueue,
   queueResponseFromPlan,
+  rushKind,
   titleCaseToken,
 } from './planExplanation.js';
 import { plannerExplanationForPoll, semanticPlannerEnabled, withSemanticPlan } from './semanticReplan.js';
@@ -72,6 +74,7 @@ export function parsePriorityChange(body) {
     po: poOf(body.po),
     priority,
     scheduledFinish,
+    rush: body.rush === true,
   };
 }
 
@@ -178,6 +181,26 @@ async function reasonHints(planId) {
   return { failedFor, priority };
 }
 
+/** Rush tags and planned starts for the plan the screen is showing. */
+async function planMarks(schedulePlanId) {
+  const { rows } = await queryOpenQueue(
+    `SELECT q.po_number, q.reasons,
+            to_char(q.planned_start_at AT TIME ZONE gold.cfg('plant_time_zone'), 'YYYY-MM-DD HH24:MI') AS planned_start
+     FROM gold.v_plan_queue q
+     WHERE q.schedule_plan_id = $1`,
+    [schedulePlanId],
+  );
+  const rushByPo = {};
+  const startByPo = {};
+  for (const row of rows) {
+    const po = String(row.po_number);
+    const kind = rushKind(row.reasons);
+    if (kind) rushByPo[po] = kind;
+    if (row.planned_start) startByPo[po] = String(row.planned_start);
+  }
+  return { rushByPo, startByPo };
+}
+
 /**
  * Scheduler poll. The latest plan (proposed or accepted) is the queue on
  * screen, in that array order. A proposed plan also returns the simulated
@@ -198,18 +221,19 @@ export async function fetchSchedulerQueue(lineId, locale) {
     ]);
     const plan = rows[0]?.result;
     if (plan) {
+      const { rushByPo, startByPo } = await planMarks(row.schedule_plan_id);
       if (row.status === 'PROPOSED' && row.created_by === 'planner-v2') {
         const { explanation, eventType, poNotes } = await plannerExplanationForPoll(
           queryOpenQueue,
           row.schedule_plan_id,
           plan,
         );
-        return queueResponseFromPlan({ ...plan, eventType }, explanation, poNotes);
+        return queueResponseFromPlan({ ...plan, eventType }, explanation, poNotes, rushByPo, startByPo);
       }
       if (row.status === 'PROPOSED') {
         const hints = await reasonHints(row.schedule_plan_id);
         const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
-        return queueResponseFromPlan(explained, explained.explanation ?? null);
+        return queueResponseFromPlan(explained, explained.explanation ?? null, {}, rushByPo, startByPo);
       }
       const version = Number(plan.planVersion) || Number(row.plan_version) || 1;
       const poNotes = row.created_by === 'planner-v2'
@@ -217,7 +241,7 @@ export async function fetchSchedulerQueue(lineId, locale) {
         : {};
       return {
         lineId: plan.lineId ?? lineId,
-        queue: normalizePlanQueue(plan.queue, poNotes),
+        queue: normalizePlanQueue(plan.queue, poNotes, rushByPo, startByPo),
         planVersion: version,
         lastEvent: null,
         acceptedPlanVersion: version,
@@ -227,7 +251,7 @@ export async function fetchSchedulerQueue(lineId, locale) {
     }
   }
 
-  const queue = await fetchOpenQueue(lineId);
+  const queue = pendingQueue(await fetchOpenQueue(lineId));
   const version = row?.plan_version != null ? Number(row.plan_version) : 1;
   return {
     lineId,
@@ -304,6 +328,35 @@ export async function acceptProposedPlan(body) {
   }
 }
 
+/**
+ * A copilot rush is an instruction, not only a lower rank. Priority 1 on an order that is
+ * already 1 would otherwise be stored as a normal change and the plan would not move.
+ */
+async function flagLatestChangeAsRush(po) {
+  await queryOpenQueue(
+    `WITH latest AS (
+       SELECT c.ingest_event_id
+       FROM silver.process_order_change c
+       JOIN silver.process_order po ON po.process_order_id = c.process_order_id
+       WHERE po.po_number = $1
+       ORDER BY c.ingest_event_id DESC
+       LIMIT 1
+     ),
+     marked AS (
+       UPDATE silver.process_order_change c
+       SET is_rush = true
+       FROM latest
+       WHERE c.ingest_event_id = latest.ingest_event_id
+       RETURNING c.ingest_event_id
+     )
+     UPDATE raw.ingest_event e
+     SET payload = e.payload || jsonb_build_object('rush', true)
+     FROM marked
+     WHERE e.ingest_event_id = marked.ingest_event_id`,
+    [po],
+  );
+}
+
 /** Urgency on a lot already in the open queue. Writes raw.ingest_event and silver.process_order_change, then replans. */
 export async function recordPriorityChange(body) {
   const parsed = parsePriorityChange(body);
@@ -317,11 +370,12 @@ export async function recordPriorityChange(body) {
   } catch (err) {
     throw mapPgError(err);
   }
+  if (parsed.rush) await flagLatestChangeAsRush(parsed.po);
   return withSemanticPlan(
     queryOpenQueue,
     {
       lineId: parsed.lineId,
-      kind: result?.eventType === 'rush' ? 'rush' : 'priority_change',
+      kind: parsed.rush || result?.eventType === 'rush' ? 'rush' : 'priority_change',
       po: parsed.po,
       shipBy: parsed.scheduledFinish,
     },
