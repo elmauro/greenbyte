@@ -7,6 +7,7 @@ import {
   queueResponseFromPlan,
   titleCaseToken,
 } from './planExplanation.js';
+import { plannerExplanationForPoll, semanticPlannerEnabled, withSemanticPlan } from './semanticReplan.js';
 
 export class SapIngestError extends Error {
   constructor(status, message) {
@@ -184,7 +185,7 @@ async function reasonHints(planId) {
  */
 export async function fetchSchedulerQueue(lineId, locale) {
   const latest = await queryOpenQueue(
-    `SELECT sp.schedule_plan_id, sp.status, sp.plan_version
+    `SELECT sp.schedule_plan_id, sp.status, sp.plan_version, sp.created_by
      FROM silver.work_center wc
      LEFT JOIN gold.v_latest_plan sp ON sp.work_center_id = wc.work_center_id
      WHERE wc.demo_line_id = $1`,
@@ -197,6 +198,14 @@ export async function fetchSchedulerQueue(lineId, locale) {
     ]);
     const plan = rows[0]?.result;
     if (plan) {
+      if (row.status === 'PROPOSED' && row.created_by === 'planner-v2') {
+        const { explanation, eventType } = await plannerExplanationForPoll(
+          queryOpenQueue,
+          row.schedule_plan_id,
+          plan,
+        );
+        return queueResponseFromPlan({ ...plan, eventType }, explanation);
+      }
       if (row.status === 'PROPOSED') {
         const hints = await reasonHints(row.schedule_plan_id);
         const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
@@ -231,19 +240,30 @@ export async function fetchSchedulerQueue(lineId, locale) {
 /** QA fail on a lot already in process. Writes raw.ingest_event and silver.quality_test, then replans. */
 export async function recordPassFail(body) {
   const parsed = parsePassFail(body);
+  const context = { locale: localeOf(body.locale), focusPo: parsed.po, failedFor: parsed.failedFor };
+  let result;
   try {
     const { rows } = await queryOpenQueue(
       'SELECT gold.ingest_pass_fail($1, $2, $3, $4, $5, NULL, CURRENT_USER) AS result',
       [parsed.lineId, parsed.po, parsed.passFail, parsed.failedFor, parsed.equipmentId],
     );
-    return explainOrPlan(rows[0].result, {
-      locale: localeOf(body.locale),
-      focusPo: parsed.po,
-      failedFor: parsed.failedFor,
-    });
+    result = rows[0].result;
   } catch (err) {
-    throw mapPgError(err);
+    const mapped = mapPgError(err);
+    if (mapped instanceof SapIngestError && mapped.status === 404 && semanticPlannerEnabled()) {
+      return withSemanticPlan(
+        queryOpenQueue,
+        { lineId: parsed.lineId, kind: 'qa_fail_finished', po: parsed.po, failedFor: parsed.failedFor },
+        () => { throw mapped; },
+      );
+    }
+    throw mapped;
   }
+  return withSemanticPlan(
+    queryOpenQueue,
+    { lineId: parsed.lineId, kind: 'qa_fail', po: parsed.po, failedFor: parsed.failedFor },
+    () => explainOrPlan(result, context),
+  );
 }
 
 /**
@@ -284,20 +304,31 @@ export async function acceptProposedPlan(body) {
 /** Urgency on a lot already in the open queue. Writes raw.ingest_event and silver.process_order_change, then replans. */
 export async function recordPriorityChange(body) {
   const parsed = parsePriorityChange(body);
+  let result;
   try {
     const { rows } = await queryOpenQueue(
       'SELECT gold.ingest_sap_priority_change($1, $2, $3, $4) AS result',
       [parsed.lineId, parsed.po, parsed.priority, parsed.scheduledFinish],
     );
-    return explainOrPlan(rows[0].result, {
+    result = rows[0].result;
+  } catch (err) {
+    throw mapPgError(err);
+  }
+  return withSemanticPlan(
+    queryOpenQueue,
+    {
+      lineId: parsed.lineId,
+      kind: result?.eventType === 'rush' ? 'rush' : 'priority_change',
+      po: parsed.po,
+      shipBy: parsed.scheduledFinish,
+    },
+    () => explainOrPlan(result, {
       locale: localeOf(body.locale),
       focusPo: parsed.po,
       priority: parsed.priority,
       scheduledFinish: parsed.scheduledFinish,
-    });
-  } catch (err) {
-    throw mapPgError(err);
-  }
+    }),
+  );
 }
 
 /**
@@ -412,15 +443,19 @@ export async function insertCoispiPo(body) {
       ]);
 
       await client.query('COMMIT');
-      return explainOrPlan(response.rows[0].result, {
-        locale: localeOf(body.locale),
-        focusPo: parsed.po,
-        priority: parsed.priority,
-        scheduledFinish: parsed.scheduledFinish,
-      });
+      return response.rows[0].result;
     } catch (err) {
       await client.query('ROLLBACK');
       throw mapPgError(err);
     }
-  });
+  }).then((result) => withSemanticPlan(
+    queryOpenQueue,
+    { lineId: parsed.lineId, kind: 'queue_refresh', po: parsed.po },
+    () => explainOrPlan(result, {
+      locale: localeOf(body.locale),
+      focusPo: parsed.po,
+      priority: parsed.priority,
+      scheduledFinish: parsed.scheduledFinish,
+    }),
+  ));
 }

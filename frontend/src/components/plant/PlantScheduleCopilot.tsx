@@ -14,6 +14,7 @@ const CHAT_OPEN_KEY = 'greenbyte-schedule-copilot-chat-open-v1';
 
 type PlantCopilotChatDockProps = {
   queue: QueueRow[];
+  lineId?: string;
   focusPo?: string;
   onFocusPo?: (po: string) => void;
   /** Lift the dock above the mobile accept bar. Desktop stays in the viewport corner. */
@@ -131,6 +132,7 @@ function storeChatOpen(open: boolean) {
 /** Question chat for the selected order, docked at the bottom-right of the page. */
 export function PlantCopilotChatDock({
   queue,
+  lineId,
   focusPo,
   onFocusPo,
   raised = false,
@@ -177,7 +179,7 @@ export function PlantCopilotChatDock({
               {focusPo ?? shell.selectRowHint}
             </p>
           </div>
-          <PlantCopilotThread queue={queue} focusPo={focusPo} onPoChange={onFocusPo} />
+          <PlantCopilotThread queue={queue} lineId={lineId} focusPo={focusPo} onPoChange={onFocusPo} />
         </section>
       )}
       <button

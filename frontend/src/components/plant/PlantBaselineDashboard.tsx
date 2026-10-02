@@ -855,7 +855,7 @@ export function PlantBaselineDashboard({
         );
       }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded focusPo={explainPo} />;
+        return <PlantBatchExplainChat queue={queue} embedded lineId={selectedLineId} focusPo={explainPo} />;
     }
   }
 
@@ -1203,6 +1203,7 @@ export function PlantBaselineDashboard({
       {isUx && !compact && schedulingLayout === 'full' && !staticPreview && !timelineOpen && (
         <PlantCopilotChatDock
           queue={queue}
+          lineId={selectedLineId}
           focusPo={explainPo ?? eventHighlightPo}
           onFocusPo={revealScheduleOrder}
           raised={Boolean(eventPendingReview && onAccept)}

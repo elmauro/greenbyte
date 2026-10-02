@@ -137,12 +137,15 @@ async function postBatchExplain(
   po: string,
   question: string,
   locale: Locale,
+  options: { lineId?: string; history?: { role: 'user' | 'copilot'; text: string }[] } = {},
 ): Promise<PlantBatchExplainResponse> {
   if (!useHttp) return plantDemoServer.explainBatch(po, question, locale);
   const { data } = await axiosApp.post<PlantBatchExplainResponse>(`/demo/plant/batches/explain`, {
     po,
     question,
     locale,
+    lineId: options.lineId,
+    history: options.history?.slice(-4),
   });
   return data;
 }

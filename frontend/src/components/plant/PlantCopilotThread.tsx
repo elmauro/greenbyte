@@ -15,6 +15,7 @@ type CopilotTurn = {
 
 type PlantCopilotThreadProps = {
   queue: QueueRow[];
+  lineId?: string;
   focusPo?: string;
   onPoChange?: (po: string) => void;
 };
@@ -59,7 +60,7 @@ function plainText(value: string) {
 }
 
 /** Chat for one production order. The thread is kept for the browser session. */
-export function PlantCopilotThread({ queue, focusPo, onPoChange }: PlantCopilotThreadProps) {
+export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: PlantCopilotThreadProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
   const shell = m.plantMvp.scheduleShell;
@@ -103,11 +104,12 @@ export function PlantCopilotThread({ queue, focusPo, onPoChange }: PlantCopilotT
     const asked = (preset ?? question).trim();
     const order = po;
     if (!order || !asked || busy) return;
+    const history = (threads[order] ?? []).slice(-4).map((turn) => ({ role: turn.role, text: turn.text }));
     remember(order, { role: 'user', text: asked });
     if (!preset) setQuestion('');
     setBusy(true);
     try {
-      const res = await plantDemoApi.postBatchExplain(order, asked, locale);
+      const res = await plantDemoApi.postBatchExplain(order, asked, locale, { lineId, history });
       remember(order, {
         role: 'copilot',
         text: plainText(res.answer),
