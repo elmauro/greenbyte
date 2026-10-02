@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DemoPageBody, DemoPageIntro } from '../layout/DemoPageIntro';
+import { DemoPageBody } from '../layout/DemoPageIntro';
 import {
   appendPlantUxApprovalHistory,
   readPlantUxApprovalHistory,
@@ -23,7 +23,6 @@ function parseSection(raw: string | null): PlantNavSection {
 export function PlantLineUx() {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp;
-  const uxPage = copy.uxCompare;
   const session = useDemoSession();
   const [searchParams, setSearchParams] = useSearchParams();
   const section = parseSection(searchParams.get('section'));
@@ -78,8 +77,6 @@ export function PlantLineUx() {
 
   return (
     <div className="pb-24">
-      <DemoPageIntro eyebrow={uxPage.badge} title={uxPage.title} subtitle={uxPage.subtitle} />
-
       <DemoPageBody>
         {loading ? (
           <p className="text-sm text-gray-500">{copy.loading}</p>

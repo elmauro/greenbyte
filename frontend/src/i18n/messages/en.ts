@@ -3,7 +3,6 @@ export const en = {
     tagline: 'AgTech innovation · Partnering with Syngenta',
     domain: 'greenbyte-ag.com',
     brandSubtitle: 'Intelligent agriculture',
-    brandMotto: 'SEED. PLAN. GROW.',
     demoSignIn: 'Demo sign in',
     demoSignOut: 'Sign out',
     demoSignedInAs: '{user}',
@@ -317,10 +316,6 @@ export const en = {
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
     uxCompare: {
-      badge: 'UX preview',
-      title: 'Pasco conditioning',
-      subtitle:
-        'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
       previewLink: 'Try Demo',
       signedInAs: 'Signed in as {user}',
       signOut: 'Sign out',
@@ -363,6 +358,9 @@ export const en = {
       askBtn: 'Ask about an order…',
       helpTitle: 'Help',
       helpClose: 'Close',
+      helpIntroTitle: 'Pasco conditioning',
+      helpIntroBody:
+        'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
       glossaryTitle: 'Glossary',
       journeysTitle: 'Typical flows',
       timelineTitle: 'Reading the timeline',

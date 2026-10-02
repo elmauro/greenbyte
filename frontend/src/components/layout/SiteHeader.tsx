@@ -68,13 +68,7 @@ export function SiteHeader() {
           </span>
           <div className="leading-tight">
             <span className="block text-lg font-semibold text-brand-blue">GreenByte</span>
-            <span className="hidden text-xs text-gray-500 sm:block">
-              {m.header.brandSubtitle}
-              <span className="mx-1.5 text-gray-300" aria-hidden>
-                ·
-              </span>
-              <span className="font-medium tracking-wide text-gray-600">{m.header.brandMotto}</span>
-            </span>
+            <span className="hidden text-xs text-gray-500 sm:block">{m.header.brandSubtitle}</span>
           </div>
         </Link>
 

@@ -11,9 +11,11 @@ type PlantHelpDrawerProps = {
   open: boolean;
   onClose: () => void;
   locale: Locale;
-  copy: {
+    copy: {
     title: string;
     close: string;
+    introTitle: string;
+    introBody: string;
     glossaryTitle: string;
     journeysTitle: string;
     timelineTitle: string;
@@ -44,6 +46,10 @@ export function PlantHelpDrawer({ open, onClose, locale, copy }: PlantHelpDrawer
       locale={locale}
     >
       <div className="space-y-6 p-4 text-sm">
+          <section>
+            <h3 className="font-semibold text-gray-900">{copy.introTitle}</h3>
+            <p className="mt-2 leading-relaxed text-gray-600">{copy.introBody}</p>
+          </section>
           <section>
             <h3 className="font-semibold text-brand-green-dark">{copy.timelineTitle}</h3>
             <ul className="mt-2 space-y-2">
