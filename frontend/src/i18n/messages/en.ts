@@ -77,7 +77,7 @@ export const en = {
     tourInjectNoteQa:
       'Picture after POST /demo/plant/ingest/pass-fail-log — HOLD + replan. Demo BFF/MSW example PO 1001884747 (Line 1, Dent).',
     tourSapRefreshHint:
-      'Surprise batch: POST /demo/plant/ingest/sap-queue-refresh inserts a new PO and replans that line — map: /demo/plant/flow?step=03c',
+      'Surprise batch: POST /demo/plant/ingest/sap-queue-refresh inserts a new PO and replans that line — map: /demo/how-it-works?section=api&step=03c',
     steps: [
       {
         title: '1. The normal queue',
@@ -85,14 +85,14 @@ export const en = {
           'The scheduler picks a line. Only lines with a demo_line_id are in the list: Line 1 (Line 1 Schedule) and Line 2 (Line 2 Schedule).',
         body:
           'GET /demo/plant/lines/{lineId}/queue reads gold.v_open_queue — active, non-complete orders for that line. The UX route adds panel, queue, and scheduling tabs.',
-        highlight: 'Live: /demo/plant/ux · Map: /demo/plant/flow?step=01',
+        highlight: 'Live: /demo/plant/ux · Map: /demo/how-it-works?section=api&step=01',
       },
       {
         title: '2. A job that cannot wait much longer',
         plainLine: 'One order has a due date soon — if it keeps falling down the list, a grower may not get seed on time.',
         body:
           'The app highlights batches tied to near-term commitments. In UX, use queue filters (At risk, species) and compare two POs from the ··· menu.',
-        highlight: 'Example: sweet-corn finish 2026-07-06 · Map: /demo/plant/flow?step=02',
+        highlight: 'Example: sweet-corn finish 2026-07-06 · Map: /demo/how-it-works?section=api&step=02',
       },
       {
         title: '3. Rush — priority on an existing PO',
@@ -100,7 +100,7 @@ export const en = {
           'An operator posts a priority or finish change for a lot already on the line. The scheduler UI has no rush button.',
         body:
           'The live call writes that change and builds a proposed plan. The preview jumps to Scheduling with the Accept bar — same as polling GET queue after ingest.',
-        highlight: 'UI ↔ API: /demo/plant/flow?step=03 · COISPI refresh: step=03c',
+        highlight: 'UI ↔ API: /demo/how-it-works?section=api&step=03 · COISPI refresh: step=03c',
       },
       {
         title: '4. QA fail — pass/fail log',
@@ -108,21 +108,21 @@ export const en = {
           'A Fail row on a lot already in process — PO, line (Equipment ID), and reason (Dent, Discolored, …) — puts that batch on hold and re-sequences the line.',
         body:
           'The live call stores the test and builds a proposed plan. Preview shows HOLD in Queue, then Scheduling with copilot copy. Example PO 1001884747 on Line 1 (see flow step 03b).',
-        highlight: 'Map: /demo/plant/flow?step=03b',
+        highlight: 'Map: /demo/how-it-works?section=api&step=03b',
       },
       {
         title: '5. Scheduling + copilot',
         plainLine: 'After a replan, the scheduler sees the proposed order, a reason on each batch, and the simulated copilot summary.',
         body:
           'GET queue returns the proposed plan while it waits for acceptance. UX shows the Gantt, copilot dock, and help journeys — BFF supplies the summary, not a live agent call from the browser.',
-        highlight: '/demo/plant/flow?step=04 · Live scheduling: /demo/plant/ux?section=scheduling',
+        highlight: '/demo/how-it-works?section=api&step=04 · Live scheduling: /demo/plant/ux?section=scheduling',
       },
       {
         title: '6. You sign off',
         plainLine: 'Accept schedule records the human sign-off on the proposed plan — no SAP write.',
         body:
           'Accept records the human decision in the BFF and adds a row to Decision history (local browser). It does not write back to SAP.',
-        highlight: 'Try Accept on /demo/plant/ux · Operator curl: docs/hackathon/uc1-demo-operator-ingest.md',
+        highlight: 'Try Accept on /demo/plant/ux · curl examples under How it works → UI and API',
       },
     ],
   },
@@ -134,10 +134,11 @@ export const en = {
     requestHeading: 'Request',
     responseHeading: 'Response',
     noBody: 'No request body. Use line-1 or line-2 in the path. locale is en or es.',
-    componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue returns the proposed plan while it is PROPOSED, otherwise gold.v_open_queue.',
+    componentNote:
+      'Preview snapshot: plantDemoServer. Live /demo/plant/ux: GET queue returns the proposed plan while it is PROPOSED, otherwise gold.v_open_queue.',
     previewHeading: 'UI preview',
     previewNote:
-      'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
+      'On /demo/plant/ux the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
     stepNavLabel: 'Flow steps',
     prev: 'Previous',
     next: 'Next',
@@ -158,7 +159,7 @@ export const en = {
         'Mauricio · BFF POST /demo/plant/batches/explain. The panel shows the browser body. The BFF calls David POST /batches/explain with po, question, locale, lineId, and planVersion. He returns po, answer, citations, and suggestedFollowUps. Simulated inside the BFF until AGENT_API_BASE_URL is set.',
     },
     triggers: {
-      s01: 'User opens /demo/plant and picks a line — plantDemoApi.getQueue(lineId).',
+      s01: 'User opens /demo/plant/ux and picks a line — plantDemoApi.getQueue(lineId).',
       s02: 'Same GET response — UI reads finish, atRisk, reasonShort (no second request).',
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operator posts a new COISPI PO — POST /demo/plant/ingest/sap-queue-refresh (insert + replan).',
@@ -185,14 +186,15 @@ export const en = {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
     title: 'Pasco conditioning',
     subtitle:
-      'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
-    demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
+      'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
+    demoTargetBadge: '',
     links: {
       tour: 'Guided story (6 steps)',
       tourCta: 'Start with the 6-step story',
       architecture: 'Integration architecture',
       flowSlides: 'UI ↔ API flow (live map)',
       backMvp: 'Back to Line 1 demo',
+      backScheduler: 'Back to scheduler workspace',
     },
     lineScheduleHeading: 'Line Schedule',
     lineSelectLabel: 'Conditioning line',
@@ -287,10 +289,10 @@ export const en = {
       },
       lastUpdated: 'Last updated: Just now',
       pageTitle: 'Pasco Conditioning — Line 1',
-      moodLine: 'Calm · Stable · Ready',
+      moodLine: 'Calm · No pending replan',
       queueTitle: 'Line 1 queue',
       orderCount: '{n} orders',
-      queueSubtitle: 'Stable state · BEFORE any event · No active alerts',
+      queueSubtitle: 'Active queue · Finish dates and priorities for open batches',
       queueSubtitleEvent: 'Queue replanned — review program timeline and copilot below',
       moodLineEvent: 'Event active · Proposed schedule on timeline',
       summaryHeadlineEvent: 'Replanned',
@@ -302,7 +304,7 @@ export const en = {
       finishFormat: '{date} at {time}',
       summaryTitle: 'Line overview',
       summaryHeadline: 'Calm & stable',
-      summaryBullets: 'No events · No delays · All systems normal',
+      summaryBullets: 'No pending replan · Queue matches the accepted plan',
       metricLoad: 'Queue load',
       metricNextFinish: 'Next finish',
       metricUtilization: 'Line utilization',
@@ -311,7 +313,7 @@ export const en = {
       sectionQueue: 'Line 1 queue',
       sectionScheduling: 'Program timeline',
       sectionCopilot: 'AI Copilot — What changed',
-      eventBannerHint: 'Open Scheduling from the menu to review the replan and accept.',
+      eventBannerHint: 'Open the Scheduling tab to review the replan and accept.',
       navBadgeScheduling: 'Pending event — review and accept',
       navBadgeQueue: 'Queue updated after accept',
       notificationsBellAria: 'Notifications, {n} unread',
@@ -327,14 +329,15 @@ export const en = {
       sapPath: 'POST /demo/plant/ingest/sap-priority-change',
       sapRefreshPath: 'POST /demo/plant/ingest/sap-queue-refresh',
       passFailPath: 'POST /demo/plant/ingest/pass-fail-log',
-      operatorDoc: 'Operator curl examples: docs/hackathon/uc1-demo-operator-ingest.md',
+      operatorDocLead: 'curl examples are on the documentation page:',
     },
     actions: {
       accept: 'Accept schedule',
       accepted: 'Accepted',
     },
     copilotTitle: 'AI Copilot — What changed',
-    copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
+    copilotIdle:
+      'A rush order or a failed quality check reorders the line. Open Scheduling to review moves and the copilot summary, then accept if you agree. Nothing is sent to SAP.',
     copilotIdleHere: 'No schedule change is waiting.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
@@ -356,7 +359,7 @@ export const en = {
     ux: {
       navHelp: 'Help',
       pillSmooth: 'Running smoothly',
-      pillSmoothSub: 'All systems normal',
+      pillSmoothSub: 'No pending schedule change',
       pillAction: 'Action required',
       pillActionSub: 'A schedule update needs your approval',
       pillApproved: 'Plan approved',
@@ -368,7 +371,7 @@ export const en = {
       amberBody: 'Review the timeline and summary, then approve if you agree. Nothing is sent to SAP automatically.',
       approvedStrip: 'Approved · Demo audit only — no live ERP write',
       whereNext: 'Where to go next',
-      nextCalm: 'Everything is on plan. Glance at the Queue to check finish dates.',
+      nextCalm: 'Use Queue for batch order and finish dates. Scheduling shows the timeline when a replan is pending.',
       nextApproved: 'Open the Queue to confirm the new order.',
       notifTitle: 'Notifications',
       notifEmptySub: 'You’re caught up on {line}',

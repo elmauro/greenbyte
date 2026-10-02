@@ -2,7 +2,7 @@
 
 **Story:** GREENBYTE-009  
 **Scope:** [uc1-mvp-scope.md](./uc1-mvp-scope.md) demo-day blocks (section 4.1) and the shipped stretch items in section 5 (manual adjust, explain my batch)  
-**Scheduler routes:** `/demo/plant` (line workspace and data-feed note) · `/demo/plant/ux` (scheduler the demo uses) · `/demo/plant/tour` (guided story)  
+**Scheduler routes:** `/demo/plant` (Pasco hub — intro, data-feed note, classic line workspace) · `/demo/plant/ux` (line scheduler UX — top tabs / mobile nav) · `/demo/plant/tour` (guided story)  
 **Sign-in:** `/demo/sign-in`. The session key is `greenbyte-plant-ux-session-v1`.
 
 This is the UX test matrix. It is not a second copy of the scope doc.
@@ -50,7 +50,7 @@ How it works is out of scope here. That page is already covered by `frontend/cyp
 | UX-01 | Sign-in gate | Automated |
 | UX-02 | Calm queue on the UX workspace | Automated |
 | UX-03 | Line 1 and Line 2 URL | Automated |
-| UX-04 | Data-feed note on `/demo/plant` | Automated |
+| UX-04 | Data-feed note on `/demo/plant` hub | Automated |
 | UX-05 | Queue poll | Manual |
 | UX-06 | Bell, including no placeholder order | Automated when calm; manual after a real event |
 | UX-07 | Scheduling timeline | Automated |
@@ -219,14 +219,14 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 - Expected result: the query string includes `line=line-2`, then `line=line-1`. Labels are "Line 2" and "Line 1". The in-process mock only serves line-1, so Line 2 may show "Could not load this line." The URL change is still the check. A live line-2 queue, when the BFF has rows, is a manual follow-up and must stay a GET.
 - Automated or manual: Automated for the URL. Manual if you need to confirm a live line-2 payload.
 
-## UX-04 — Data-feed note
+## UX-04 — Data-feed note (Pasco hub)
 
 - Id: UX-04
 - Route: `/demo/plant`
 - Precondition: signed in. Calm queue.
 - Steps:
   1. Open `/demo/plant`.
-- Expected result: the page shows "Events come from data — not from this screen" and the calm badge "Calm & stable". The note lists the ingest paths and says the UI polls. There is no rush or QA button on this screen. Scope block: data-feed note.
+- Expected result: the page shows "Events come from data — not from this screen". The note lists ingest POST paths and links **How it works — UI and API** for operator curl examples (no raw repo path). There is no rush or QA button on this screen. This is **not** the same route as `/demo/plant/ux` (scheduler UX tabs).
 - Automated or manual: Automated
 
 ## UX-05 — Queue poll
@@ -302,7 +302,7 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 ## UX-11 — Ingest
 
 - Id: UX-11
-- Route: not a scheduler control. Operator or Data API posts to the BFF. The data-feed note on `/demo/plant` lists the paths.
+- Route: not a scheduler control. Operator or Data API posts to the BFF. Ingest paths are listed on **How it works → UI and API**.
 - Precondition: a target plan you are allowed to change.
 - Steps:
   1. Post one ingest replay row: **DATA-R01** (`sap-priority-change`), **DATA-R02** (`sap-queue-refresh`), or **DATA-R03** (`pass-fail-log`) for `line-1` or `line-2`, using [uc1-demo-operator-ingest.md](./uc1-demo-operator-ingest.md).
@@ -340,7 +340,7 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 - Precondition: signed in. The route is still registered.
 - Steps:
   1. Open `/demo/plant/tour`.
-- Expected result: the heading is "Pasco conditioning — guided demo" and the first step title "1. The normal queue" is visible. The tour is read-only snapshots. It does not post ingest or Accept.
+- Expected result: the heading is "Pasco conditioning — guided demo" and the first step title "1. The normal queue" is visible. Step previews use the same **scheduler UX** widgets as `/demo/plant/ux` (top section tabs on large screens). Back link targets `/demo/plant` (hub). Flow map links use `/demo/how-it-works?section=api&step=…`. The tour does not post ingest or Accept on the live BFF.
 - Automated or manual: Automated
 
 ## UX-15 — How it works
@@ -360,7 +360,7 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 | Scope block in uc1-mvp-scope.md | Cases |
 | --- | --- |
 | Session in front of the demo routes | UX-01 |
-| Data-feed note; no rush/QA buttons | UX-04, UX-11, DATA-R01..R03 |
+| Data-feed note; scheduler UX at `/demo/plant/ux`; ingest via operator POST | UX-04, UX-11, DATA-R01..R03 |
 | Calm queue, GET queue, poll | UX-02, UX-03, UX-05 |
 | Notifications, then Scheduling and copilot | UX-06, UX-07, UX-08, MAN-01 |
 | Explain my batch | UX-08, UX-09 |

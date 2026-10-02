@@ -137,7 +137,7 @@ export function PlantTourStepPreview({ stepIndex, snapshots }: PlantTourStepPrev
         onLineChange={
           showLineControl ? (nextId) => setLineId(plantLineById(nextId).id) : undefined
         }
-        compact
+        compact={false}
         staticPreview
         staticPreviewFaithful={cfg.faithful}
         showProgramTimeline={cfg.showProgramTimeline}
