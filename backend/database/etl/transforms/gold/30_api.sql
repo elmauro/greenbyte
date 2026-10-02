@@ -20,6 +20,60 @@ SELECT DISTINCT ON (sp.work_center_id) sp.*
 FROM gold.schedule_plan sp
 ORDER BY sp.work_center_id, sp.plan_version DESC;
 
+-- v4 (D-04): acceptance history from plan_decision. schedule_plan.status only says whether the plan is the line's
+-- current one (a replan supersedes an accepted plan); this view keeps "was it accepted, when, by whom".
+CREATE VIEW gold.v_plan_status AS
+SELECT sp.schedule_plan_id, sp.work_center_id, sp.plan_version, sp.status, sp.policy_id, sp.plan_event_id,
+       sp.schedule_plan_id = lp.schedule_plan_id AS is_latest,
+       d.decided_at IS NOT NULL AS is_accepted,
+       d.decided_at AS accepted_at, d.decided_by AS accepted_by,
+       (sp.schedule_plan_id = lp.schedule_plan_id AND d.decided_at IS NOT NULL) AS is_current_accepted
+FROM gold.schedule_plan sp
+JOIN gold.v_latest_plan lp USING (work_center_id)
+LEFT JOIN LATERAL (
+    SELECT pd.decided_at, pd.decided_by FROM gold.plan_decision pd
+    WHERE pd.schedule_plan_id = sp.schedule_plan_id AND pd.decision = 'ACCEPT'
+    ORDER BY pd.decided_at DESC LIMIT 1) d ON true;
+COMMENT ON VIEW gold.v_plan_status IS 'Per plan: latest?, accepted (from plan_decision), when and by whom. Status stays the lifecycle of the latest plan';
+
+-- planner v2 (Q4c, Q6): impact of a plan vs its parent, derived from the entries (R-DERIVED). "Newly late" compares like
+-- with like: a PO whose due_date_basis changed (e.g. heuristic NEED_BY -> planner SAP_FINISH) is listed apart.
+-- planner_impact = what the planner said (payload.impact of a planner_run), shown next to the derived numbers.
+CREATE VIEW gold.v_plan_impact AS
+WITH pair AS (
+    SELECT sp.schedule_plan_id, se.process_order_id, po.po_number, se.position, se.entry_status, se.is_at_risk,
+           se.due_date_basis, se.est_changeover_h,
+           pe.position AS parent_position, pe.is_at_risk AS parent_at_risk, pe.due_date_basis AS parent_basis
+    FROM gold.schedule_plan sp
+    JOIN gold.schedule_entry se USING (schedule_plan_id)
+    JOIN silver.process_order po ON po.process_order_id = se.process_order_id
+    LEFT JOIN gold.schedule_entry pe ON pe.schedule_plan_id = sp.parent_plan_id AND pe.process_order_id = se.process_order_id
+)
+SELECT sp.schedule_plan_id, sp.work_center_id, sp.plan_version, sp.created_by, sp.parent_plan_id,
+       count(p.process_order_id) FILTER (WHERE p.entry_status = 'PLANNED') AS n_planned,
+       count(p.process_order_id) FILTER (WHERE p.entry_status = 'HOLD') AS n_hold,
+       count(p.process_order_id) FILTER (WHERE p.is_at_risk) AS n_at_risk,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE p.is_at_risk AND NOT coalesce(p.parent_at_risk, false)
+             AND p.due_date_basis IS NOT DISTINCT FROM p.parent_basis), '[]') AS newly_late,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE NOT p.is_at_risk AND p.parent_at_risk
+             AND p.due_date_basis IS NOT DISTINCT FROM p.parent_basis), '[]') AS no_longer_late,
+       coalesce(jsonb_agg(p.po_number ORDER BY p.position) FILTER (
+           WHERE p.is_at_risk AND p.parent_position IS NOT NULL
+             AND p.due_date_basis IS DISTINCT FROM p.parent_basis), '[]') AS late_on_changed_basis,
+       count(p.process_order_id) FILTER (WHERE p.parent_position IS NOT NULL AND p.parent_position <> p.position) AS n_moved,
+       coalesce(sum(p.est_changeover_h), 0) AS changeover_h,
+       (SELECT coalesce(sum(x.est_changeover_h), 0) FROM gold.schedule_entry x WHERE x.schedule_plan_id = sp.parent_plan_id)
+           AS parent_changeover_h,
+       ev.payload -> 'impact' AS planner_impact
+FROM gold.schedule_plan sp
+LEFT JOIN pair p USING (schedule_plan_id)
+LEFT JOIN gold.plan_event ev ON ev.plan_event_id = sp.plan_event_id AND ev.event_type = 'planner_run'
+GROUP BY sp.schedule_plan_id, sp.work_center_id, sp.plan_version, sp.created_by, sp.parent_plan_id, ev.payload;
+COMMENT ON VIEW gold.v_plan_impact IS
+  'Per plan vs its parent: planned / hold / at-risk counts, newly late and no longer late (same due_date_basis only), late on a changed basis, moved POs, changeover hours vs parent, and the planner''s own impact claim';
+
 -- One row per plan entry, with the BFF QueueRow shape in queue_row.
 CREATE VIEW gold.v_plan_queue AS
 SELECT sp.schedule_plan_id, sp.work_center_id, wc.work_center_code, coalesce(wc.demo_line_id, wc.work_center_code) AS line_id,
@@ -306,6 +360,16 @@ BEGIN
     WHERE source_csv = 'raw.ingest_event' AND source_row_number IN (SELECT ingest_event_id FROM _voided);
     DROP TABLE _voided;
 
+    -- v4: void the note reviews made for this line's open POs (text-wide reviews of notes on the line too)
+    UPDATE raw.note_review r SET voided_at = clock_timestamp(), void_reason = 'reset_demo'
+    WHERE r.voided_at IS NULL
+      AND r.note_hash IN (SELECT sn.note_hash FROM gold.source_note sn
+                          JOIN gold.v_open_queue q ON q.line_schedule_item_id = sn.line_schedule_item_id
+                          WHERE q.work_center_id = v_wc.work_center_id)
+      AND (r.po_number IS NULL
+           OR r.po_number IN (SELECT q.po_number FROM gold.v_open_queue q WHERE q.work_center_id = v_wc.work_center_id));
+    PERFORM gold.refresh_semantic_facts();
+
     PERFORM gold.replan(v_wc.work_center_code);
     RETURN gold.queue_response(p_line);
 END
@@ -348,6 +412,20 @@ LANGUAGE sql STABLE AS $$
              FROM q, jsonb_array_elements(q.reasons) r WHERE r -> 'params' ? 'quality_test_id') AS quality_test_ids,
             (SELECT jsonb_agg(DISTINCT o) FROM q, jsonb_array_elements(q.reasons) r,
                     jsonb_array_elements_text(r -> 'params' -> 'order_numbers') o) AS order_numbers
+    ), facts AS (
+        SELECT jsonb_agg(DISTINCT jsonb_build_object(
+                   'factId', sf.semantic_fact_id, 'po', po.po_number, 'type', sf.fact_type,
+                   'label', coalesce(sf.fact_value ->> 'reason', sf.fact_type), 'note', sn.note_text,
+                   'source', sn.source_csv || ':' || sn.source_row_number || ':' || sn.source_column,
+                   'status', sf.status, 'reader', sf.model_id, 'confidence', sf.confidence)) AS facts,
+               jsonb_agg(DISTINCT sf.semantic_fact_id) AS fact_ids
+        FROM gold.schedule_entry se
+        JOIN gold.entry_reason er USING (schedule_entry_id)
+        JOIN gold.entry_reason_fact erf USING (entry_reason_id)
+        JOIN gold.semantic_fact sf USING (semantic_fact_id)
+        JOIN gold.source_note sn USING (source_note_id)
+        LEFT JOIN silver.process_order po ON po.process_order_id = sf.process_order_id
+        WHERE se.schedule_plan_id = p_schedule_plan_id
     )
     SELECT jsonb_build_object(
         'lineId', p.line_id,
@@ -367,8 +445,13 @@ LANGUAGE sql STABLE AS $$
         'diff', (SELECT jsonb_build_object('moves', d.moves, 'reasons', d.reasons, 'held', d.held,
                                            'added', d.added, 'removed', d.removed)
                  FROM gold.v_plan_diff d WHERE d.schedule_plan_id = p_schedule_plan_id),
+        'facts', coalesce(facts.facts, '[]'),
         'constraints', jsonb_build_object(
             'heuristic', p.created_by,
+            'policy', (SELECT jsonb_build_object('policyId', pol.policy_id, 'version', pol.policy_version,
+                                                 'rankingMode', pol.ranking_mode, 'criteria', pol.criteria,
+                                                 'factMinConfidence', pol.fact_min_confidence)
+                       FROM gold.policy pol WHERE pol.policy_id = p.policy_id),
             'horizonStart', p.horizon_start,
             'changeover', (SELECT jsonb_agg(jsonb_build_object('transition', r.transition_code, 'hours', r.hours,
                                                                'source', r.rule_source, 'n', r.derived_n)
@@ -379,12 +462,14 @@ LANGUAGE sql STABLE AS $$
         'citable', jsonb_build_object('poNumbers', coalesce(cited.po_numbers, '[]'),
                                       'lotNumbers', coalesce(cited.lot_numbers, '[]'),
                                       'qualityTestIds', coalesce(cited.quality_test_ids, '[]'),
-                                      'orderNumbers', coalesce(cited.order_numbers, '[]')),
+                                      'orderNumbers', coalesce(cited.order_numbers, '[]'),
+                                      'factIds', coalesce(facts.fact_ids, '[]')),
         'notes', jsonb_build_array(
             'Cite only ids listed in citable; never invent POs, dates or fail codes.',
             'Customer orders are synthetic (not in the Pasco extracts).',
-            'Accepting a plan does not write to SAP/ERP.'))
-    FROM p, cited
+            'Accepting a plan does not write to SAP/ERP.',
+            'Facts are readings of free-text notes; quote the note, cite its factId, and say when it is an assumption (rules-v1).'))
+    FROM p, cited, facts
 $$;
 
 -- GET /batches/{po}: one PO with material, lot, schedules, QA, runs, demand and its place in the latest plans.
@@ -437,4 +522,91 @@ LANGUAGE sql STABLE AS $$
     LEFT JOIN silver.species sp ON sp.species_id = po.species_id
     LEFT JOIN silver.lot l ON l.lot_id = po.lot_id
     WHERE po.po_number = (silver.norm_po(p_po)).po_number
+$$;
+
+-- v4 (D-03): store a reading of one note text (Bedrock via the Agent API -> Data API, or a person) and refresh the
+-- facts. Idempotent on (note_hash, reader, model_id, prompt_version). The Agent API never writes to the database.
+CREATE FUNCTION gold.record_note_reading(p_note_text text, p_reader text, p_model_id text, p_prompt_version text,
+                                         p_facts jsonb, p_read_by text DEFAULT current_user)
+RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_hash char(64) := gold.note_hash(p_note_text);
+    v_id   bigint;
+    v_bad  text;
+BEGIN
+    IF p_reader NOT IN ('BEDROCK', 'HUMAN', 'RULE') THEN
+        RAISE EXCEPTION 'reader must be BEDROCK, HUMAN or RULE' USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    IF jsonb_typeof(p_facts) IS DISTINCT FROM 'array' THEN
+        RAISE EXCEPTION 'facts must be a JSON array' USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    SELECT string_agg(coalesce(f ->> 'fact_type', 'null'), ', ') INTO v_bad
+    FROM jsonb_array_elements(p_facts) f
+    WHERE coalesce(f ->> 'fact_type', '') NOT IN ('NOT_READY', 'HOLD', 'RELEASE', 'RUSH', 'DEADLINE', 'INFO')
+       OR (f ? 'confidence' AND NOT ((f ->> 'confidence')::numeric BETWEEN 0 AND 1));
+    IF v_bad IS NOT NULL THEN
+        RAISE EXCEPTION 'invalid facts: %', v_bad USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM gold.source_note WHERE note_hash = v_hash) THEN
+        RAISE EXCEPTION 'no source note has this text' USING ERRCODE = 'no_data_found';
+    END IF;
+
+    INSERT INTO raw.note_reading (note_hash, note_text, reader, model_id, prompt_version, facts, read_by)
+    VALUES (v_hash, btrim(p_note_text), p_reader, p_model_id, p_prompt_version, p_facts, p_read_by)
+    ON CONFLICT (note_hash, reader, model_id, prompt_version) DO NOTHING
+    RETURNING note_reading_id INTO v_id;
+    PERFORM gold.refresh_semantic_facts();
+
+    RETURN jsonb_build_object('noteHash', v_hash, 'noteReadingId', v_id, 'created', v_id IS NOT NULL,
+                              'occurrences', (SELECT count(*) FROM gold.source_note WHERE note_hash = v_hash));
+END
+$$;
+
+-- v4: a person confirms or rejects one fact. Stored in raw.note_review (durable), facts refreshed; when the fact sits on
+-- an open row of a line that has plans, a note_review plan_event is written and the line is replanned.
+-- p_scope 'PO' = this PO only; 'TEXT' = every occurrence of the same note text.
+CREATE FUNCTION gold.review_fact(p_semantic_fact_id bigint, p_decision text, p_reviewed_by text DEFAULT current_user,
+                                 p_comment text DEFAULT NULL, p_scope text DEFAULT 'PO')
+RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_f     record;
+    v_event bigint;
+    v_plan  bigint;
+BEGIN
+    IF p_decision NOT IN ('CONFIRMED', 'REJECTED') OR p_scope NOT IN ('PO', 'TEXT') THEN
+        RAISE EXCEPTION 'decision CONFIRMED|REJECTED, scope PO|TEXT' USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    SELECT sf.*, sn.note_hash, sn.note_text, sn.line_schedule_item_id, po.po_number INTO v_f
+    FROM gold.semantic_fact sf
+    JOIN gold.source_note sn USING (source_note_id)
+    LEFT JOIN silver.process_order po ON po.process_order_id = sf.process_order_id
+    WHERE sf.semantic_fact_id = p_semantic_fact_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'semantic_fact % not found', p_semantic_fact_id USING ERRCODE = 'no_data_found';
+    END IF;
+    IF p_scope = 'PO' AND v_f.po_number IS NULL THEN
+        RAISE EXCEPTION 'fact % has no PO: use scope TEXT', p_semantic_fact_id USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+
+    INSERT INTO raw.note_review (note_hash, po_number, fact_type, decision, comment, reviewed_by)
+    VALUES (v_f.note_hash, CASE WHEN p_scope = 'PO' THEN v_f.po_number END, v_f.fact_type, p_decision, p_comment, p_reviewed_by);
+    PERFORM gold.refresh_semantic_facts();
+
+    IF EXISTS (SELECT 1 FROM gold.v_open_queue q WHERE q.line_schedule_item_id = v_f.line_schedule_item_id)
+       AND EXISTS (SELECT 1 FROM gold.schedule_plan sp WHERE sp.work_center_id = v_f.work_center_id) THEN
+        INSERT INTO gold.plan_event (work_center_id, event_type, source, process_order_id, payload, created_by)
+        VALUES (v_f.work_center_id, 'note_review', 'ui_manual', v_f.process_order_id,
+                jsonb_build_object('semanticFactId', p_semantic_fact_id, 'factType', v_f.fact_type, 'decision', p_decision,
+                                   'scope', p_scope, 'note', v_f.note_text, 'po', v_f.po_number),
+                p_reviewed_by)
+        RETURNING plan_event_id INTO v_event;
+        v_plan := gold.replan((SELECT work_center_code FROM silver.work_center WHERE work_center_id = v_f.work_center_id), v_event);
+        RETURN gold.event_response(v_plan);
+    END IF;
+    RETURN jsonb_build_object('semanticFactId', p_semantic_fact_id,
+                              'status', (SELECT status FROM gold.semantic_fact WHERE semantic_fact_id = p_semantic_fact_id),
+                              'replanned', false);
+END
 $$;
