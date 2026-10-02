@@ -296,7 +296,7 @@ These are **expectations on the proposed plan** after replay, not copy checks on
 - Steps:
   1. Open Scheduling and read the what-changed rail.
   2. Click "Accept schedule".
-- Expected result: the button posts `POST /demo/plant/schedule/accept` with `{ lineId }`. The page records acceptance ("Accepted" / "Human acceptance recorded on the proposed plan. No write to SAP."). Nothing is written to SAP. Scope block: Accept.
+- Expected result: the button posts `POST /demo/plant/schedule/accept` with `{ lineId }`. The page records acceptance ("Accepted" / "Human acceptance recorded on the proposed plan. No write to SAP."). Pending replan chrome clears (banner, Accept bar, what-changed rail). The bell must **not** add a separate "queue updated" / "confirm queue order" notice solely because accept succeeded — return to calm bell count unless another line still has a pending replan (UX-06). Nothing is written to SAP. Scope block: Accept.
 - Automated or manual: Manual. Cypress must not click Accept against the live BFF (`https://wg7eopv9wl.execute-api.us-east-1.amazonaws.com` when that base URL is set).
 
 ## UX-11 — Ingest

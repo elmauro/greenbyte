@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-012 — Remove post-accept queue bell notification
+
+- FW: `n/a` · Slug: `remove-post-accept-queue-bell-notification` · Stack: frontend
+- Change type: `fix` · Branch: `feature/greenbyte-012` · PR: `fix(frontend): remove post-accept queue bell notification`
+- Status: shipped · Shipped: 2026-10-02 · Package: [`frontend/remove-post-accept-queue-bell-notification/`](../../../analysis/features/frontend/remove-post-accept-queue-bell-notification/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: remove-post-accept-queue-bell-notification
+Feature name: Remove post-accept queue bell notification
+Ticket/story: GREENBYTE-012
+Backlog ID: n/a
+Change type: feat
+Stack scope: frontend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-011 — Copilot order select placeholder
 
 - FW: `n/a` · Slug: `copilot-select-order-placeholder` · Stack: frontend
