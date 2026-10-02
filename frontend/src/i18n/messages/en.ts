@@ -543,7 +543,7 @@ export const en = {
     title: 'Demo architecture',
     subtitle:
       'The demo that runs is UC1. React calls only the BFF. The BFF reads and writes PostgreSQL. The agent narrates the plan the rules already built.',
-    docNote: 'Document version 1.4 · No live Syngenta production connections.',
+    docNote: 'Document version 1.3 · No live Syngenta production connections.',
     useCasesTitle: 'Syngenta briefs',
     genAiRoleLabel: 'GenAI role',
     useCaseCards: [
@@ -570,7 +570,7 @@ export const en = {
       uc1: {
         title: 'UC1 — Plant capacity',
         intro:
-          'Two operator paths: curl or scripts post SAP, COISPI, or Fail ingests; on /demo/plant/ux the scheduler uses Reset demo (stage-raw) and Generate plan (plan-line). PostgreSQL reorders the line. The agent explains the diff when a plan is proposed. Accept does not write to SAP.',
+          'An operator posts a SAP change, a new COISPI order, or a Fail. PostgreSQL reorders the line. The agent explains that diff. The scheduler accepts. Accept does not write to SAP.',
         syngentaGoal: 'The rules propose the order and the reason. A person validates. No live SAP connection.',
         dataSource:
           'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs), loaded into PostgreSQL.',
@@ -591,7 +591,7 @@ export const en = {
         owner: 'Mauricio / GreenByte',
         responsibility: 'One contract for the browser. The BFF calls PostgreSQL and, after a replan, the agent.',
         useCases:
-          'GET /demo/plant/lines/{lineId}/queue · POST /demo/stage-raw · POST /demo/plan-line · POST ingest (priority, COISPI refresh, pass/fail) · POST /schedule/accept · POST /batches/explain',
+          'GET /demo/plant/lines/{lineId}/queue · POST ingest (priority, COISPI refresh, pass/fail) · POST /schedule/accept · POST /batches/explain',
       },
       {
         role: 'Data in PostgreSQL',
@@ -619,9 +619,8 @@ export const en = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../demo/stage-raw · POST .../demo/plan-line · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
-        purpose:
-          'UX reset and one-shot plan, scripted ingest, queue poll, human accept, and sales Q&A. stage-raw clears plans and demo rush/QA ingests; plan-line runs gold.replan on the line.',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
+        purpose: 'Operator ingest, the queue poll, human accept, and the sales question',
       },
       {
         layer: 'PostgreSQL',
@@ -641,7 +640,6 @@ export const en = {
       'The agent receives the diff and queueSnapshot. queueSnapshot is the plan queue, renamed. It must not invent orders or dates.',
       'An empty AGENT_API_BASE_URL keeps the template inside the BFF. If the agent call fails, the plan still returns.',
       'Accept records the human decision. It does not write to SAP.',
-      'POST /demo/plant/demo/stage-raw returns the raw open queue for one line (no plan). POST /demo/plant/demo/plan-line runs one replan; the UX polls GET queue when it finishes.',
     ],
     diagrams: {
       shared: `React  /demo/plant
@@ -660,7 +658,7 @@ core-api  BFF
               template inside the BFF while AGENT_API_BASE_URL is empty`,
       uc1Flow: `Pasco Excel -- ETL --> PostgreSQL
 
-Operator (scripts / curl)
+Operator
   POST /demo/plant/ingest/sap-priority-change
   POST /demo/plant/ingest/sap-queue-refresh
   POST /demo/plant/ingest/pass-fail-log
@@ -671,14 +669,9 @@ core-api BFF -- gold.replan --> proposed plan
         +-- POST /explain-replan --> copilot text
                     queueSnapshot = the plan queue
 
-Scheduler UX  (/demo/plant/ux)
-  POST /demo/plant/demo/stage-raw   --> raw open queue (plans cleared)
-  POST /demo/plant/demo/plan-line   --> one gold.replan on the line
-
 React polls GET /demo/plant/lines/{lineId}/queue
 Scheduler POST /demo/plant/schedule/accept --> gold.accept_plan`,
-      uc1Sequence: `Ingest path
-Operator     React          BFF            PostgreSQL       Agent
+      uc1Sequence: `Operator     React          BFF            PostgreSQL       Agent
    |           |              |                 |              |
    |-- ingest --------------->|                 |              |
    |           |              |-- gold.replan ->|              |
@@ -686,16 +679,6 @@ Operator     React          BFF            PostgreSQL       Agent
    |           |              |-- explain-replan ------------->|
    |           |              |<- summary ---------------------|
    |           |-- GET queue ->|                 |              |
-   |           |<- plan + why -|                 |              |
-   |           |-- accept ---->|-- accept_plan ->|              |
-
-UX toolbar (/demo/plant/ux)
-   |           |              |                 |              |
-   |           |-- stage-raw >| clear plans ---->|              |
-   |           |<- raw queue -|                 |              |
-   |           |-- plan-line >|-- gold.replan -->|              |
-   |           |              |-- explain-replan (if needed) ->|
-   |           |-- GET queue >|                 |              |
    |           |<- plan + why -|                 |              |
    |           |-- accept ---->|-- accept_plan ->|              |`,
     },
@@ -710,12 +693,11 @@ UX toolbar (/demo/plant/ux)
       },
       uc1Flow: {
         title: 'UC1 — From ingest to accept',
-        description:
-          'SAP and QA events use operator ingest. The scheduler UX also calls stage-raw and plan-line from Reset demo and Generate plan. The screen polls the queue.',
+        description: 'The scheduler screen does not post the SAP or QA event. An operator ingest does. The screen polls the queue.',
       },
       uc1Sequence: {
         title: 'UC1 — Call order',
-        description: 'Replan finishes before explain. Accept does not call the agent. The UX path clears the line before an optional manual replan.',
+        description: 'Replan finishes before explain. Accept does not call the agent.',
       },
     },
     monolithTitle: 'What is actually deployed',

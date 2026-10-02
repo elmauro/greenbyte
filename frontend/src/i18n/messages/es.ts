@@ -44,7 +44,7 @@ export const es: Messages = {
     title: 'Arquitectura del demo',
     subtitle:
       'El demo que corre es UC1. React solo llama al BFF. El BFF lee y escribe PostgreSQL. El agente narra el plan que ya armaron las reglas.',
-    docNote: 'Documento v1.4 · Sin conexión a sistemas productivos Syngenta.',
+    docNote: 'Documento v1.3 · Sin conexión a sistemas productivos Syngenta.',
     useCasesTitle: 'Briefs de Syngenta',
     genAiRoleLabel: 'Rol GenAI',
     useCaseCards: [
@@ -71,7 +71,7 @@ export const es: Messages = {
       uc1: {
         title: 'UC1 — Capacidad de planta',
         intro:
-          'Dos caminos de operador: curl o scripts publican ingest SAP, COISPI o Fail; en /demo/plant/ux el programador usa Reiniciar demo (stage-raw) y Generar plan (plan-line). PostgreSQL reordena la línea. El agente explica el diff cuando hay plan propuesto. Accept no escribe en SAP.',
+          'Un operador publica un cambio SAP, una orden nueva de COISPI o un Fail. PostgreSQL reordena la línea. El agente explica ese diff. El programador acepta. Accept no escribe en SAP.',
         syngentaGoal: 'Las reglas proponen el orden y la razón. Una persona valida. Sin conexión SAP en vivo.',
         dataSource:
           'Excel de acondicionamiento Pasco LSV/SSV (programas, órdenes SAP, logs de acondicionamiento, pass/fail), cargado en PostgreSQL.',
@@ -92,7 +92,7 @@ export const es: Messages = {
         owner: 'Mauricio / GreenByte',
         responsibility: 'Un contrato para el navegador. El BFF llama a PostgreSQL y, después de un replan, al agente.',
         useCases:
-          'GET /demo/plant/lines/{lineId}/queue · POST /demo/stage-raw · POST /demo/plan-line · POST ingest (prioridad, refresh COISPI, pass/fail) · POST /schedule/accept · POST /batches/explain',
+          'GET /demo/plant/lines/{lineId}/queue · POST ingest (prioridad, refresh COISPI, pass/fail) · POST /schedule/accept · POST /batches/explain',
       },
       {
         role: 'Datos en PostgreSQL',
@@ -120,9 +120,8 @@ export const es: Messages = {
       {
         layer: 'BFF',
         examples:
-          'GET .../queue · POST .../demo/stage-raw · POST .../demo/plan-line · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
-        purpose:
-          'Reset y plan desde la UX, ingest por script, poll de cola, visto bueno humano y pregunta de ventas. stage-raw borra planes e ingests rush/QA de demo; plan-line ejecuta gold.replan en la línea.',
+          'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
+        purpose: 'Ingest del operador, el poll de la cola, el visto bueno humano y la pregunta de ventas',
       },
       {
         layer: 'PostgreSQL',
@@ -142,7 +141,6 @@ export const es: Messages = {
       'El agente recibe el diff y queueSnapshot. queueSnapshot es la cola del plan, con otro nombre. No debe inventar órdenes ni fechas.',
       'Si AGENT_API_BASE_URL está vacío, sigue la plantilla dentro del BFF. Si la llamada al agente falla, el plan se entrega igual.',
       'Accept registra la decisión humana. No escribe en SAP.',
-      'POST /demo/plant/demo/stage-raw devuelve la cola abierta sin plan en una línea. POST /demo/plant/demo/plan-line ejecuta un replan; la UX consulta GET queue al terminar.',
     ],
     diagrams: {
       shared: `React  /demo/plant
@@ -161,7 +159,7 @@ core-api  BFF
               plantilla dentro del BFF mientras AGENT_API_BASE_URL está vacío`,
       uc1Flow: `Excel Pasco -- ETL --> PostgreSQL
 
-Operador (scripts / curl)
+Operador
   POST /demo/plant/ingest/sap-priority-change
   POST /demo/plant/ingest/sap-queue-refresh
   POST /demo/plant/ingest/pass-fail-log
@@ -172,30 +170,15 @@ core-api BFF -- gold.replan --> plan propuesto
         +-- POST /explain-replan --> texto del copiloto
                     queueSnapshot = la cola del plan
 
-UX programador  (/demo/plant/ux)
-  POST /demo/plant/demo/stage-raw   --> cola abierta sin plan
-  POST /demo/plant/demo/plan-line   --> un gold.replan en la línea
-
 React consulta GET /demo/plant/lines/{lineId}/queue
 El programador POST /demo/plant/schedule/accept --> gold.accept_plan`,
-      uc1Sequence: `Camino ingest
-Operador     React          BFF            PostgreSQL       Agente
+      uc1Sequence: `Operador     React          BFF            PostgreSQL       Agente
    |           |              |                 |              |
    |-- ingest --------------->|                 |              |
    |           |              |-- gold.replan ->|              |
    |           |              |<- cola + diff --|              |
    |           |              |-- explain-replan ------------->|
    |           |              |<- resumen ---------------------|
-   |           |-- GET cola -->|                 |              |
-   |           |<- plan + por -|                 |              |
-   |           |-- accept ---->|-- accept_plan ->|              |
-
-Barra UX (/demo/plant/ux)
-   |           |              |                 |              |
-   |           |-- stage-raw >| borra planes --->|              |
-   |           |<- cola cruda -|                 |              |
-   |           |-- plan-line >|-- gold.replan -->|              |
-   |           |              |-- explain-replan (si aplica) ->|
    |           |-- GET cola -->|                 |              |
    |           |<- plan + por -|                 |              |
    |           |-- accept ---->|-- accept_plan ->|              |`,
@@ -211,13 +194,11 @@ Barra UX (/demo/plant/ux)
       },
       uc1Flow: {
         title: 'UC1 — Del ingest a la aceptación',
-        description:
-          'Los eventos SAP y QA usan ingest de operador. La UX del programador también llama stage-raw y plan-line con Reiniciar demo y Generar plan. La pantalla consulta la cola.',
+        description: 'La pantalla del programador no publica el evento SAP ni el de QA. Lo publica un ingest de operador. La pantalla consulta la cola.',
       },
       uc1Sequence: {
         title: 'UC1 — Orden de llamadas',
-        description:
-          'El replan termina antes del explain. Accept no llama al agente. El camino UX limpia la línea antes de un replan manual opcional.',
+        description: 'El replan termina antes del explain. Accept no llama al agente.',
       },
     },
     monolithTitle: 'Qué está desplegado de verdad',
