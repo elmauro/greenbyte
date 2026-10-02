@@ -7,6 +7,12 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-015 — Align Pasco hub with horizontal scheduler UX
+
+- FW: `n/a` · Slug: `plant-hub-horizontal-scheduler-ux` · Stack: frontend
+- Change type: `feat` · Branch: `feature/greenbyte-015-plant-hub-horizontal-nav` · PR: #17 `feat(frontend): align Pasco hub with horizontal scheduler UX (GREENBYTE-015)`
+- Status: shipped · Shipped: 2026-10-02 · Package: [`frontend/plant-hub-horizontal-scheduler-ux/`](../../../analysis/features/frontend/plant-hub-horizontal-scheduler-ux/)
+
 ### GREENBYTE-014 — Show demo login credentials on sign-in hint
 
 - FW: `n/a` · Slug: `show-demo-login-credentials-on-sign-in-hint` · Stack: frontend

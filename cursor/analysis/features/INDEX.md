@@ -36,6 +36,7 @@ Path:
 | GREENBYTE-012 | n/a | `remove-post-accept-queue-bell-notification` | Remove post-accept queue bell notification | frontend | done |
 | GREENBYTE-013 | n/a | `nav-pasco-conditioning-label` | Nav label Pasco conditioning | frontend | done |
 | GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | frontend | done |
+| GREENBYTE-015 | n/a | `plant-hub-horizontal-scheduler-ux` | Align Pasco hub with horizontal scheduler UX | frontend | done |
 
 ## How to update
 
