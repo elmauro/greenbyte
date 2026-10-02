@@ -13,6 +13,8 @@ type PlantBatchExplainChatProps = {
   focusPo?: string;
   /** Keeps the timeline selection in sync when the order is changed from this panel. */
   onPoChange?: (po: string) => void;
+  /** Reload the line after the copilot sends a rush. */
+  onQueueRefresh?: () => void | Promise<void>;
 };
 
 export function PlantBatchExplainChat({
@@ -21,6 +23,7 @@ export function PlantBatchExplainChat({
   lineId,
   focusPo,
   onPoChange,
+  onQueueRefresh,
 }: PlantBatchExplainChatProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
@@ -58,7 +61,16 @@ export function PlantBatchExplainChat({
     setBusy(true);
     try {
       const res = await plantDemoApi.postBatchExplain(po, q, locale, { lineId });
-      setAnswer(res.answer);
+      let text = res.answer;
+      if (res.action === 'rush') {
+        try {
+          await plantDemoApi.sendCopilotRush(locale, lineId, po);
+          await onQueueRefresh?.();
+        } catch {
+          text = copy.rushError;
+        }
+      }
+      setAnswer(text.replace(/\*\*(.*?)\*\*/g, '$1'));
       setCitations(res.citations);
       if (!preset) setQuestion('');
     } finally {

@@ -40,7 +40,12 @@ export function PlantLineUx() {
     loading,
     refreshing,
     busy,
+    demoAction,
+    demoActionError,
     acceptPlan,
+    resetDemo,
+    generatePlan,
+    reloadQueue,
     setManualOrder,
     loadError,
   } = usePlantDemoQueue(locale, line.id);
@@ -110,7 +115,12 @@ export function PlantLineUx() {
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void handleAccept()}
+            onResetDemo={() => void resetDemo()}
+            onGeneratePlan={() => void generatePlan()}
+            demoAction={demoAction}
+            demoActionError={demoActionError}
             onManualOrder={setManualOrder}
+            onQueueRefresh={reloadQueue}
             onSelectOrder={selectOrder}
             explainPo={searchParams.get('po') ?? undefined}
             onOpenLine={(lineId) => {

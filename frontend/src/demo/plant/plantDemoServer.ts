@@ -243,12 +243,25 @@ class PlantDemoServer {
     const position = index + 1;
     const ahead = queue.slice(0, index);
     const q = question.toLowerCase();
+    const rush = !/[?¿]/.test(question) && /\brush\b|\bexpedite\b|\bmove (it|this) up\b|\bm[aá]rcalo rush\b/.test(q);
 
     const citations = [
       `PO ${row.po}`,
       `Line 1 queue v${this.planVersion}`,
       row.finish,
     ];
+
+    if (rush) {
+      return {
+        po,
+        action: 'rush',
+        answer: locale === 'es'
+          ? `Rush enviado para PO ${po}. El plan nuevo queda propuesto y hay que aceptarlo. Nada se escribe en SAP.`
+          : `Rush sent for PO ${po}. The new plan is proposed and waiting to be accepted. Nothing is written to SAP.`,
+        citations,
+        suggestedFollowUps: locale === 'es' ? ['¿Por qué está esperando?'] : ['Why is it waiting?'],
+      };
+    }
 
     if (locale === 'es') {
       if (row.status === 'HOLD') {

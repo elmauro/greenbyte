@@ -1,7 +1,7 @@
 export type QueueColumnHighlight = 'finish' | 'status' | 'reason';
 export type PlantNavSection = 'dashboard' | 'queue' | 'scheduling' | 'copilot';
 
-import { useEffect, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useState } from 'react';
 import type {
   PlantEventType,
   PlantExplanation,
@@ -17,6 +17,8 @@ import { PlantCopilotChatDock, PlantScheduleCopilot } from './PlantScheduleCopil
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { usePlantLineNotices } from '../../hooks/usePlantLineNotices';
 import { PlantListPagination } from './PlantListPagination';
+import { PlantPlanGeneratingModal } from './PlantPlanGeneratingModal';
+import { PlantQueueNote } from './PlantQueueNote';
 import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
@@ -72,6 +74,13 @@ type PlantBaselineDashboardProps = {
   onSelectOrder?: (po: string) => void;
   /** Order the copilot should explain. Comes from the schedule row. */
   explainPo?: string;
+  /** Reload the line after the copilot sends a rush. */
+  onQueueRefresh?: () => void | Promise<void>;
+  /** Demo controls: drop the plan, then run the scheduler on the orders already here. */
+  onResetDemo?: () => void;
+  onGeneratePlan?: () => void;
+  demoAction?: 'reset' | 'plan' | null;
+  demoActionError?: boolean;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -144,6 +153,11 @@ export function PlantBaselineDashboard({
   onManualOrder,
   onSelectOrder,
   explainPo,
+  onQueueRefresh,
+  onResetDemo,
+  onGeneratePlan,
+  demoAction = null,
+  demoActionError = false,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -177,6 +191,7 @@ export function PlantBaselineDashboard({
     return true;
   });
 
+  const [notePo, setNotePo] = useState('');
   const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
     return defaultSection;
@@ -572,10 +587,12 @@ export function PlantBaselineDashboard({
             const isHold = row.status === 'HOLD';
             const linePosition = queue.findIndex((r) => r.po === row.po) + 1;
             const isSelected = selectedPo.includes(row.po);
+            const noteOpen = !staticPreview && !isComplete && notePo === row.po;
+            const noteColumns = (isUx ? 8 : 7);
             return (
+              <Fragment key={row.po}>
               <tr
-                key={row.po}
-                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${row.previousPosition && isUx ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
+                className={`hover:bg-gray-50/80 ${isSelected && isUx ? 'bg-brand-green/5' : ''} ${noteOpen ? 'bg-brand-green/5' : ''} ${row.previousPosition && isUx ? 'ring-1 ring-inset ring-brand-green/20' : ''}`}
               >
                 {isUx && (
                   <td className="px-3 py-3">
@@ -593,7 +610,38 @@ export function PlantBaselineDashboard({
                     {linePosition}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">{formatPo(row.po)}</td>
+                <td className="px-4 py-3 font-mono text-xs font-medium text-gray-800">
+                  <span className="inline-flex items-center gap-1.5">
+                    {row.rush && (
+                      <span
+                        title={row.rush === 'note' ? copy.table.rushNote : copy.table.rushPriority}
+                        aria-label={row.rush === 'note' ? copy.table.rushNote : copy.table.rushPriority}
+                        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold leading-none text-amber-700"
+                      >
+                        !
+                      </span>
+                    )}
+                    {formatPo(row.po)}
+                    {!staticPreview && !isComplete && (
+                      <button
+                        type="button"
+                        aria-label={noteOpen ? copy.salesChat.noteClose : copy.salesChat.noteOpen}
+                        aria-pressed={noteOpen}
+                        onClick={() => setNotePo(noteOpen ? '' : row.po)}
+                        className={`inline-flex h-6 w-6 items-center justify-center rounded ${
+                          noteOpen
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'text-amber-500 hover:bg-amber-50 hover:text-amber-700'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+                          <path fill="currentColor" d="M6 3h8l6 6v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                          <path fill="white" fillOpacity="0.7" d="M14 3v5a1 1 0 0 0 1 1h5z" />
+                        </svg>
+                      </button>
+                    )}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <p className="font-semibold text-gray-900">{sp.common}</p>
                   <p className="text-xs italic text-gray-500">{sp.scientific}</p>
@@ -650,30 +698,24 @@ export function PlantBaselineDashboard({
                   )}
                 </td>
               </tr>
+              {noteOpen && (
+                <tr>
+                  <td colSpan={noteColumns} className="p-0">
+                    <PlantQueueNote
+                      po={row.po}
+                      lineId={selectedLineId}
+                      locale={locale}
+                      onQueueRefresh={onQueueRefresh}
+                      copy={copy.salesChat}
+                    />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             );
           })}
         </tbody>
       </table>
-    </div>
-  );
-
-  const acceptFooter = eventPendingReview && onAccept && (
-    <div className="mt-4 flex flex-col items-stretch justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center">
-      <p className="text-sm text-gray-600">
-        {schedule.footerTotal
-          .replace('{count}', String(active.length))
-          .replace('{runtime}', schedule.demoRuntime)}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={acceptDisabled || accepted}
-          onClick={onAccept}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-green px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-green-dark disabled:opacity-40"
-        >
-          ✓ {accepted ? copy.actions.accepted : copy.actions.accept}
-        </button>
-      </div>
     </div>
   );
 
@@ -823,12 +865,19 @@ export function PlantBaselineDashboard({
                 timeline
               )}
             </div>
-            {!isUx && acceptFooter}
           </>
         );
       }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded lineId={selectedLineId} focusPo={explainPo} />;
+        return (
+          <PlantBatchExplainChat
+            queue={queue}
+            embedded
+            lineId={selectedLineId}
+            focusPo={explainPo}
+            onQueueRefresh={onQueueRefresh}
+          />
+        );
     }
   }
 
@@ -931,8 +980,38 @@ export function PlantBaselineDashboard({
     );
   }
 
+  const showDemoActions = !compact && !staticPreview && Boolean(onResetDemo && onGeneratePlan);
+  const demoBusy = demoAction != null;
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-[#f8faf8] shadow-lg">
+      {showDemoActions && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-white px-3 py-2 sm:px-4">
+          {demoActionError && (
+            <p className="mr-auto text-xs font-medium text-brand-red">{copy.actions.demoActionError}</p>
+          )}
+          <div className={`flex flex-wrap items-center gap-2 ${demoActionError ? '' : 'ml-auto'}`}>
+            <button
+              type="button"
+              onClick={onResetDemo}
+              disabled={demoBusy || acceptDisabled}
+              title={copy.actions.resetDemoHint}
+              className="rounded-full border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {demoAction === 'reset' ? copy.actions.resettingDemo : copy.actions.resetDemo}
+            </button>
+            <button
+              type="button"
+              onClick={onGeneratePlan}
+              disabled={demoBusy || acceptDisabled}
+              title={copy.actions.generatePlanHint}
+              className="rounded-full bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark disabled:opacity-50"
+            >
+              {demoAction === 'plan' ? copy.actions.generatingPlan : copy.actions.generatePlan}
+            </button>
+          </div>
+        </div>
+      )}
       <div className={`flex min-h-[520px] flex-col ${isUx ? '' : 'md:flex-row'}`}>
       {!compact && !isUx && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
@@ -1108,8 +1187,12 @@ export function PlantBaselineDashboard({
         </nav>
       )}
 
-      {isUx && eventPendingReview && onAccept && (
-        <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
+      {eventPendingReview && onAccept && (
+        <div className={`fixed inset-x-0 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 ${
+          isUx
+            ? 'bottom-14 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none'
+            : 'bottom-0'
+        }`}>
           <div className={`mx-auto flex flex-wrap items-center gap-4 sm:justify-between ${
             isUx && !compact && schedulingLayout === 'full' && (!staticPreview || faithfulStatic)
               ? 'lg:pr-20'
@@ -1151,6 +1234,7 @@ export function PlantBaselineDashboard({
           lineId={selectedLineId}
           focusPo={explainPo ?? eventHighlightPo}
           onFocusPo={revealScheduleOrder}
+          onQueueRefresh={onQueueRefresh}
           raised={Boolean(eventPendingReview && onAccept)}
         />
       )}
@@ -1222,6 +1306,14 @@ export function PlantBaselineDashboard({
             }}
           />
         </>
+      )}
+
+      {demoAction === 'plan' && (
+        <PlantPlanGeneratingModal
+          title={copy.actions.planModalTitle}
+          subtitle={copy.actions.planModalSubtitle}
+          steps={copy.actions.planModalSteps}
+        />
       )}
     </div>
   );

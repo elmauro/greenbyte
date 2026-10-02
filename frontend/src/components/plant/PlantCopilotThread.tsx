@@ -1,66 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  appendCopilotTurn,
+  askCopilot,
+  readCopilotThreads,
+  writeCopilotThreads,
+  type CopilotTurn,
+} from '../../demo/plant/copilotThread';
 import type { QueueRow } from '../../demo/plant/plantDemoTypes';
 import { useLocale } from '../../i18n';
-import { plantDemoApi } from '../../services/plantDemoApi';
 import { PlantSelect } from './PlantSelect';
-
-const THREAD_KEY = 'greenbyte-schedule-copilot-threads-v1';
-const MAX_TURNS = 16;
-
-type CopilotTurn = {
-  role: 'user' | 'copilot';
-  text: string;
-  citations?: string[];
-};
 
 type PlantCopilotThreadProps = {
   queue: QueueRow[];
   lineId?: string;
   focusPo?: string;
   onPoChange?: (po: string) => void;
+  /** Reload the line after the copilot sends a rush. */
+  onQueueRefresh?: () => void | Promise<void>;
 };
 
-function readThreads(): Record<string, CopilotTurn[]> {
-  try {
-    const raw = sessionStorage.getItem(THREAD_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
-    const threads: Record<string, CopilotTurn[]> = {};
-    for (const [order, value] of Object.entries(parsed)) {
-      if (!Array.isArray(value)) continue;
-      const turns = value.flatMap((turn) => {
-        if (!turn || typeof turn !== 'object') return [];
-        const row = turn as { role?: unknown; text?: unknown; citations?: unknown };
-        if ((row.role !== 'user' && row.role !== 'copilot') || typeof row.text !== 'string') return [];
-        const citations = Array.isArray(row.citations)
-          ? row.citations.filter((item): item is string => typeof item === 'string')
-          : undefined;
-        const next: CopilotTurn = { role: row.role, text: row.text, citations };
-        return [next];
-      });
-      if (turns.length) threads[order] = turns.slice(-MAX_TURNS);
-    }
-    return threads;
-  } catch {
-    return {};
-  }
-}
-
-function writeThreads(threads: Record<string, CopilotTurn[]>) {
-  try {
-    sessionStorage.setItem(THREAD_KEY, JSON.stringify(threads));
-  } catch {
-    /* quota or private mode: the thread still shows for this view */
-  }
-}
-
-function plainText(value: string) {
-  return value.replace(/\*\*(.*?)\*\*/g, '$1');
-}
-
 /** Chat for one production order. The thread is kept for the browser session. */
-export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: PlantCopilotThreadProps) {
+export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange, onQueueRefresh }: PlantCopilotThreadProps) {
   const { locale, messages: m } = useLocale();
   const copy = m.plantMvp.salesChat;
   const shell = m.plantMvp.scheduleShell;
@@ -68,7 +28,7 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: Plant
   const [po, setPo] = useState(() =>
     focusPo && selectable.some((row) => row.po === focusPo) ? focusPo : '',
   );
-  const [threads, setThreads] = useState(readThreads);
+  const [threads, setThreads] = useState(readCopilotThreads);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
@@ -91,11 +51,8 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: Plant
 
   function remember(order: string, turn: CopilotTurn) {
     setThreads((prev) => {
-      const next = {
-        ...prev,
-        [order]: [...(prev[order] ?? []), turn].slice(-MAX_TURNS),
-      };
-      writeThreads(next);
+      const next = appendCopilotTurn(prev, order, turn);
+      writeCopilotThreads(next);
       return next;
     });
   }
@@ -109,12 +66,15 @@ export function PlantCopilotThread({ queue, lineId, focusPo, onPoChange }: Plant
     if (!preset) setQuestion('');
     setBusy(true);
     try {
-      const res = await plantDemoApi.postBatchExplain(order, asked, locale, { lineId, history });
-      remember(order, {
-        role: 'copilot',
-        text: plainText(res.answer),
-        citations: res.citations,
-      });
+      remember(order, await askCopilot({
+        po: order,
+        question: asked,
+        locale,
+        lineId,
+        history,
+        onQueueRefresh,
+        rushError: copy.rushError,
+      }));
     } catch {
       remember(order, { role: 'copilot', text: copy.askError });
     } finally {

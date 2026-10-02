@@ -17,6 +17,7 @@ type PlantCopilotChatDockProps = {
   lineId?: string;
   focusPo?: string;
   onFocusPo?: (po: string) => void;
+  onQueueRefresh?: () => void | Promise<void>;
   /** Lift the dock above the mobile accept bar. Desktop stays in the viewport corner. */
   raised?: boolean;
 };
@@ -135,6 +136,7 @@ export function PlantCopilotChatDock({
   lineId,
   focusPo,
   onFocusPo,
+  onQueueRefresh,
   raised = false,
 }: PlantCopilotChatDockProps) {
   const { messages: m } = useLocale();
@@ -179,7 +181,7 @@ export function PlantCopilotChatDock({
               {focusPo ?? shell.selectRowHint}
             </p>
           </div>
-          <PlantCopilotThread queue={queue} lineId={lineId} focusPo={focusPo} onPoChange={onFocusPo} />
+          <PlantCopilotThread queue={queue} lineId={lineId} focusPo={focusPo} onPoChange={onFocusPo} onQueueRefresh={onQueueRefresh} />
         </section>
       )}
       <button

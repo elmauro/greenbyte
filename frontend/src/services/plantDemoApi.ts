@@ -150,6 +150,26 @@ async function postBatchExplain(
   return data;
 }
 
+/** Same SAP priority ingest the operator uses. Priority 1 is a rush when it is higher than the order's current rank. */
+async function sendCopilotRush(locale: Locale, lineId: string | undefined, po: string) {
+  return postIngestSapPriorityChange(locale, lineId, { po, priority: 1 });
+}
+
+/** Drops the line's plan. Orders stay, in open-queue order, with no schedule. */
+async function stageRawLine(lineId: string): Promise<void> {
+  if (!useHttp) {
+    plantDemoServer.reset();
+    return;
+  }
+  await axiosApp.post('/demo/plant/demo/stage-raw', { lineId });
+}
+
+/** One scheduler run over the orders already on the line. */
+async function planLine(lineId: string): Promise<void> {
+  if (!useHttp) return;
+  await axiosApp.post('/demo/plant/demo/plan-line', { lineId }, { timeout: 120_000 });
+}
+
 export const plantDemoApi = {
   getQueue,
   postIngestPassFailLog,
@@ -157,6 +177,9 @@ export const plantDemoApi = {
   postIngestSapQueueRefresh,
   postAccept,
   postBatchExplain,
+  sendCopilotRush,
+  stageRawLine,
+  planLine,
   /** @deprecated use connectionMode === 'bff' */
   useRemoteBff: useLiveBff,
   connectionMode: getApiConnectionMode(),

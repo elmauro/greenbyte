@@ -42,6 +42,10 @@ export function writeManualOrder(record: ManualOrderRecord) {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(record));
 }
 
+export function clearManualOrder() {
+  sessionStorage.removeItem(STORAGE_KEY);
+}
+
 /** Puts the scheduler's order on top of a fresh queue snapshot. Completed rows stay at the end. */
 export function applyManualOrder(rows: QueueRow[], record: ManualOrderRecord, locale: Locale): QueueRow[] {
   const byPo = new Map(rows.map((row) => [row.po, row]));

@@ -10,7 +10,7 @@ import { explainPlan, templateExplanation } from '../semanticEngine/explain/expl
 import { createJevClassifier, explainClients, jevEnabled } from '../semanticEngine/models/clients.js';
 import { zonedTimeToUtc } from '../semanticEngine/planner/calendar.js';
 import { applyPlannerEvent, computePlan } from '../semanticEngine/planner/index.js';
-import { normalizePlanDiff, normalizePlanQueue } from './planExplanation.js';
+import { normalizePlanDiff, normalizePlanQueue, rushByPoFromEntries, startByPoFromEntries } from './planExplanation.js';
 
 export function semanticPlannerEnabled() {
   return process.env.SEMANTIC_PLANNER_ENABLED === 'true';
@@ -113,7 +113,7 @@ export async function replanWithSemanticEngine(query, change) {
   return {
     ...plan,
     eventType: trigger,
-    queue: normalizePlanQueue(plan.queue, poNotes),
+    queue: normalizePlanQueue(plan.queue, poNotes, rushByPoFromEntries(payload.entries), startByPoFromEntries(payload.entries)),
     diff: normalizePlanDiff(plan.diff),
     explanation,
     explanationSource: source,

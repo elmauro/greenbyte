@@ -22,7 +22,7 @@ import { PLANT_DEMO_LINE_ID } from '../demo/plant/plantDemoServer';
 import type { PlantPlanDiff } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n/LocaleContext';
 import { getApiConnectionMode } from '../services/apiConfig';
-import { applyManualOrder, readManualOrder, rememberManualOrder } from '../demo/plant/plantManualOrder';
+import { applyManualOrder, clearManualOrder, readManualOrder, rememberManualOrder } from '../demo/plant/plantManualOrder';
 import { plantDemoApi } from '../services/plantDemoApi';
 
 function explanationFromQueue(value: PlantExplanation | null | undefined): PlantExplanation | null {
@@ -46,6 +46,8 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [demoAction, setDemoAction] = useState<'reset' | 'plan' | null>(null);
+  const [demoActionError, setDemoActionError] = useState(false);
   const acceptedPlanVersionRef = useRef<number | null>(readAckPlanVersion(lineId));
   const acceptEpochRef = useRef(0);
   const shellReadyRef = useRef(false);
@@ -192,6 +194,23 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     };
   }, [pollQueue, pollsRemoteQueue]);
 
+  const runDemoAction = useCallback(async (action: 'reset' | 'plan') => {
+    setBusy(true);
+    setDemoAction(action);
+    setDemoActionError(false);
+    try {
+      clearManualOrder();
+      if (action === 'reset') await plantDemoApi.stageRawLine(lineId);
+      else await plantDemoApi.planLine(lineId);
+      await loadQueue();
+    } catch {
+      setDemoActionError(true);
+    } finally {
+      setBusy(false);
+      setDemoAction(null);
+    }
+  }, [lineId, loadQueue]);
+
   const acceptPlan = useCallback(async () => {
     setBusy(true);
     try {
@@ -227,7 +246,12 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
     refreshing,
     loadError,
     busy,
+    demoAction,
+    demoActionError,
     acceptPlan,
+    resetDemo: () => runDemoAction('reset'),
+    generatePlan: () => runDemoAction('plan'),
+    reloadQueue: loadQueue,
     setManualOrder,
     connectionMode: plantDemoApi.connectionMode,
   };

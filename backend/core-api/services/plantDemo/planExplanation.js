@@ -43,7 +43,35 @@ export function explainContextFromPlan(plan, overrides = {}) {
   };
 }
 
-export function normalizePlanQueue(queue, poNotes = {}) {
+/** Priority rush wins when both codes are present, matching gold.replan. */
+export function rushKind(reasons) {
+  const codes = new Set((Array.isArray(reasons) ? reasons : []).map((reason) => reason?.code));
+  if (codes.has('RUSH_PRIORITY')) return 'priority';
+  if (codes.has('NOTE_RUSH')) return 'note';
+  return undefined;
+}
+
+export function rushByPoFromEntries(entries) {
+  const flags = {};
+  for (const entry of entries || []) {
+    const po = String(entry?.poNumber || entry?.po || '');
+    const kind = rushKind(entry?.reasons);
+    if (po && kind) flags[po] = kind;
+  }
+  return flags;
+}
+
+export function startByPoFromEntries(entries) {
+  const starts = {};
+  for (const entry of entries || []) {
+    const po = String(entry?.poNumber || entry?.po || '');
+    const text = String(entry?.plannedStartAt ?? '').replace('T', ' ').slice(0, 16);
+    if (po && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(text)) starts[po] = text;
+  }
+  return starts;
+}
+
+export function normalizePlanQueue(queue, poNotes = {}, rushByPo = {}, startByPo = {}) {
   if (!Array.isArray(queue)) return [];
   return queue
     .map((row) => {
@@ -61,6 +89,10 @@ export function normalizePlanQueue(queue, poNotes = {}) {
       if (row.atRisk === true) out.atRisk = true;
       if (row.reasonShort) out.reasonShort = String(row.reasonShort);
       if (poNotes?.[out.po]) out.aiNote = String(poNotes[out.po]);
+      const rush = rushByPo[out.po];
+      if (rush === 'priority' || rush === 'note') out.rush = rush;
+      const start = startByPo[out.po] || row.start;
+      if (start) out.start = String(start).replace('T', ' ').slice(0, 16);
       if (previous != null && previous !== '' && Number.isFinite(Number(previous))) {
         out.previousPosition = Number(previous);
       }
@@ -79,11 +111,11 @@ export function normalizePlanDiff(diff) {
   };
 }
 
-export function queueResponseFromPlan(plan, explanation, poNotes = {}) {
+export function queueResponseFromPlan(plan, explanation, poNotes = {}, rushByPo = {}, startByPo = {}) {
   const ctx = explainContextFromPlan(plan);
   return {
     lineId: plan.lineId,
-    queue: normalizePlanQueue(plan.queue, poNotes),
+    queue: normalizePlanQueue(plan.queue, poNotes, rushByPo, startByPo),
     planVersion: Number(plan.planVersion) || 1,
     lastEvent: ctx.uiEventType,
     acceptedPlanVersion: null,

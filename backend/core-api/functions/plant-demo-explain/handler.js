@@ -50,6 +50,7 @@ export async function handler(event) {
         answer: result.answer,
         citations: result.citations,
         suggestedFollowUps: result.suggestedFollowUps,
+        ...(result.action ? { action: result.action } : {}),
       });
     }
 

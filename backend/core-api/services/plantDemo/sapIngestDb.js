@@ -5,6 +5,7 @@ import {
   localeOf,
   normalizePlanQueue,
   queueResponseFromPlan,
+  rushKind,
   titleCaseToken,
 } from './planExplanation.js';
 import { plannerExplanationForPoll, semanticPlannerEnabled, withSemanticPlan } from './semanticReplan.js';
@@ -178,6 +179,26 @@ async function reasonHints(planId) {
   return { failedFor, priority };
 }
 
+/** Rush tags and planned starts for the plan the screen is showing. */
+async function planMarks(schedulePlanId) {
+  const { rows } = await queryOpenQueue(
+    `SELECT q.po_number, q.reasons,
+            to_char(q.planned_start_at AT TIME ZONE gold.cfg('plant_time_zone'), 'YYYY-MM-DD HH24:MI') AS planned_start
+     FROM gold.v_plan_queue q
+     WHERE q.schedule_plan_id = $1`,
+    [schedulePlanId],
+  );
+  const rushByPo = {};
+  const startByPo = {};
+  for (const row of rows) {
+    const po = String(row.po_number);
+    const kind = rushKind(row.reasons);
+    if (kind) rushByPo[po] = kind;
+    if (row.planned_start) startByPo[po] = String(row.planned_start);
+  }
+  return { rushByPo, startByPo };
+}
+
 /**
  * Scheduler poll. The latest plan (proposed or accepted) is the queue on
  * screen, in that array order. A proposed plan also returns the simulated
@@ -198,18 +219,19 @@ export async function fetchSchedulerQueue(lineId, locale) {
     ]);
     const plan = rows[0]?.result;
     if (plan) {
+      const { rushByPo, startByPo } = await planMarks(row.schedule_plan_id);
       if (row.status === 'PROPOSED' && row.created_by === 'planner-v2') {
         const { explanation, eventType, poNotes } = await plannerExplanationForPoll(
           queryOpenQueue,
           row.schedule_plan_id,
           plan,
         );
-        return queueResponseFromPlan({ ...plan, eventType }, explanation, poNotes);
+        return queueResponseFromPlan({ ...plan, eventType }, explanation, poNotes, rushByPo, startByPo);
       }
       if (row.status === 'PROPOSED') {
         const hints = await reasonHints(row.schedule_plan_id);
         const explained = await explainOrPlan(plan, { locale: localeOf(locale), ...hints });
-        return queueResponseFromPlan(explained, explained.explanation ?? null);
+        return queueResponseFromPlan(explained, explained.explanation ?? null, {}, rushByPo, startByPo);
       }
       const version = Number(plan.planVersion) || Number(row.plan_version) || 1;
       const poNotes = row.created_by === 'planner-v2'
@@ -217,7 +239,7 @@ export async function fetchSchedulerQueue(lineId, locale) {
         : {};
       return {
         lineId: plan.lineId ?? lineId,
-        queue: normalizePlanQueue(plan.queue, poNotes),
+        queue: normalizePlanQueue(plan.queue, poNotes, rushByPo, startByPo),
         planVersion: version,
         lastEvent: null,
         acceptedPlanVersion: version,

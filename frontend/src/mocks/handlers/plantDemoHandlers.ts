@@ -116,6 +116,23 @@ export const plantDemoHandlers = [
     }
   }),
 
+  http.post('*/demo/plant/demo/stage-raw', async ({ request }) => {
+    const body = (await request.json()) as { lineId?: string };
+    const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
+    plantDemoServer.reset();
+    return HttpResponse.json({ lineId, plansCleared: 1 });
+  }),
+
+  http.post('*/demo/plant/demo/plan-line', async ({ request }) => {
+    const body = (await request.json()) as { lineId?: string };
+    const lineId = body.lineId ?? PLANT_DEMO_LINE_ID;
+    try {
+      return HttpResponse.json(plantDemoServer.getQueue(lineId));
+    } catch {
+      return HttpResponse.json({ message: 'Unknown line' }, { status: 404 });
+    }
+  }),
+
   http.post('*/demo/plant/batches/explain', async ({ request }) => {
     const body = (await request.json()) as { po?: string; question?: string; locale?: Locale };
     const locale = parseLocale(body);

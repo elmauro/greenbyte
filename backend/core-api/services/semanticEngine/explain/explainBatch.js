@@ -60,8 +60,16 @@ export function batchAnswerGuard(answer, packet) {
   return unknown ? { ok: false, reason: `unknown po ${unknown}` } : { ok: true };
 }
 
+/** An instruction to rush the selected order. A question about moving it up is not one. */
+export function rushCommand(question) {
+  const text = String(question || '').trim().toLowerCase();
+  if (!text || /[?¿]/.test(text)) return false;
+  if (/\b(what|why|how|when|which|would|could|qué|por qué|cómo|cuándo|cuando)\b/.test(text)) return false;
+  return /\brush\b|\bexpedite\b|\bmove (it|this) up\b|\brun (it|this) first\b|\b(subelo|súbelo|sube esto|adelantalo|adelántalo)\b|\bm[aá]rcalo rush\b|\bponlo de primero\b/.test(text);
+}
+
 /** Chip text when JEV is off or the call fails. A real JEV answer is kept, including OTHER. */
-export function intentFromQuestion(question) {
+function intentFromQuestion(question) {
   const text = String(question || '').toLowerCase();
   if (/waiting|esperando|por qu[eé]|why\b|fumi|hold/.test(text)) return 'WHY_WAITING';
   if (/when|ship|finish|cu[aá]ndo|sale/.test(text)) return 'WHEN_FINISH';
@@ -169,6 +177,16 @@ export async function explainBatchQuestion({ packet, question, history, locale, 
   }
   if (!intent) intent = intentFromQuestion(question);
   const template = templateBatchAnswer(packet, intent, locale);
+  if (rushCommand(question)) {
+    const es = locale === 'es';
+    return {
+      ...template,
+      action: 'rush',
+      answer: es
+        ? `Rush enviado para PO ${packet.po}. El plan nuevo queda propuesto y hay que aceptarlo. Nada se escribe en SAP.`
+        : `Rush sent for PO ${packet.po}. The new plan is proposed and waiting to be accepted. Nothing is written to SAP.`,
+    };
+  }
   if (!complete) return template;
   try {
     const raw = await complete(answerPrompt(packet, intent, question, history));

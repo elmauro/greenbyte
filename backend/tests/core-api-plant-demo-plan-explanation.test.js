@@ -4,6 +4,7 @@ import {
   explainContextFromPlan,
   normalizePlanQueue,
   queueResponseFromPlan,
+  rushKind,
   titleCaseToken,
 } from '../core-api/services/plantDemo/planExplanation.js';
 
@@ -55,6 +56,22 @@ describe('plan explanation', () => {
       failedFor: 'Discolored',
       focusPo: '1001884747',
     });
+  });
+
+  it('marks a priority rush ahead of a note rush', () => {
+    expect(rushKind([{ code: 'NOTE_RUSH' }, { code: 'RUSH_PRIORITY' }])).toBe('priority');
+    expect(rushKind([{ code: 'NOTE_RUSH' }])).toBe('note');
+    expect(normalizePlanQueue(
+      [{ po: '1001', species: 'PECO', kg: 1, finish: '2026-10-02', status: 'PLANNED' }],
+      {},
+      { 1001: 'note' },
+    )[0].rush).toBe('note');
+    expect(normalizePlanQueue(
+      [{ po: '1001', species: 'PECO', kg: 1, finish: '2026-10-02 18:00', status: 'PLANNED' }],
+      {},
+      {},
+      { 1001: '2026-10-02T14:00:00-07:00' },
+    )[0].start).toBe('2026-10-02 14:00');
   });
 
   it('normalizes a plan row and drops a false at-risk flag', () => {
