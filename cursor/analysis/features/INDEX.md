@@ -31,6 +31,7 @@ Path:
 | GREENBYTE-007 | n/a | `how-it-works-reference` | How it works reference | frontend | done |
 | GREENBYTE-008 | n/a | `copilot-placeholder-order-fix` | Copilot placeholder order fix | frontend | done |
 | GREENBYTE-009 | n/a | `uc1-scheduler-ux-test-cases` | UC1 scheduler UX test cases | frontend | done |
+| GREENBYTE-010 | n/a | `pending-po-highlight` | Pending replan PO highlight (not running slot) | frontend | done |
 
 ## How to update
 
