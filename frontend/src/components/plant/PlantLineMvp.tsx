@@ -42,6 +42,7 @@ export function PlantLineMvp() {
     acceptPlan,
     setManualOrder,
     loadError,
+    planVersion,
   } = usePlantDemoQueue(locale, line.id);
 
   const onSectionChange = useCallback(
@@ -139,6 +140,7 @@ export function PlantLineMvp() {
             section={section}
             onSectionChange={onSectionChange}
             queue={queue}
+            planVersion={planVersion}
             eventType={eventType}
             explanation={explanation}
             eventHighlightPo={eventHighlightPo}

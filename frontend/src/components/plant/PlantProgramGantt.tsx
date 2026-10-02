@@ -27,6 +27,8 @@ type PlantProgramGanttProps = {
   onSelectRow?: (po: string) => void;
   /** The page footer already shows the batch count next to Accept. */
   hideSummary?: boolean;
+  /** Block backdrop / Escape close until the scheduler finishes review (expanded dialog only). */
+  lockExpandedClose?: boolean;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -192,6 +194,7 @@ export function PlantProgramGantt({
   selectedPo,
   onSelectRow,
   hideSummary = false,
+  lockExpandedClose = false,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
@@ -211,13 +214,25 @@ export function PlantProgramGantt({
   const chartMinPx = Math.max(640, (scale?.ticks.length ?? 1) * tickPx);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!expanded || !lockExpandedClose) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    }
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [expanded, lockExpandedClose]);
+
+  useEffect(() => {
+    if (!expanded || lockExpandedClose) return;
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape') setExpanded(false);
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [expanded]);
+  }, [expanded, lockExpandedClose]);
 
   function canDragRow(index: number) {
     if (layout === 'approval') return false;
@@ -359,8 +374,11 @@ export function PlantProgramGantt({
       <button
         type="button"
         className="fixed inset-0 z-40 bg-black/40"
-        aria-label={s.closeExpanded}
-        onClick={() => setExpanded(false)}
+        aria-label={lockExpandedClose ? s.expandedBackdropLocked : s.closeExpanded}
+        aria-disabled={lockExpandedClose || undefined}
+        onClick={() => {
+          if (!lockExpandedClose) setExpanded(false);
+        }}
       />
     )}
     <div

@@ -22,7 +22,12 @@ import { PLANT_DEMO_LINE_ID } from '../demo/plant/plantDemoServer';
 import type { PlantPlanDiff } from '../demo/plant/plantDemoTypes';
 import type { Locale } from '../i18n/LocaleContext';
 import { getApiConnectionMode } from '../services/apiConfig';
-import { applyManualOrder, readManualOrder, rememberManualOrder } from '../demo/plant/plantManualOrder';
+import {
+  applyManualOrder,
+  clearManualOrder,
+  readManualOrder,
+  rememberManualOrder,
+} from '../demo/plant/plantManualOrder';
 import { plantDemoApi } from '../services/plantDemoApi';
 
 function explanationFromQueue(value: PlantExplanation | null | undefined): PlantExplanation | null {
@@ -72,6 +77,10 @@ export function usePlantDemoQueue(locale: Locale, lineId: string = PLANT_DEMO_LI
 
   const applyQueueSnapshot = useCallback(
     (res: PlantQueueResponse) => {
+      const priorVersion = planVersionRef.current;
+      if (res.planVersion <= 1 && priorVersion > 1) {
+        clearManualOrder();
+      }
       planVersionRef.current = res.planVersion;
       setQueue(queueForSnapshot(res));
       setPlanVersion(res.planVersion);

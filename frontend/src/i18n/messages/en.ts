@@ -213,7 +213,7 @@ export const en = {
     statusLabels: { planned: 'PLANNED', atRisk: 'AT RISK', complete: 'COMPLETE', hold: 'QA HOLD' },
     queueTitle: 'Conditioning run order',
     table: {
-      position: '#',
+      position: 'Schedule line',
       po: 'PO',
       species: 'Species',
       kg: 'Kg',
@@ -273,6 +273,7 @@ export const en = {
       ganttScrollRegionHorizontal: 'Program timeline, horizontal card strip',
       expand: 'Expand timeline',
       closeExpanded: 'Close expanded timeline',
+      expandedBackdropLocked: 'Review the proposed plan in Scheduling before closing',
       queuePosition: 'Queue position {n}',
     },
     pagination: {
@@ -370,7 +371,20 @@ export const en = {
       calmBody: 'No schedule changes waiting · {line} is on plan',
       calmMeta: 'Next completion: {finish} · Line utilization {utilization}%',
       amberTitle: 'Schedule change waiting for your approval',
-      amberBody: 'Review the timeline and summary, then approve if you agree. Nothing is sent to SAP automatically.',
+      amberBody:
+        'Review the **timeline** and **copilot summary**, then **Accept schedule** if you agree. **Nothing is sent to SAP** automatically.',
+      planReviewModal: {
+        title: 'Proposed plan ready',
+        eventRush: 'Priority replan',
+        eventQa: 'Quality hold replan',
+        lead: 'A new **proposed plan** was generated for **{line}**.',
+        bullets: [
+          'Open **Scheduling** to review the **timeline**, queue moves, and **copilot** explanation.',
+          'Tap **Accept schedule** only after you agree — **no SAP write** in this demo.',
+        ],
+        hint: 'This notice stays on screen until you open Scheduling to review the plan.',
+        cta: 'Review in Scheduling',
+      },
       approvedStrip: 'Approved · Demo audit only — no live ERP write',
       whereNext: 'Where to go next',
       nextCalm: 'Use Queue for batch order and finish dates. Scheduling shows the timeline when a replan is pending.',

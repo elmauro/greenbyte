@@ -14,8 +14,34 @@ export type ManualOrderRecord = {
   originalPrevious: Record<string, number | undefined>;
 };
 
-function manualReason(locale: Locale): string {
+export function manualSchedulerReason(locale: Locale): string {
   return locale === 'es' ? 'Lo movió el planificador' : 'Moved by the scheduler';
+}
+
+export function clearManualOrder() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Schedule line badge in queue tables (hidden on calm baseline v1 after demo reset). */
+export function shouldShowScheduleLineNumber(
+  planVersion: number,
+  eventPendingReview: boolean,
+  row: QueueRow,
+  linePosition: number,
+  locale: Locale,
+): boolean {
+  if (eventPendingReview) return true;
+  if (planVersion > 1) return true;
+  const reason = manualSchedulerReason(locale);
+  return (
+    row.reasonShort === reason &&
+    row.previousPosition != null &&
+    row.previousPosition !== linePosition
+  );
 }
 
 export function readManualOrder(lineId: string, planVersion: number): ManualOrderRecord | null {
@@ -57,14 +83,14 @@ export function applyManualOrder(rows: QueueRow[], record: ManualOrderRecord, lo
     if (row.status !== 'COMPLETE' && !used.has(row.po)) ordered.push(row);
   }
   const complete = rows.filter((row) => row.status === 'COMPLETE');
-  const reason = manualReason(locale);
+  const reason = manualSchedulerReason(locale);
   const visible = ordered.map((row, index) => {
     const position = index + 1;
     const baseline = record.baseline[row.po];
     const moved = baseline != null && baseline !== position && row.status !== 'HOLD';
     return {
       ...row,
-      previousPosition: moved ? baseline : record.originalPrevious[row.po],
+      previousPosition: moved ? baseline : undefined,
       reasonShort: moved ? reason : record.originalReason[row.po],
     };
   });
