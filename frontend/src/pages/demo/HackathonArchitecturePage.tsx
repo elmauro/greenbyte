@@ -24,17 +24,13 @@ function TextDiagram({
   );
 }
 
-export function HackathonArchitecturePage() {
+export function HackathonArchitecturePage({ embedded = false }: { embedded?: boolean }) {
   const { messages: m } = useLocale();
   const a = m.demoArchitecture;
   const g = a.groups;
 
-  return (
-    <SiteLayout>
-      <div className="pb-16">
-        <DemoPageIntro eyebrow={a.eyebrow} title={a.title} subtitle={a.subtitle} />
-
-        <DemoPageBody>
+  const body = (
+        <DemoPageBody contained={!embedded} className={embedded ? 'py-0' : ''}>
           <section className="rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-semibold text-brand-blue">{a.useCasesTitle}</h2>
             <div className="mt-6 grid max-w-3xl gap-6">
@@ -123,6 +119,15 @@ export function HackathonArchitecturePage() {
             <p className="mt-2 leading-relaxed">{a.monolithBody}</p>
           </section>
         </DemoPageBody>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <SiteLayout>
+      <div className="pb-16">
+        <DemoPageIntro eyebrow={a.eyebrow} title={a.title} subtitle={a.subtitle} />
+        {body}
       </div>
     </SiteLayout>
   );

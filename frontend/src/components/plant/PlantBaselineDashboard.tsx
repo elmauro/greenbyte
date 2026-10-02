@@ -13,8 +13,9 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
-import { PlantScheduleCopilot } from './PlantScheduleCopilot';
+import { PlantCopilotChatDock, PlantScheduleCopilot } from './PlantScheduleCopilot';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
+import { usePlantLineNotices } from '../../hooks/usePlantLineNotices';
 import { PlantListPagination } from './PlantListPagination';
 import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
@@ -59,6 +60,8 @@ type PlantBaselineDashboardProps = {
   /** Lines with a valid demo_line_id. Omit on tour and flow previews. */
   selectedLineId?: string;
   onLineChange?: (lineId: string) => void;
+  /** Open that line's schedule and select it in the line control. */
+  onOpenLine?: (lineId: string) => void;
   /** Line switch in flight — dim the data area, keep nav and the line control. */
   dataRefreshing?: boolean;
   /** Scheduler reorders the proposed plan. The running batch and holds stay put. */
@@ -133,6 +136,7 @@ export function PlantBaselineDashboard({
   eventHighlightPo,
   selectedLineId,
   onLineChange,
+  onOpenLine,
   dataRefreshing = false,
   onManualOrder,
   onSelectOrder,
@@ -146,6 +150,7 @@ export function PlantBaselineDashboard({
   const copy = m.plantMvp;
   const paginationCopy = m.plantMvp.pagination;
   const isUx = experience === 'ux';
+  const remoteNotices = usePlantLineNotices(isUx && !staticPreview, locale);
   const schedule = m.plantMvp.scheduleShell;
   const enablePagination = !staticPreview && !compact;
   const hi = new Set(highlightColumns);
@@ -153,7 +158,11 @@ export function PlantBaselineDashboard({
   const totalKg = active.reduce((s, r) => s + r.kg, 0);
   const nextRow = active[0];
   const utilization = Math.min(95, 58 + active.length * 2);
-  const eventActive = Boolean(eventType && explanation);
+  const explanationLead = (explanation?.alertBanner ?? '').trim() || (explanation?.summary ?? '').trim();
+  const explanationHasCopy = Boolean(
+    explanationLead || explanation?.bullets?.some((line) => line.trim().length > 0),
+  );
+  const eventActive = Boolean(eventType && explanation && explanationHasCopy);
   /** Rush/QA still awaiting human accept — hide event chrome once accepted. */
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
@@ -177,14 +186,12 @@ export function PlantBaselineDashboard({
 
   function revealScheduleOrder(po: string) {
     onSelectOrder?.(po);
-    setCopilotOpenTick((n) => n + 1);
   }
 
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [copilotOpenTick, setCopilotOpenTick] = useState(0);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -199,6 +206,7 @@ export function PlantBaselineDashboard({
   const [selectedPo, setSelectedPo] = useState<string[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [notificationDismissed, setNotificationDismissed] = useState(false);
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState<string[]>([]);
   const displayQueue = isUx ? filterQueueRows(queue, queueFilter) : queue;
   const shownPo = displayQueue.map((r) => r.po);
   const allShownSelected =
@@ -292,8 +300,20 @@ export function PlantBaselineDashboard({
 
   const showSchedulingNotification =
     schedulingActionPending && !(isUx && notificationDismissed);
+  const scheduleNotices = isUx
+    ? PLANT_LINES.flatMap((line) => {
+        const remote = remoteNotices.find((notice) => notice.lineId === line.id);
+        const isCurrent = line.id === selectedLine.id;
+        if (isCurrent) {
+          if (!eventType || !eventPendingReview) return [];
+          return [{ lineId: line.id, eventType, summary: explanation?.summary }];
+        }
+        if (!remote || dismissedNoticeIds.includes(`${remote.lineId}:${remote.eventType}`)) return [];
+        return [remote];
+      })
+    : [];
   const notificationCount =
-    (showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
+    (isUx ? scheduleNotices.length : showSchedulingNotification ? 1 : 0) + (queueUpdateUnread ? 1 : 0);
 
   function statusPill(): { label: string; sub: string; className: string; dot: string } {
     if (eventPendingReview) {
@@ -418,17 +438,39 @@ export function PlantBaselineDashboard({
     setBellOpen(false);
   }
 
-  const eventBanner = eventPendingReview && explanation && (
+  function openScheduleForLine(lineId: string) {
+    setBellOpen(false);
+    if (onOpenLine) {
+      onOpenLine(lineId);
+      return;
+    }
+    if (lineId !== selectedLine.id) onLineChange?.(lineId);
+    goToSection('scheduling');
+  }
+
+  function dismissScheduleNotice(lineId: string, eventTypeName: string) {
+    if (lineId === selectedLine.id) {
+      setNotificationDismissed(true);
+      return;
+    }
+    const id = `${lineId}:${eventTypeName}`;
+    setDismissedNoticeIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+  }
+
+  const eventBanner = eventPendingReview && explanation && explanationLead && (
     <div className="mb-4 flex flex-col gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 sm:flex-row sm:items-start">
       <span className="text-amber-600">⚠</span>
       <div className="min-w-0 flex-1">
         {isUx && (
           <p className="font-semibold">{ux.amberTitle}</p>
         )}
-        {!isUx && (
+        {!isUx && explanation.alertBanner?.trim() && (
           <p>{explanation.alertBanner}</p>
         )}
-        {!isUx && explanation.summary && (
+        {!isUx && !explanation.alertBanner?.trim() && (
+          <p>{explanationLead}</p>
+        )}
+        {!isUx && explanation.alertBanner?.trim() && explanation.summary && (
           <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
         )}
         {isUx && (
@@ -785,6 +827,7 @@ export function PlantBaselineDashboard({
             onPlaceRow={onManualOrder ? placeRunnable : undefined}
             selectedPo={isUx ? explainPo : undefined}
             onSelectRow={isUx ? revealScheduleOrder : undefined}
+            hideSummary={isUx && eventPendingReview && Boolean(onAccept)}
           />
         );
         const showUxRail = isUx && schedulingLayout === 'full';
@@ -796,14 +839,7 @@ export function PlantBaselineDashboard({
               {showUxRail ? (
                 <div className="flex flex-col lg:flex-row">
                   {timeline}
-                  <PlantScheduleCopilot
-                    explanation={eventPendingReview ? explanation : null}
-                    queue={queue}
-                    lineId={selectedLineId}
-                    focusPo={explainPo}
-                    onFocusPo={revealScheduleOrder}
-                    openRequest={copilotOpenTick}
-                  />
+                  <PlantScheduleCopilot explanation={eventPendingReview ? explanation : null} />
                 </div>
               ) : showClassicRail ? (
                 <div className="flex flex-col lg:flex-row">
@@ -854,37 +890,39 @@ export function PlantBaselineDashboard({
                 {ux.notifTitle} ({notificationCount})
               </li>
             )}
-            {showSchedulingNotification && (
-              <li role="none" className="border-b px-3 py-3 last:border-0">
-                <div className="flex gap-2">
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
-                    <p className="mt-0.5 text-xs text-gray-600">
-                      {explanation?.summary ?? (eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
-                        onClick={() => goToSection('scheduling')}
-                      >
-                        {ux.openSchedule}
-                      </button>
-                      {isUx && (
+            {isUx &&
+              scheduleNotices.map((notice) => (
+                <li key={notice.lineId} role="none" className="border-b px-3 py-3 last:border-0">
+                  <div className="flex gap-2">
+                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                    <div className="flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        {copy.lineNames[notice.lineId as keyof typeof copy.lineNames]}
+                      </p>
+                      <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
+                      <p className="mt-0.5 text-xs text-gray-600">
+                        {notice.summary ?? (notice.eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                          onClick={() => openScheduleForLine(notice.lineId)}
+                        >
+                          {ux.openSchedule}
+                        </button>
                         <button
                           type="button"
                           className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                          onClick={() => setNotificationDismissed(true)}
+                          onClick={() => dismissScheduleNotice(notice.lineId, notice.eventType)}
                         >
                           {ux.dismiss}
                         </button>
-                      )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            )}
+                </li>
+              ))}
             {!isUx && schedulingActionPending && (
               <li role="none">
                 <button
@@ -960,12 +998,7 @@ export function PlantBaselineDashboard({
       {!compact && !isUx && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
-            <p className="mt-8 px-2 text-[10px] text-gray-500">
-              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
-              {b.systemsOk}
-              <br />
-              {b.lastUpdated}
-            </p>
+            <p className="mt-8 px-2 text-[10px] text-gray-500">{b.lastUpdated}</p>
           </aside>
         )}
 
@@ -1006,10 +1039,6 @@ export function PlantBaselineDashboard({
                     </span>
                   )}
                 </button>
-                <p className="ml-2 text-[11px] text-gray-500">
-                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
-                  {b.systemsOk}
-                </p>
                 <div className="ml-2 flex items-center gap-2 border-l border-gray-200 pl-3">
                   {renderAlerts(`${bellMenuId}-bar`)}
                   <img src="/demo/syngenta-logo.png" alt="Syngenta" className="h-8 w-auto" />
@@ -1142,7 +1171,9 @@ export function PlantBaselineDashboard({
 
       {isUx && eventPendingReview && onAccept && (
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
-          <div className="mx-auto flex flex-wrap items-center gap-4 sm:justify-between">
+          <div className={`mx-auto flex flex-wrap items-center gap-4 sm:justify-between ${
+            isUx && !compact && schedulingLayout === 'full' && !staticPreview ? 'lg:pr-20' : ''
+          }`}>
             <p className="flex-1 text-sm text-gray-600">
               {schedule.footerTotal
                 .replace('{count}', String(active.length))
@@ -1167,6 +1198,16 @@ export function PlantBaselineDashboard({
             </button>
           </div>
         </div>
+      )}
+
+      {isUx && !compact && schedulingLayout === 'full' && !staticPreview && !timelineOpen && (
+        <PlantCopilotChatDock
+          queue={queue}
+          lineId={selectedLineId}
+          focusPo={explainPo ?? eventHighlightPo}
+          onFocusPo={revealScheduleOrder}
+          raised={Boolean(eventPendingReview && onAccept)}
+        />
       )}
 
       {isUx && (

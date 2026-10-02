@@ -31,6 +31,12 @@ type DemoPageBodyProps = {
 };
 
 /** Body column aligned with the site header and the intro band. */
-export function DemoPageBody({ children, className = '' }: DemoPageBodyProps) {
-  return <div className={`site-container-demo space-y-8 py-8 ${className}`}>{children}</div>;
+export function DemoPageBody({
+  children,
+  className = '',
+  contained = true,
+}: DemoPageBodyProps & { contained?: boolean }) {
+  return (
+    <div className={`${contained ? 'site-container-demo py-8' : ''} space-y-8 ${className}`}>{children}</div>
+  );
 }

@@ -120,4 +120,59 @@ describe('plan explanation', () => {
   it('title-cases a fail reason code', () => {
     expect(titleCaseToken('DISCOLORED')).toBe('Discolored');
   });
+
+  it('names the moved order instead of an em dash', () => {
+    const text = buildExplainReplan('es', 'rush', {
+      focusPo: '—',
+      moves: [{ po: '-', fromPosition: 4, toPosition: 2 }],
+      added: [],
+      held: ['PO'],
+      queue: [
+        { po: '1001759341', species: 'SWCO', status: 'PLANNED' },
+        { po: '1002307551', species: 'SWCO', status: 'PLANNED', previousPosition: 4 },
+      ],
+    });
+    expect(text.summary).toBe('PO 1002307551 quedó en la posición 2.');
+    expect(text.summary).not.toMatch(/—/);
+    expect(text.bullets.join(' ')).toMatch(/Señal de prioridad/);
+    expect(text.bullets.join(' ')).toMatch(/Especie SWCO/);
+    expect(text.bullets.join(' ')).toMatch(/Sin escritura ERP/);
+  });
+
+  it('does not invent an order number when none can be resolved', () => {
+    const spanish = buildExplainReplan('es', 'rush', {
+      focusPo: '—',
+      moves: [],
+      added: ['-'],
+      held: [],
+      queue: [{ po: '1001759341', species: 'SWCO', status: 'PLANNED' }],
+    });
+    expect(spanish.summary).toBe('Un lote se adelantó en la cola.');
+    expect(spanish.bullets[0]).toBe('Un lote se adelantó en la cola.');
+    expect(spanish.summary).not.toMatch(/PO/);
+    expect(spanish.bullets.join(' ')).toMatch(/Changeover según la especie/);
+    expect(spanish.bullets.join(' ')).toMatch(/Sin escritura ERP/);
+
+    const english = buildExplainReplan('en', 'rush', {
+      focusPo: '',
+      moves: [{ po: '—' }],
+      queue: [],
+    });
+    expect(english.summary).toBe('A batch moved ahead in the queue.');
+    expect(english.bullets[0]).toBe('A batch moved ahead in the queue.');
+    expect(english.summary).not.toMatch(/PO —/);
+    expect(english.bullets.join(' ')).toMatch(/SAP finish \/ priority signal applied/);
+    expect(english.bullets.join(' ')).toMatch(/No ERP write/);
+  });
+
+  it('uses the first order after the running row when that is the only signal', () => {
+    const text = buildExplainReplan('en', 'rush', {
+      queue: [
+        { po: '1001759341', status: 'PLANNED' },
+        { po: '1002266350', status: 'PLANNED', species: 'PECO' },
+      ],
+    });
+    expect(text.summary).toBe('PO 1002266350 is at position 2.');
+    expect(text.summary).not.toMatch(/1001759341/);
+  });
 });

@@ -25,6 +25,8 @@ type PlantProgramGanttProps = {
   selectedPo?: string;
   /** Choose an order for the copilot. Does not leave the schedule. */
   onSelectRow?: (po: string) => void;
+  /** The page footer already shows the batch count next to Accept. */
+  hideSummary?: boolean;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -189,6 +191,7 @@ export function PlantProgramGantt({
   onPlaceRow,
   selectedPo,
   onSelectRow,
+  hideSummary = false,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
@@ -611,7 +614,7 @@ export function PlantProgramGantt({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-4 py-2 text-[11px] text-gray-500">
-        <span>{footer}</span>
+        {!hideSummary && <span>{footer}</span>}
         {layout !== 'approval' && <ColorLegend labels={s} />}
         {rows.length > 8 && <span className="text-gray-400">{s.ganttScrollHint}</span>}
       </div>

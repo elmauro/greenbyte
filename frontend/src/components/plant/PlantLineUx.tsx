@@ -108,6 +108,15 @@ export function PlantLineUx() {
             onManualOrder={setManualOrder}
             onSelectOrder={selectOrder}
             explainPo={searchParams.get('po') ?? undefined}
+            onOpenLine={(lineId) => {
+              setSearchParams((prev) => {
+                const params = new URLSearchParams(prev);
+                params.set('line', lineId);
+                params.set('section', 'scheduling');
+                params.delete('po');
+                return params;
+              }, { replace: true });
+            }}
           />
           </>
         )}

@@ -45,7 +45,11 @@ provider:
         - Effect: Allow
           Action:
             - bedrock:InvokeModel
-          Resource: '*'
+          Resource:
+            - arn:aws:bedrock:us-east-1::foundation-model/*
+            - arn:aws:bedrock:us-east-2::foundation-model/*
+            - arn:aws:bedrock:us-west-2::foundation-model/*
+            - arn:aws:bedrock:${aws:region}:${aws:accountId}:inference-profile/*
 
 functions:
   health:

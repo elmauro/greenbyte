@@ -26,7 +26,7 @@ export function PlantCapacityTour() {
         plainLanguage={d.plainLanguage}
         steps={d.steps}
         labels={m.demoCommon.labels}
-        architectureLink={{ label: m.demoCommon.viewArchitecture, href: paths.demoArchitecture }}
+        architectureLink={{ label: m.demoCommon.viewArchitecture, href: paths.demoHowItWorks }}
         renderStepPreview={(stepIndex) => (
           <PlantTourStepPreview stepIndex={stepIndex} snapshots={snapshots} />
         )}

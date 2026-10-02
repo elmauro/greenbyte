@@ -1,5 +1,52 @@
 import { customerMetaForPo } from './customerOrderMeta.js';
 
+const PLACEHOLDER_PO = new Set(['—', '–', '-', 'PO']);
+
+/** True when the value is an order number, not a missing-value placeholder. */
+export function isUsablePo(value) {
+  if (value == null) return false;
+  const text = String(value).trim();
+  return text.length > 0 && !PLACEHOLDER_PO.has(text);
+}
+
+function firstUsablePo(values) {
+  for (const value of values) {
+    if (isUsablePo(value)) return String(value).trim();
+  }
+  return null;
+}
+
+/**
+ * Order number for the copilot sentence.
+ * focusPo, then added, held, moves, a planned row that already moved, then the
+ * first queued PO after the running position-1 row.
+ * @param {object} ctx
+ * @returns {string | null}
+ */
+export function resolveExplainPo(ctx = {}) {
+  const added = Array.isArray(ctx.added) ? ctx.added : [];
+  const held = Array.isArray(ctx.held) ? ctx.held : [];
+  const moves = Array.isArray(ctx.moves) ? ctx.moves : [];
+  const queue = Array.isArray(ctx.queue) ? ctx.queue : [];
+
+  const listed = firstUsablePo([
+    ctx.focusPo,
+    ...added,
+    ...held,
+    ...moves.map((row) => row?.po),
+  ]);
+  if (listed) return listed;
+
+  const moved = queue.find((row) => {
+    const status = String(row?.status ?? 'PLANNED').toUpperCase();
+    return status === 'PLANNED' && row?.previousPosition != null && row.previousPosition !== '' && isUsablePo(row?.po);
+  });
+  if (moved) return String(moved.po).trim();
+
+  const afterRunning = queue.slice(1).find((row) => isUsablePo(row?.po));
+  return afterRunning ? String(afterRunning.po).trim() : null;
+}
+
 /**
  * Stub Agent explain-replan — grounded in diff + ingest context (swap for David API when live).
  * @param {'en' | 'es'} loc
@@ -8,7 +55,6 @@ import { customerMetaForPo } from './customerOrderMeta.js';
  */
 export function buildExplainReplan(loc, eventType, ctx) {
   const {
-    focusPo,
     failedFor,
     priority,
     trigger,
@@ -17,8 +63,8 @@ export function buildExplainReplan(loc, eventType, ctx) {
   } = ctx;
 
   const added = Array.isArray(ctx.added) ? ctx.added : [];
-  const po = focusPo ?? added[0] ?? moves[0]?.po ?? '—';
-  const ownMove = moves.find((row) => String(row.po) === String(po)) ?? null;
+  const po = resolveExplainPo({ ...ctx, added, moves, queue });
+  const ownMove = po ? moves.find((row) => String(row.po) === String(po)) ?? null : null;
   const focusRow = queue.find((row) => String(row.po) === String(po));
   const queueIndex = queue.findIndex((row) => String(row.po) === String(po));
   const position = queueIndex >= 0 ? queueIndex + 1 : ownMove?.toPosition ?? null;
@@ -43,18 +89,34 @@ export function buildExplainReplan(loc, eventType, ctx) {
         ? `Refresh SAP COISPI — nuevo PO activo en Línea ${lineNo}; cola replanificada.`
         : 'Actualización de prioridad SAP — ventana de cliente en riesgo; línea reprogramada.';
       const moveLine = isAdded
-        ? `PO ${po} entró en la posición ${position ?? '—'}.`
+        ? position != null
+          ? po
+            ? `PO ${po} entró en la posición ${position}.`
+            : `Un lote entró en la posición ${position}.`
+          : po
+            ? `PO ${po} entró en la cola.`
+            : 'Un lote entró en la cola.'
         : toPosition != null && fromPosition != null
-          ? `PO ${po} pasó de la posición ${fromPosition} a la ${toPosition}.`
+          ? po
+            ? `PO ${po} pasó de la posición ${fromPosition} a la ${toPosition}.`
+            : `Un lote pasó de la posición ${fromPosition} a la ${toPosition}.`
           : toPosition != null
-            ? `PO ${po} quedó en la posición ${toPosition}.`
+            ? po
+              ? `PO ${po} quedó en la posición ${toPosition}.`
+              : `Un lote quedó en la posición ${toPosition}.`
             : position != null
-              ? `PO ${po} quedó en la posición ${position}.`
-              : `PO ${po} se adelantó en la cola.`;
+              ? po
+                ? `PO ${po} quedó en la posición ${position}.`
+                : `Un lote quedó en la posición ${position}.`
+              : po
+                ? `PO ${po} se adelantó en la cola.`
+                : 'Un lote se adelantó en la cola.';
       const dueLine =
         due && projected ? `Fecha SAP ${due}. Fin proyectado ${projected}.` : null;
       const summary = isRefresh
-        ? `PO ${po} entró en la Línea ${lineNo}${position != null ? ` en la posición ${position}` : ''}${due ? `, con fecha SAP ${due}` : ''}${projected ? ` y fin proyectado ${projected}` : ''}.`
+        ? po
+          ? `PO ${po} entró en la Línea ${lineNo}${position != null ? ` en la posición ${position}` : ''}${due ? `, con fecha SAP ${due}` : ''}${projected ? ` y fin proyectado ${projected}` : ''}.`
+          : `Un lote entró en la Línea ${lineNo}${position != null ? ` en la posición ${position}` : ''}${due ? `, con fecha SAP ${due}` : ''}${projected ? ` y fin proyectado ${projected}` : ''}.`
         : moveLine;
       const bullets = [
         moveLine,
@@ -74,11 +136,12 @@ export function buildExplainReplan(loc, eventType, ctx) {
         impact: 'Impacto: ventana de cliente / rush cubierto · Changeover neto estimado (heurística Pasco).',
       };
     }
+    const qaOrder = po ? `PO ${po}` : 'Un lote';
     return {
       alertBanner: 'Log pass/fail LSV — Fail registrado; lote en hold y cola reordenada.',
-      summary: `PO ${po} en hold QA (${failLabel}); el resto de lotes sigue flujo sin el slot fallido.`,
+      summary: `${qaOrder} en hold QA (${failLabel}); el resto de lotes sigue flujo sin el slot fallido.`,
       bullets: [
-        `PO ${po} en HOLD — Fail (${failLabel}), Línea 1 (extracto Pasco).`,
+        `${qaOrder} en HOLD — Fail (${failLabel}), Línea 1 (extracto Pasco).`,
         'Posiciones siguientes ajustadas; sin escritura en ERP.',
         'Bloques siguientes agrupados para limitar changeover.',
       ],
@@ -91,17 +154,33 @@ export function buildExplainReplan(loc, eventType, ctx) {
       ? `SAP COISPI refresh — new active PO on Line ${lineNo}; queue replanned.`
       : 'SAP priority update — customer window at risk; line replanned.';
     const moveLine = isAdded
-      ? `Added PO ${po} at position ${position ?? '—'}.`
+      ? position != null
+        ? po
+          ? `Added PO ${po} at position ${position}.`
+          : `Added a batch at position ${position}.`
+        : po
+          ? `Added PO ${po} to the queue.`
+          : 'Added a batch to the queue.'
       : toPosition != null && fromPosition != null
-        ? `Moved PO ${po} from position ${fromPosition} to position ${toPosition}.`
+        ? po
+          ? `Moved PO ${po} from position ${fromPosition} to position ${toPosition}.`
+          : `Moved a batch from position ${fromPosition} to position ${toPosition}.`
         : toPosition != null
-          ? `Moved PO ${po} to position ${toPosition}.`
+          ? po
+            ? `Moved PO ${po} to position ${toPosition}.`
+            : `Moved a batch to position ${toPosition}.`
           : position != null
-            ? `PO ${po} is at position ${position}.`
-            : `Moved PO ${po} ahead in the queue.`;
+            ? po
+              ? `PO ${po} is at position ${position}.`
+              : `A batch is at position ${position}.`
+            : po
+              ? `Moved PO ${po} ahead in the queue.`
+              : 'A batch moved ahead in the queue.';
     const dueLine = due && projected ? `SAP due ${due}. Projected finish ${projected}.` : null;
     const summary = isRefresh
-      ? `PO ${po} entered Line ${lineNo}${position != null ? ` at position ${position}` : ''}${due ? `, SAP due ${due}` : ''}${projected ? `, projected finish ${projected}` : ''}.`
+      ? po
+        ? `PO ${po} entered Line ${lineNo}${position != null ? ` at position ${position}` : ''}${due ? `, SAP due ${due}` : ''}${projected ? `, projected finish ${projected}` : ''}.`
+        : `A batch entered Line ${lineNo}${position != null ? ` at position ${position}` : ''}${due ? `, SAP due ${due}` : ''}${projected ? `, projected finish ${projected}` : ''}.`
       : moveLine;
     const bullets = [
       moveLine,
@@ -124,9 +203,13 @@ export function buildExplainReplan(loc, eventType, ctx) {
 
   return {
     alertBanner: 'LSV pass/fail log — Fail recorded; batch on hold and queue re-sequenced.',
-    summary: `PO ${po} placed on QA hold (${failLabel}); remaining batches keep flow without the failed slot.`,
+    summary: po
+      ? `PO ${po} placed on QA hold (${failLabel}); remaining batches keep flow without the failed slot.`
+      : `A batch was placed on QA hold (${failLabel}); remaining batches keep flow without the failed slot.`,
     bullets: [
-      `PO ${po} set to HOLD from LSV pass/fail log — Fail (${failLabel}), Line 1 (Pasco extract).`,
+      po
+        ? `PO ${po} set to HOLD from LSV pass/fail log — Fail (${failLabel}), Line 1 (Pasco extract).`
+        : `A batch was set to HOLD from LSV pass/fail log — Fail (${failLabel}), Line 1 (Pasco extract).`,
       'Downstream positions shifted; no ERP write — planner validates.',
       'Next runnable batches grouped to limit changeover.',
     ],

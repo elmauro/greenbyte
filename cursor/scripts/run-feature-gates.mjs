@@ -205,8 +205,17 @@ function parseValidationPlan(manifest) {
     const extraBlock = section.slice(extraIdx);
     for (const line of extraBlock.split("\n").slice(1)) {
       if (/^- /.test(line) && !/^\s+- /.test(line)) break;
-      const cmd = line.match(/`([^`]+)`/);
-      if (cmd && cmd[1].trim().toLowerCase() !== "n/a") plan.extraCommands.push(cmd[1].trim());
+      // Backtick text is a command. A plain indented list item is a command too,
+      // so the plan can list shell lines without wrapping them in backticks.
+      const ticked = line.match(/`([^`]+)`/);
+      if (ticked && ticked[1].trim().toLowerCase() !== "n/a") {
+        plan.extraCommands.push(ticked[1].trim());
+        continue;
+      }
+      const plain = line.match(/^\s+-\s+(.+)$/);
+      if (!plain) continue;
+      const cmd = plain[1].trim();
+      if (cmd && cmd.toLowerCase() !== "n/a") plan.extraCommands.push(cmd);
     }
   }
   return plan;

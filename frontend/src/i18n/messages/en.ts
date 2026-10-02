@@ -16,6 +16,7 @@ export const en = {
     demoPlantUx: 'Program Timeline',
     demoPlantFlow: 'UC1 UI↔API',
     demoArchitecture: 'Architecture',
+    howItWorks: 'How it works',
   },
   demoCommon: {
     labels: {
@@ -28,6 +29,11 @@ export const en = {
     },
     viewPlant: 'View UC1 plant capacity walkthrough',
     viewArchitecture: 'View architecture diagrams',
+  },
+  howItWorks: {
+    navLabel: 'How it works',
+    architecture: 'Architecture',
+    api: 'UI and API',
   },
   demoPlant: {
     eyebrow: 'Syngenta UC1 · Plant Capacity',
@@ -111,7 +117,10 @@ export const en = {
     eyebrow: 'UC1 integration map',
     title: 'UI controls ↔ BFF ↔ JSON (live components)',
     subtitle:
-      'Left: the same React widgets as the plant screen. Right: the HTTP contract. While a plan is PROPOSED, GET queue returns that plan and the copilot summary; otherwise it reads gold.v_open_queue. These pictures use the scripted snapshot so rush and QA stay on one story.',
+      'Each step starts with the call: method, path, the example request, and the JSON that comes back. The screen preview sits under that contract. While a plan is PROPOSED, GET queue returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
+    requestHeading: 'Request',
+    responseHeading: 'Response',
+    noBody: 'No request body. Use line-1 or line-2 in the path. locale is en or es.',
     componentNote: 'Preview snapshot: plantDemoServer. Live /demo/plant: GET queue returns the proposed plan while it is PROPOSED, otherwise gold.v_open_queue.',
     previewHeading: 'UI preview',
     previewNote:
@@ -223,7 +232,7 @@ export const en = {
       adjustDown: 'Move down',
       adjustRunning: 'Running',
       thisOrder: 'This order',
-      selectRowHint: 'Select an order on the timeline. The explanation stays in this panel.',
+      selectRowHint: 'Select an order on the timeline, then ask about it here.',
       hideCopilot: 'Hide copilot',
       showCopilot: 'Show copilot',
       layoutVertical: 'Vertical',
@@ -261,7 +270,6 @@ export const en = {
         scheduling: 'Scheduling',
         copilot: 'AI Copilot',
       },
-      systemsOk: 'All systems normal',
       lastUpdated: 'Last updated: Just now',
       pageTitle: 'Pasco Conditioning — Line 1',
       moodLine: 'Calm · Stable · Ready',
@@ -350,7 +358,7 @@ export const en = {
       notifTitle: 'Notifications',
       notifEmptySub: 'You’re caught up on {line}',
       reviewUpdated: 'Review updated schedule',
-      pBell: 'Priority change on Line 1 — customer window',
+      pBell: 'Priority change — customer window',
       qBell: 'Quality failure — batch on hold',
       openSchedule: 'Open Schedule',
       dismiss: 'Dismiss',
@@ -373,8 +381,8 @@ export const en = {
         'The batch already running stays first.',
         'Batches on hold stay on hold.',
         'Approval is for review only. Drag a batch in Vertical or Horizontal.',
-        'Select an order on the timeline. The copilot on the right explains that batch.',
-        'Hide the copilot when you want the schedule wider. It opens again when you select an order or a new change arrives.',
+        'Select an order on the timeline. Ask about it from the chat button in the corner.',
+        'Hide the copilot when you want the schedule wider. It opens again when a new change arrives.',
       ],
       glossary: [
         { term: 'PO (order)', def: 'One batch of seed with its own order number.' },
