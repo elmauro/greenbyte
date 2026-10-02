@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
 import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
-import { demoDefaultAfterSignIn, paths } from '../../routes/paths';
+import { demoDefaultAfterSignIn, isWideDemoPath, paths } from '../../routes/paths';
 import { openPlantHelp } from '../plant/ux/PlantHelpDrawer';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
@@ -14,6 +14,7 @@ export function SiteHeader() {
   const navigate = useNavigate();
   const session = useDemoSession();
   const onHome = location.pathname === paths.home;
+  const frame = isWideDemoPath(location.pathname) ? 'site-container-demo' : 'site-container';
 
   /** Landing anchors — public home only; hidden once demo session is active. */
   const navItems =
@@ -54,13 +55,13 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="border-b border-brand-green/20 bg-brand-green/5">
-        <div className="site-container flex h-9 items-center justify-between text-xs text-gray-600">
+        <div className={`${frame} flex h-9 items-center justify-between text-xs text-gray-600`}>
           <span>{m.header.tagline}</span>
           <span className="hidden sm:inline">{m.header.domain}</span>
         </div>
       </div>
 
-      <div className="site-container flex h-16 items-center justify-between gap-4">
+      <div className={`${frame} flex h-16 items-center justify-between gap-4`}>
         <Link to={paths.home} className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-green text-lg font-bold text-white">
             G

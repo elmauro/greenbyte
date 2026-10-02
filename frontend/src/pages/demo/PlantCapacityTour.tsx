@@ -14,7 +14,7 @@ export function PlantCapacityTour() {
 
   return (
     <SiteLayout>
-      <div className="site-container border-b border-gray-100 py-3 text-sm">
+      <div className="site-container-demo border-b border-gray-100 py-3 text-sm">
         <Link to={paths.demoPlant} className="font-semibold text-brand-green hover:text-brand-green-dark">
           ← {m.plantMvp.links.backMvp}
         </Link>

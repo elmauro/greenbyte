@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
 import { ArchitectureSectionGroup } from '../../components/demo/ArchitectureSectionGroup';
+import { DemoPageBody, DemoPageIntro } from '../../components/layout/DemoPageIntro';
 import { SiteLayout } from '../../components/layout/SiteLayout';
 import { useLocale } from '../../i18n';
 import { paths } from '../../routes/paths';
@@ -15,7 +15,7 @@ function TextDiagram({
 }) {
   return (
     <section>
-      <h3 className="text-xl font-semibold text-brand-blue">{title}</h3>
+      <h3 className="text-lg font-semibold text-brand-blue">{title}</h3>
       {description && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">{description}</p>}
       <pre className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-slate-950 p-4 text-[11px] leading-relaxed text-slate-100 sm:text-xs">
         {body}
@@ -31,39 +31,12 @@ export function HackathonArchitecturePage() {
 
   return (
     <SiteLayout>
-      <div className="pb-20">
-        <section className="border-b border-gray-100 bg-gradient-to-br from-brand-blue/10 via-white to-brand-green/5 py-12">
-          <div className="site-container max-w-4xl">
-            <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{a.eyebrow}</p>
-            <h1 className="mt-3 text-3xl font-bold text-brand-blue sm:text-4xl">{a.title}</h1>
-            <p className="mt-4 text-lg text-gray-600">{a.subtitle}</p>
-            <p className="mt-3 text-sm leading-relaxed text-gray-500">{a.scopeNote}</p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                to={paths.demoPlant}
-                className="rounded-full bg-brand-green px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-green-dark"
-              >
-                {a.links.plant}
-              </Link>
-              <Link
-                to={paths.demoPlantTour}
-                className="rounded-full border border-brand-blue/30 px-5 py-2.5 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5"
-              >
-                {a.links.tour}
-              </Link>
-              <Link
-                to={paths.demoPlantFlow}
-                className="rounded-full border border-brand-blue/30 px-5 py-2.5 text-sm font-semibold text-brand-blue hover:bg-brand-blue/5"
-              >
-                {a.links.flow}
-              </Link>
-            </div>
-          </div>
-        </section>
+      <div className="pb-16">
+        <DemoPageIntro eyebrow={a.eyebrow} title={a.title} subtitle={a.subtitle} />
 
-        <div className="site-container mt-12 max-w-[90rem] space-y-12">
+        <DemoPageBody>
           <section className="rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">
-            <h2 className="text-lg font-semibold text-gray-900">{a.useCasesTitle}</h2>
+            <h2 className="text-xl font-semibold text-brand-blue">{a.useCasesTitle}</h2>
             <div className="mt-6 grid max-w-3xl gap-6">
               {a.useCaseCards.map((card) => (
                 <article key={card.id} className="rounded-xl border border-gray-200 p-5">
@@ -79,7 +52,7 @@ export function HackathonArchitecturePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900">{a.teamTitle}</h2>
+            <h2 className="text-xl font-semibold text-brand-blue">{a.teamTitle}</h2>
             <p className="mt-2 max-w-3xl text-sm text-gray-600">{a.teamIntro}</p>
             <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
               <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
@@ -106,7 +79,7 @@ export function HackathonArchitecturePage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900">{a.rulesTitle}</h2>
+            <h2 className="text-xl font-semibold text-brand-blue">{a.rulesTitle}</h2>
             <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed text-gray-700">
               {a.rules.map((rule) => (
                 <li key={rule}>{rule}</li>
@@ -149,7 +122,7 @@ export function HackathonArchitecturePage() {
             <p className="font-semibold text-brand-blue">{a.monolithTitle}</p>
             <p className="mt-2 leading-relaxed">{a.monolithBody}</p>
           </section>
-        </div>
+        </DemoPageBody>
       </div>
     </SiteLayout>
   );
@@ -166,7 +139,7 @@ function EndpointTable({
 }) {
   return (
     <section>
-      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+      <h3 className="text-lg font-semibold text-brand-blue">{title}</h3>
       <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
           <thead className="bg-gray-50">

@@ -1,7 +1,7 @@
 export type QueueColumnHighlight = 'finish' | 'status' | 'reason';
 export type PlantNavSection = 'dashboard' | 'queue' | 'scheduling' | 'copilot';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type {
   PlantEventType,
   PlantExplanation,
@@ -13,8 +13,10 @@ import type { Locale } from '../../i18n/LocaleContext';
 import { useLocale } from '../../i18n';
 import { PlantBatchExplainChat } from './PlantBatchExplainChat';
 import { PlantCopilotWowPanel } from './PlantCopilotWowPanel';
+import { PlantScheduleCopilot } from './PlantScheduleCopilot';
 import { useListPagination, type PlantPageSize } from '../../hooks/useListPagination';
 import { PlantListPagination } from './PlantListPagination';
+import { PlantSelect } from './PlantSelect';
 import { PlantProgramGantt, type ScheduleGanttLayout } from './PlantProgramGantt';
 import type { PlantUxHistoryEntry } from '../../demo/plant/plantUxApprovalHistory';
 import { PlantHelpDrawer, PLANT_HELP_OPEN_EVENT } from './ux/PlantHelpDrawer';
@@ -59,6 +61,12 @@ type PlantBaselineDashboardProps = {
   onLineChange?: (lineId: string) => void;
   /** Line switch in flight — dim the data area, keep nav and the line control. */
   dataRefreshing?: boolean;
+  /** Scheduler reorders the proposed plan. The running batch and holds stay put. */
+  onManualOrder?: (order: string[]) => void;
+  /** Choose an order for the copilot beside the timeline. */
+  onSelectOrder?: (po: string) => void;
+  /** Order the copilot should explain. Comes from the schedule row. */
+  explainPo?: string;
 };
 
 function filterQueueRows(rows: QueueRow[], filter: PlantQueueFilter): QueueRow[] {
@@ -126,6 +134,9 @@ export function PlantBaselineDashboard({
   selectedLineId,
   onLineChange,
   dataRefreshing = false,
+  onManualOrder,
+  onSelectOrder,
+  explainPo,
 }: PlantBaselineDashboardProps) {
   const { locale, messages: m } = useLocale();
   const lineSelectId = useId();
@@ -147,9 +158,11 @@ export function PlantBaselineDashboard({
   const eventPendingReview = eventActive && !accepted && !planAcknowledged;
   const schedulingActionPending = !staticPreview && eventPendingReview;
   const rushPo = eventHighlightPo;
-  const visibleNav = NAV_ITEMS.filter(
-    (item) => showProgramTimeline || item.id === 'dashboard' || item.id === 'queue',
-  );
+  const visibleNav = NAV_ITEMS.filter((item) => {
+    if (!showProgramTimeline && item.id !== 'dashboard' && item.id !== 'queue') return false;
+    if (isUx && item.id === 'copilot') return false;
+    return true;
+  });
 
   const [internalSection, setInternalSection] = useState<PlantNavSection>(() => {
     if (!showProgramTimeline) return defaultSection === 'scheduling' || defaultSection === 'copilot' ? 'queue' : defaultSection;
@@ -162,9 +175,16 @@ export function PlantBaselineDashboard({
     else setInternalSection(next);
   }
 
+  function revealScheduleOrder(po: string) {
+    onSelectOrder?.(po);
+    setCopilotOpenTick((n) => n + 1);
+  }
+
   const [queueUpdateUnread, setQueueUpdateUnread] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [copilotOpenTick, setCopilotOpenTick] = useState(0);
 
   useEffect(() => {
     if (!isUx || compact) return;
@@ -207,6 +227,22 @@ export function PlantBaselineDashboard({
   const paginatedQueueRows = queuePag.pageItems;
 
   const scheduleActive = queue.filter((r) => r.status !== 'COMPLETE');
+  const runnableRows = scheduleActive.filter((row) => row.status !== 'HOLD');
+  const heldRows = scheduleActive.filter((row) => row.status === 'HOLD');
+
+  function moveRunnable(index: number, direction: -1 | 1) {
+    placeRunnable(index, index + direction);
+  }
+
+  function placeRunnable(from: number, to: number) {
+    if (!onManualOrder) return;
+    if (from <= 0 || to <= 0 || from === to) return;
+    if (from >= runnableRows.length || to >= runnableRows.length) return;
+    const next = runnableRows.slice();
+    const [row] = next.splice(from, 1);
+    next.splice(to, 0, row);
+    onManualOrder([...next, ...heldRows].map((item) => item.po));
+  }
 
   useEffect(() => {
     setQueueFilter('all');
@@ -223,7 +259,6 @@ export function PlantBaselineDashboard({
     if (queuePag.safePage !== queuePage) setQueuePage(queuePag.safePage);
   }, [queuePag.safePage, queuePage]);
 
-  const bellWrapRef = useRef<HTMLDivElement>(null);
   const bellMenuId = useId();
 
   useEffect(() => {
@@ -246,9 +281,10 @@ export function PlantBaselineDashboard({
   useEffect(() => {
     if (!bellOpen) return;
     function onDocClick(e: MouseEvent) {
-      if (bellWrapRef.current && !bellWrapRef.current.contains(e.target as Node)) {
-        setBellOpen(false);
-      }
+      const inside = [...document.querySelectorAll('[data-bell-root]')].some((root) =>
+        root.contains(e.target as Node),
+      );
+      if (!inside) setBellOpen(false);
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -353,6 +389,30 @@ export function PlantBaselineDashboard({
     );
   }
 
+  function renderBoardTab(item: (typeof visibleNav)[number]) {
+    const selected = activeSection === item.id;
+    const badge = navBadgeKind(item.id);
+    const badgeAria =
+      badge === 'action' ? b.navBadgeScheduling : badge === 'info' ? b.navBadgeQueue : undefined;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => setActiveSection(item.id)}
+        className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm transition-colors ${
+          selected
+            ? 'border-brand-green font-semibold text-brand-green-dark'
+            : 'border-transparent text-gray-600 hover:text-gray-900'
+        }`}
+        aria-current={selected ? 'page' : undefined}
+        aria-label={badgeAria ? `${b.nav[item.labelKey]} — ${badgeAria}` : b.nav[item.labelKey]}
+      >
+        <span>{b.nav[item.labelKey]}</span>
+        {badge && renderNavBadge(badge)}
+      </button>
+    );
+  }
+
   function goToSection(section: PlantNavSection) {
     setActiveSection(section);
     setBellOpen(false);
@@ -365,8 +425,10 @@ export function PlantBaselineDashboard({
         {isUx && (
           <p className="font-semibold">{ux.amberTitle}</p>
         )}
-        <p className={isUx ? 'mt-1' : ''}>{explanation.alertBanner}</p>
-        {explanation.summary && (
+        {!isUx && (
+          <p>{explanation.alertBanner}</p>
+        )}
+        {!isUx && explanation.summary && (
           <p className="mt-1 text-xs font-normal text-amber-950">{explanation.summary}</p>
         )}
         {isUx && (
@@ -376,15 +438,6 @@ export function PlantBaselineDashboard({
           <p className="mt-1 text-xs font-normal text-amber-900/80">{b.eventBannerHint}</p>
         )}
       </div>
-      {isUx && (
-        <button
-          type="button"
-          onClick={() => setActiveSection('scheduling')}
-          className="shrink-0 rounded-lg bg-brand-green px-4 py-2 text-xs font-semibold text-white hover:bg-brand-green-dark"
-        >
-          {ux.goSchedule}
-        </button>
-      )}
     </div>
   );
 
@@ -600,12 +653,6 @@ export function PlantBaselineDashboard({
         >
           ✓ {accepted ? copy.actions.accepted : copy.actions.accept}
         </button>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-        >
-          ✎ {schedule.adjustManually}
-        </button>
       </div>
     </div>
   );
@@ -650,18 +697,20 @@ export function PlantBaselineDashboard({
                   <label className="sr-only" htmlFor="queue-filter">
                     {ux.filterLabel}
                   </label>
-                  <select
+                  <PlantSelect
                     id="queue-filter"
+                    size="sm"
+                    ariaLabel={ux.filterLabel}
                     value={queueFilter}
-                    onChange={(e) => setQueueFilter(e.target.value as PlantQueueFilter)}
-                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700"
-                  >
-                    <option value="all">{ux.fAll}</option>
-                    <option value="risk">{ux.fRisk}</option>
-                    <option value="hold">{ux.fHold}</option>
-                    <option value="SWCO">{ux.fSwco}</option>
-                    <option value="CORN">{ux.fCorn}</option>
-                  </select>
+                    onChange={(value) => setQueueFilter(value as PlantQueueFilter)}
+                    options={[
+                      { value: 'all', label: ux.fAll },
+                      { value: 'risk', label: ux.fRisk },
+                      { value: 'hold', label: ux.fHold },
+                      { value: 'SWCO', label: ux.fSwco },
+                      { value: 'CORN', label: ux.fCorn },
+                    ]}
+                  />
                   {queueFilter !== 'all' && (
                     <button
                       type="button"
@@ -721,73 +770,195 @@ export function PlantBaselineDashboard({
             )}
           </>
         );
-      case 'scheduling':
+      case 'scheduling': {
+        const timeline = (
+          <PlantProgramGantt
+            rows={scheduleActive}
+            rushPo={rushPo}
+            compact={compact}
+            layout={ganttLayout}
+            onLayoutChange={setGanttLayout}
+            showMoves={eventPendingReview}
+            expanded={timelineOpen}
+            onExpandedChange={setTimelineOpen}
+            onMoveRow={onManualOrder ? moveRunnable : undefined}
+            onPlaceRow={onManualOrder ? placeRunnable : undefined}
+            selectedPo={isUx ? explainPo : undefined}
+            onSelectRow={isUx ? revealScheduleOrder : undefined}
+          />
+        );
+        const showUxRail = isUx && schedulingLayout === 'full';
+        const showClassicRail = !isUx && eventPendingReview && schedulingLayout === 'full';
         return (
           <>
             {eventBanner}
             <div className="overflow-hidden rounded-xl border border-gray-200">
-              {eventPendingReview && schedulingLayout === 'full' ? (
+              {showUxRail ? (
                 <div className="flex flex-col lg:flex-row">
-                  <PlantProgramGantt
-                    rows={scheduleActive}
-                    rushPo={rushPo}
-                    compact={compact}
-                    layout={ganttLayout}
-                    onLayoutChange={setGanttLayout}
-                    lineId={selectedLineId}
-                    showMoves={eventPendingReview}
+                  {timeline}
+                  <PlantScheduleCopilot
+                    explanation={eventPendingReview ? explanation : null}
+                    queue={queue}
+                    focusPo={explainPo}
+                    onFocusPo={revealScheduleOrder}
+                    openRequest={copilotOpenTick}
                   />
+                </div>
+              ) : showClassicRail ? (
+                <div className="flex flex-col lg:flex-row">
+                  {timeline}
                   <PlantCopilotWowPanel explanation={explanation} compact={compact} />
                 </div>
               ) : (
-                <PlantProgramGantt
-                  rows={scheduleActive}
-                  rushPo={rushPo}
-                  compact={compact}
-                  layout={ganttLayout}
-                  onLayoutChange={setGanttLayout}
-                  lineId={selectedLineId}
-                  showMoves={eventPendingReview}
-                />
+                timeline
               )}
             </div>
-            {acceptFooter}
+            {!isUx && acceptFooter}
           </>
         );
+      }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded />;
+        return <PlantBatchExplainChat queue={queue} embedded focusPo={explainPo} />;
     }
+  }
+
+  function renderAlerts(menuId: string) {
+    if (!showProgramTimeline || staticPreview) return null;
+    return (
+      <div className="relative" data-bell-root>
+        <button
+          type="button"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-base hover:bg-gray-50"
+          aria-label={b.notificationsBellAria.replace('{n}', String(notificationCount))}
+          aria-expanded={bellOpen}
+          aria-haspopup="menu"
+          aria-controls={menuId}
+          onClick={() => setBellOpen((open) => !open)}
+        >
+          🔔
+          {notificationCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+              {notificationCount}
+            </span>
+          )}
+        </button>
+        {bellOpen && notificationCount > 0 && (
+          <ul
+            id={menuId}
+            role="menu"
+            className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-left text-sm shadow-lg"
+          >
+            {isUx && (
+              <li className="border-b px-3 py-2 text-xs font-semibold text-gray-700">
+                {ux.notifTitle} ({notificationCount})
+              </li>
+            )}
+            {showSchedulingNotification && (
+              <li role="none" className="border-b px-3 py-3 last:border-0">
+                <div className="flex gap-2">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
+                    <p className="mt-0.5 text-xs text-gray-600">
+                      {explanation?.summary ?? (eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                        onClick={() => goToSection('scheduling')}
+                      >
+                        {ux.openSchedule}
+                      </button>
+                      {isUx && (
+                        <button
+                          type="button"
+                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                          onClick={() => setNotificationDismissed(true)}
+                        >
+                          {ux.dismiss}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )}
+            {!isUx && schedulingActionPending && (
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-gray-50"
+                  onClick={() => goToSection('scheduling')}
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
+                  <span>
+                    <span className="font-semibold text-gray-900">{b.notificationSchedulingTitle}</span>
+                    <span className="mt-0.5 block text-xs text-gray-600">{b.notificationSchedulingBody}</span>
+                  </span>
+                </button>
+              </li>
+            )}
+            {queueUpdateUnread && isUx && (
+              <li role="none" className="px-3 py-3">
+                <div className="flex gap-2">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-2 border-brand-blue bg-transparent" aria-hidden />
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{ux.confirmTitle}</p>
+                    <p className="mt-0.5 text-xs text-gray-600">{ux.confirmBody}</p>
+                    <button
+                      type="button"
+                      className="mt-2 rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
+                      onClick={() => goToSection('queue')}
+                    >
+                      {ux.openQueue}
+                    </button>
+                  </div>
+                </div>
+              </li>
+            )}
+            {queueUpdateUnread && !isUx && (
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-gray-50"
+                  onClick={() => goToSection('queue')}
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-blue" aria-hidden />
+                  <span>
+                    <span className="font-semibold text-gray-900">{b.notificationQueueTitle}</span>
+                    <span className="mt-0.5 block text-xs text-gray-600">{b.notificationQueueBody}</span>
+                  </span>
+                </button>
+              </li>
+            )}
+          </ul>
+        )}
+        {bellOpen && notificationCount === 0 && (
+          <div
+            id={menuId}
+            className="absolute right-0 z-30 mt-2 w-56 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-600 shadow-lg"
+          >
+            <p className="font-medium text-gray-900">{b.notificationsEmpty}</p>
+            {isUx && (
+              <p className="mt-1 text-xs text-gray-500">
+                {ux.notifEmptySub.replace('{line}', copy.lineNames[selectedLine.id])}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-[#f8faf8] shadow-lg">
-      <div className="flex min-h-[520px] flex-col md:flex-row">
-        {!compact && (
+      <div className={`flex min-h-[520px] flex-col ${isUx ? '' : 'md:flex-row'}`}>
+      {!compact && !isUx && (
           <aside className="hidden w-52 shrink-0 border-r border-gray-200 bg-white px-3 py-4 md:block">
-            <div className="mb-6 flex items-center gap-2 px-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-green text-xs font-bold text-white">
-                G
-              </span>
-              <div className="text-[10px] leading-tight">
-                <p className="font-bold text-brand-green">GreenByte</p>
-                <p className="text-gray-500">{b.tagline}</p>
-              </div>
-            </div>
             <nav className="space-y-0.5 text-sm">{visibleNav.map(renderNavButton)}</nav>
-            {isUx && (
-              <button
-                type="button"
-                onClick={() => setHistoryOpen(true)}
-                className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50"
-              >
-                <span>{ux.menuHistory}</span>
-                {uxApprovalHistory.length > 0 && (
-                  <span className="rounded-full bg-brand-blue/10 px-1.5 text-[11px] font-semibold text-brand-blue">
-                    {uxApprovalHistory.length}
-                  </span>
-                )}
-              </button>
-            )}
             <p className="mt-8 px-2 text-[10px] text-gray-500">
               <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
               {b.systemsOk}
@@ -797,193 +968,133 @@ export function PlantBaselineDashboard({
           </aside>
         )}
 
-        <div className="min-w-0 flex-1 bg-white p-4 sm:p-6">
-          <header className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-4">
-            <div>
-              {onLineChange ? (
-                <div>
-                  <label htmlFor={lineSelectId} className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {copy.lineSelectLabel}
-                  </label>
-                  <select
+        <div className="min-w-0 flex-1 bg-white">
+          {isUx && !compact && (
+            <nav
+              aria-label={copy.lineSelectLabel}
+              className="hidden items-stretch border-b border-gray-200 bg-white px-3 lg:flex"
+            >
+              {onLineChange && (
+                <div className="mr-2 flex items-center gap-2 self-center border-r border-gray-200 pr-3">
+                  <PlantSelect
                     id={lineSelectId}
-                    className="mt-1 block rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-900"
+                    size="sm"
+                    className="w-36"
+                    ariaLabel={copy.lineSelectLabel}
                     value={selectedLine.id}
-                    onChange={(event) => onLineChange(event.target.value)}
-                  >
-                    {PLANT_LINES.map((line) => (
-                      <option key={line.id} value={line.id}>
-                        {copy.lineNames[line.id]} — {line.sheet}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={onLineChange}
+                    options={PLANT_LINES.map((line) => ({
+                      value: line.id,
+                      label: copy.lineNames[line.id],
+                    }))}
+                  />
+                  <span className="text-xs text-gray-500">{selectedLine.workCenter}</span>
+                </div>
+              )}
+              {visibleNav.map(renderBoardTab)}
+              <div className="ml-auto flex items-center gap-1 pr-3">
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  className="inline-flex items-center gap-2 px-3 py-3 text-sm text-gray-600 hover:text-gray-900"
+                >
+                  <span>{ux.menuHistory}</span>
+                  {uxApprovalHistory.length > 0 && (
+                    <span className="rounded-full bg-brand-blue/10 px-1.5 text-[11px] font-semibold text-brand-blue">
+                      {uxApprovalHistory.length}
+                    </span>
+                  )}
+                </button>
+                <p className="ml-2 text-[11px] text-gray-500">
+                  <span className="mr-1 inline-block h-2 w-2 rounded-full bg-brand-green" />
+                  {b.systemsOk}
+                </p>
+                <div className="ml-2 flex items-center gap-2 border-l border-gray-200 pl-3">
+                  {renderAlerts(`${bellMenuId}-bar`)}
+                  <img src="/demo/syngenta-logo.png" alt="Syngenta" className="h-8 w-auto" />
+                </div>
+              </div>
+            </nav>
+          )}
+          <div className="p-4 sm:p-6">
+          <header
+            className={`flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-4 ${
+              isUx && !compact && eventPendingReview ? 'lg:hidden' : ''
+            }`}
+          >
+            <div>
+              {onLineChange && !(isUx && !compact) && (
+                <div>
+                  <PlantSelect
+                    id={lineSelectId}
+                    className="w-full max-w-md"
+                    ariaLabel={copy.lineSelectLabel}
+                    value={selectedLine.id}
+                    onChange={onLineChange}
+                    options={PLANT_LINES.map((line) => ({
+                      value: line.id,
+                      label: copy.lineNames[line.id],
+                    }))}
+                  />
                   <p className="mt-1 text-xs text-gray-500">{selectedLine.workCenter}</p>
                 </div>
-              ) : (
-                <h2 className="text-xl font-bold text-gray-900">{b.pageTitle}</h2>
               )}
-              <p className="mt-1 text-sm font-medium text-brand-green">
-                {eventPendingReview ? b.moodLineEvent : b.moodLine}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              {showProgramTimeline && !staticPreview && (
-                <div className="relative" ref={bellWrapRef}>
-                  <button
-                    type="button"
-                    className="relative flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-base hover:bg-gray-50"
-                    aria-label={b.notificationsBellAria.replace('{n}', String(notificationCount))}
-                    aria-expanded={bellOpen}
-                    aria-haspopup="menu"
-                    aria-controls={bellMenuId}
-                    onClick={() => setBellOpen((o) => !o)}
-                  >
-                    🔔
-                    {notificationCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
-                        {notificationCount}
-                      </span>
-                    )}
-                  </button>
-                  {bellOpen && notificationCount > 0 && (
-                    <ul
-                      id={bellMenuId}
-                      role="menu"
-                      className="absolute right-0 z-20 mt-2 w-72 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-left text-sm shadow-lg"
-                    >
-                      {isUx && (
-                        <li className="border-b px-3 py-2 text-xs font-semibold text-gray-700">
-                          {ux.notifTitle} ({notificationCount})
-                        </li>
-                      )}
-                      {showSchedulingNotification && (
-                        <li role="none" className="border-b px-3 py-3 last:border-0">
-                          <div className="flex gap-2">
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900">{ux.reviewUpdated}</p>
-                              <p className="mt-0.5 text-xs text-gray-600">
-                                {explanation?.summary ??
-                                  (eventType === 'qa_fail' ? ux.qBell : ux.pBell)}
-                              </p>
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
-                                  onClick={() => goToSection('scheduling')}
-                                >
-                                  {ux.openSchedule}
-                                </button>
-                                {isUx && (
-                                  <button
-                                    type="button"
-                                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50"
-                                    onClick={() => setNotificationDismissed(true)}
-                                  >
-                                    {ux.dismiss}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      )}
-                      {!isUx && schedulingActionPending && (
-                        <li role="none">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-gray-50"
-                            onClick={() => goToSection('scheduling')}
-                          >
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden />
-                            <span>
-                              <span className="font-semibold text-gray-900">{b.notificationSchedulingTitle}</span>
-                              <span className="mt-0.5 block text-xs text-gray-600">{b.notificationSchedulingBody}</span>
-                            </span>
-                          </button>
-                        </li>
-                      )}
-                      {queueUpdateUnread && isUx && (
-                        <li role="none" className="px-3 py-3">
-                          <div className="flex gap-2">
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full border-2 border-brand-blue bg-transparent" aria-hidden />
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900">{ux.confirmTitle}</p>
-                              <p className="mt-0.5 text-xs text-gray-600">{ux.confirmBody}</p>
-                              <button
-                                type="button"
-                                className="mt-2 rounded-lg bg-brand-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-green-dark"
-                                onClick={() => goToSection('queue')}
-                              >
-                                {ux.openQueue}
-                              </button>
-                            </div>
-                          </div>
-                        </li>
-                      )}
-                      {queueUpdateUnread && !isUx && (
-                        <li role="none">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-start gap-2 px-3 py-2.5 text-left hover:bg-gray-50"
-                            onClick={() => goToSection('queue')}
-                          >
-                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-blue" aria-hidden />
-                            <span>
-                              <span className="font-semibold text-gray-900">{b.notificationQueueTitle}</span>
-                              <span className="mt-0.5 block text-xs text-gray-600">{b.notificationQueueBody}</span>
-                            </span>
-                          </button>
-                        </li>
-                      )}
-                    </ul>
-                  )}
-                  {bellOpen && notificationCount === 0 && (
-                    <div
-                      id={bellMenuId}
-                      className="absolute right-0 z-20 mt-2 w-56 rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-600 shadow-lg"
-                    >
-                      <p className="font-medium text-gray-900">{b.notificationsEmpty}</p>
-                      {isUx && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          {ux.notifEmptySub.replace('{line}', copy.lineNames[selectedLine.id])}
-                        </p>
-                      )}
-                    </div>
-                  )}
+              {onLineChange && isUx && !compact && (
+                <div className="lg:hidden">
+                  <PlantSelect
+                    id={`${lineSelectId}-mobile`}
+                    className="w-full max-w-md"
+                    ariaLabel={copy.lineSelectLabel}
+                    value={selectedLine.id}
+                    onChange={onLineChange}
+                    options={PLANT_LINES.map((line) => ({
+                      value: line.id,
+                      label: copy.lineNames[line.id],
+                    }))}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">{selectedLine.workCenter}</p>
                 </div>
               )}
-              <img
-                src="/demo/syngenta-logo.png"
-                alt="Syngenta"
-                className="h-8 w-auto"
-              />
+              {!onLineChange && <h2 className="text-xl font-bold text-gray-900">{b.pageTitle}</h2>}
+              {!(isUx && eventPendingReview) && (
+                <p className="mt-1 text-sm font-medium text-brand-green">
+                  {eventPendingReview ? b.moodLineEvent : b.moodLine}
+                </p>
+              )}
+            </div>
+            <div className={`flex flex-wrap items-center gap-2 text-xs ${isUx && !compact ? 'lg:hidden' : ''}`}>
+              {renderAlerts(bellMenuId)}
+              <img src="/demo/syngenta-logo.png" alt="Syngenta" className="h-8 w-auto" />
             </div>
           </header>
 
-          {!compact && (
+          {!compact && !isUx && (
             <nav className="mt-3 flex gap-1 overflow-x-auto border-b border-gray-100 pb-2 md:hidden">
               {visibleNav.map(renderNavButton)}
             </nav>
           )}
 
           <section className={`mt-5 ${dataRefreshing ? 'opacity-60' : ''}`}>
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="text-lg font-semibold text-gray-900">{sectionTitle()}</h3>
-              {pill && (
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${pill.className}`}
-                  title={pill.sub}
-                >
-                  <span className={`h-2 w-2 rounded-full ${pill.dot}`} />
-                  {pill.label}
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">{sectionTitle()}</h3>
+                {pill && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${pill.className}`}
+                    title={pill.sub}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${pill.dot}`} />
+                    {pill.label}
+                  </span>
+                )}
+              </div>
+              {isUx && activeSection === 'scheduling' && eventPendingReview && (
+                <p className="text-sm font-medium text-brand-green">{b.moodLineEvent}</p>
               )}
             </div>
             <div className="mt-4">{renderMainSection()}</div>
           </section>
+          </div>
         </div>
       </div>
 
@@ -1015,20 +1126,36 @@ export function PlantBaselineDashboard({
               </button>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="relative flex flex-col items-center justify-center gap-0.5 px-1 text-center text-[10px] font-medium leading-tight text-gray-500"
+          >
+            {ux.menuHistory}
+            {uxApprovalHistory.length > 0 && (
+              <span className="absolute right-[22%] top-2 h-2 w-2 rounded-full bg-brand-blue" />
+            )}
+          </button>
         </nav>
       )}
 
       {isUx && eventPendingReview && onAccept && (
         <div className="fixed inset-x-0 bottom-14 z-30 border-t border-gray-200 bg-white/95 px-5 py-4 shadow-lg backdrop-blur sm:px-8 lg:static lg:bottom-0 lg:border-x-0 lg:border-b-0 lg:bg-white lg:px-8 lg:py-5 lg:shadow-none">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 sm:justify-between">
-            <p className="hidden flex-1 text-sm text-gray-600 sm:block">{ux.footerAction}</p>
-            <button
-              type="button"
-              onClick={() => setActiveSection('copilot')}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-            >
-              {ux.askBtn}
-            </button>
+          <div className="mx-auto flex flex-wrap items-center gap-4 sm:justify-between">
+            <p className="flex-1 text-sm text-gray-600">
+              {schedule.footerTotal
+                .replace('{count}', String(active.length))
+                .replace('{runtime}', schedule.demoRuntime)}
+            </p>
+            {activeSection !== 'scheduling' && (
+              <button
+                type="button"
+                onClick={() => setActiveSection('scheduling')}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                {ux.askBtn}
+              </button>
+            )}
             <button
               type="button"
               disabled={acceptDisabled || accepted}
@@ -1050,12 +1177,15 @@ export function PlantBaselineDashboard({
             copy={{
               title: ux.helpTitle,
               close: ux.helpClose,
+              introTitle: ux.helpIntroTitle,
+              introBody: ux.helpIntroBody,
               glossaryTitle: ux.glossaryTitle,
               journeysTitle: ux.journeysTitle,
-              presenterTitle: ux.presenterTitle,
+              timelineTitle: ux.timelineTitle,
               glossary: ux.glossary,
               journeys: ux.journeys,
-              talkTrack: ux.talkTrack,
+              timelineLegend: ux.timelineLegend,
+              timelineRules: ux.timelineRules,
             }}
           />
           <PlantUxHistoryDrawer

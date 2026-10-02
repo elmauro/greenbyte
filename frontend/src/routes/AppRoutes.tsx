@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { DemoSessionGuard } from '../components/demo/DemoSessionGuard';
 import { DemoSignInPage } from '../pages/demo/DemoSignInPage';
 import { HackathonArchitecturePage } from '../pages/demo/HackathonArchitecturePage';
@@ -9,9 +10,19 @@ import { PlantUc1FlowGallery } from '../pages/demo/PlantUc1FlowGallery';
 import { Home } from '../pages/Home/Home';
 import { paths } from './paths';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 export function AppRoutes() {
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       <Route path={paths.home} element={<Home />} />
       <Route path={paths.demoSignIn} element={<DemoSignInPage />} />
       <Route
@@ -55,6 +66,7 @@ export function AppRoutes() {
         }
       />
       <Route path="*" element={<Navigate to={paths.home} replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

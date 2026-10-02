@@ -13,7 +13,7 @@ export const en = {
     sustainability: 'Sustainability',
     news: 'News',
     demoPlant: 'UC1 Pasco',
-    demoPlantUx: 'UC1 Pasco (Demo)',
+    demoPlantUx: 'Program Timeline',
     demoPlantFlow: 'UC1 UI↔API',
     demoArchitecture: 'Architecture',
   },
@@ -116,8 +116,6 @@ export const en = {
     previewHeading: 'UI preview',
     previewNote:
       'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
-    liveDemoCta: 'Try the live plant demo',
-    tourLink: '6-step story',
     stepNavLabel: 'Flow steps',
     prev: 'Previous',
     next: 'Next',
@@ -162,7 +160,7 @@ export const en = {
   },
   plantMvp: {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
-    title: 'Pasco conditioning — Line 1',
+    title: 'Pasco conditioning',
     subtitle:
       'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
@@ -173,6 +171,7 @@ export const en = {
       flowSlides: 'UI ↔ API flow (live map)',
       backMvp: 'Back to Line 1 demo',
     },
+    lineScheduleHeading: 'Line Schedule',
     lineSelectLabel: 'Conditioning line',
     lineNames: {
       'line-1': 'Line 1',
@@ -217,10 +216,19 @@ export const en = {
       footerTotal: '{count} batches · Total runtime: {runtime}',
       demoRuntime: '5d 2h 45m',
       adjustManually: 'Adjust manually',
+      adjustHint: 'Drag a batch to another place. The one already running stays first. Batches on hold stay on hold.',
+      adjustDrag: 'Drag to reorder',
+      adjustDone: 'Done',
+      adjustUp: 'Move up',
+      adjustDown: 'Move down',
+      adjustRunning: 'Running',
+      thisOrder: 'This order',
+      selectRowHint: 'Select an order on the timeline. The explanation stays in this panel.',
+      hideCopilot: 'Hide copilot',
+      showCopilot: 'Show copilot',
       layoutVertical: 'Vertical',
       layoutHorizontal: 'Horizontal',
       layoutApproval: 'Approval',
-      approvalTitle: 'Program timeline — Line {line}',
       approvalSubtitle: 'Simplified view for approval (not ERP)',
       holdArea: 'Hold area',
       movedUpShort: 'Moved up',
@@ -247,7 +255,6 @@ export const en = {
       pageOf: 'Page {page} of {totalPages}',
     },
     baselineDashboard: {
-      tagline: 'SEED. PLAN. GROW.',
       nav: {
         panel: 'Dashboard',
         queue: 'Queue',
@@ -305,20 +312,10 @@ export const en = {
     },
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
+    copilotIdleHere: 'No schedule change is waiting.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
-    apiNoteMsw:
-      'Dev mocks: HTTP → MSW → same BFF paths as production. Set VITE_USE_MSW=false and VITE_API_BASE_APP when Mauricio’s core-api is live.',
-    apiNoteLocal:
-      'Static demo: in-process plantDemoServer (no HTTP). For local dev with mocks use .env.development (MSW).',
-    apiNoteBff:
-      'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
-      badge: 'UX preview',
-      title: 'Pasco conditioning — UX preview',
-      subtitle:
-        'Same BFF queue and accept flow as the classic demo. Compare navigation, help, and notifications side-by-side.',
-      classicLink: 'Open classic Line 1 demo',
       previewLink: 'Try Demo',
       signedInAs: 'Signed in as {user}',
       signOut: 'Sign out',
@@ -346,7 +343,6 @@ export const en = {
       calmMeta: 'Next completion: {finish} · Line utilization {utilization}%',
       amberTitle: 'Schedule change waiting for your approval',
       amberBody: 'Review the timeline and summary, then approve if you agree. Nothing is sent to SAP automatically.',
-      goSchedule: 'Go to Schedule',
       approvedStrip: 'Approved · Demo audit only — no live ERP write',
       whereNext: 'Where to go next',
       nextCalm: 'Everything is on plan. Glance at the Queue to check finish dates.',
@@ -358,13 +354,28 @@ export const en = {
       qBell: 'Quality failure — batch on hold',
       openSchedule: 'Open Schedule',
       dismiss: 'Dismiss',
-      footerAction: 'Review the proposed plan, then approve if you agree.',
       askBtn: 'Ask about an order…',
-      helpTitle: 'Help — Line 1',
+      helpTitle: 'Help',
       helpClose: 'Close',
+      helpIntroTitle: 'Pasco conditioning',
+      helpIntroBody:
+        'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
       glossaryTitle: 'Glossary',
       journeysTitle: 'Typical flows',
-      presenterTitle: 'Presenter notes (30s)',
+      timelineTitle: 'Reading the timeline',
+      timelineLegend: [
+        { tone: 'up' as const, label: 'Moved up in the queue' },
+        { tone: 'rush' as const, label: 'Rush order' },
+        { tone: 'hold' as const, label: 'On hold' },
+        { tone: 'quiet' as const, label: 'Unchanged' },
+      ],
+      timelineRules: [
+        'The batch already running stays first.',
+        'Batches on hold stay on hold.',
+        'Approval is for review only. Drag a batch in Vertical or Horizontal.',
+        'Select an order on the timeline. The copilot on the right explains that batch.',
+        'Hide the copilot when you want the schedule wider. It opens again when you select an order or a new change arrives.',
+      ],
       glossary: [
         { term: 'PO (order)', def: 'One batch of seed with its own order number.' },
         { term: 'Hold', def: 'A batch set aside after a failed quality check.' },
@@ -384,16 +395,10 @@ export const en = {
           title: 'Priority or quality event',
           steps: [
             'Bell shows 1 — open notifications',
-            'Open Scheduling, read timeline and Copilot',
+            'Open Scheduling and read the copilot beside the timeline',
             'Approve schedule, then open Queue to confirm order',
           ],
         },
-      ],
-      talkTrack: [
-        'This is Line 1 at Pasco — calm morning, queue on plan.',
-        'Planning raises priority on 1002307551 — the app asks for approval, not auto-push to SAP.',
-        'Scheduler reads Copilot, checks the timeline, approves.',
-        'Second story: quality fails on 1001884747 — hold, re-sequence, same human gate.',
       ],
       whatChanged: 'What changed',
       queueSubAfter: 'Queue reflects your approved plan — verify order and dates',
@@ -433,12 +438,9 @@ export const en = {
       colFinish: 'Planned finish',
       colStatus: 'Status',
       paused: 'No ship date',
-      operatorsTitle: 'For demo operators',
-      operatorsBody:
-        'Schedule changes are triggered via BFF ingest (SAP priority / pass-fail log), not from the scheduler UI. See docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
-      eyebrow: 'Syngenta nice-to-have',
+      eyebrow: 'When a customer asks about a batch',
       title: 'Explain my batch (sales / customer service)',
       subtitle:
         'Ask why a PO is waiting, when it ships, or what would move it up — answers grounded in the current Line 1 queue (Agent API when live).',
@@ -446,9 +448,12 @@ export const en = {
       quickPrompts: ['Why is it waiting?', 'When does it ship?', 'What would move it up?'],
       inputPlaceholder: 'Ask about this batch…',
       askButton: 'Ask',
+      railPrompt: 'Ask about this order. The answer uses the current queue and does not change the plan.',
+      youLabel: 'You',
+      copilotLabel: 'Copilot',
+      thinking: 'Looking up this order…',
+      askError: 'The answer did not come back. Ask again in a moment.',
       citationsLabel: 'Sources',
-      agentNote:
-        'Demo uses rule-based answers from queue facts. David: replace with Agent tool calls to Data API batch + queue context.',
     },
   },
   demoArchitecture: {
@@ -456,13 +461,7 @@ export const en = {
     title: 'Demo architecture',
     subtitle:
       'The demo that runs is UC1. React calls only the BFF. The BFF reads and writes PostgreSQL. The agent narrates the plan the rules already built.',
-    scopeNote: 'UC1 is the live demo. No live Syngenta systems.',
     docNote: 'Document version 1.3 · No live Syngenta production connections.',
-    links: {
-      plant: 'UC1 MVP (Line 1)',
-      tour: 'UC1 guided tour',
-      flow: 'UC1 UI ↔ API map',
-    },
     useCasesTitle: 'Syngenta briefs',
     genAiRoleLabel: 'GenAI role',
     useCaseCards: [

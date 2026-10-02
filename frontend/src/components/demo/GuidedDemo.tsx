@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { DemoPageBody, DemoPageIntro } from '../layout/DemoPageIntro';
 
 export type DemoStep = {
   title: string;
@@ -61,11 +62,7 @@ export function GuidedDemo({
 
   return (
     <div className="pb-16">
-      <section className="border-b border-gray-100 bg-gradient-to-br from-brand-green/10 via-white to-brand-blue/5 py-12">
-        <div className="site-container max-w-4xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-bold text-brand-blue sm:text-4xl">{title}</h1>
-          <p className="mt-4 text-lg text-gray-600">{subtitle}</p>
+      <DemoPageIntro eyebrow={eyebrow} title={title} subtitle={subtitle}>
           <div className="mt-6 flex flex-wrap gap-4">
             {otherDemo && (
               <Link
@@ -84,12 +81,11 @@ export function GuidedDemo({
               </Link>
             )}
           </div>
-        </div>
-      </section>
+      </DemoPageIntro>
 
-      <div className="site-container mt-10 max-w-[90rem]">
+      <DemoPageBody>
         <aside className="mb-10 rounded-2xl border border-brand-blue/15 bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="text-lg font-semibold text-brand-blue">{plainLanguage.sectionTitle}</h2>
+          <h2 className="text-xl font-semibold text-brand-blue">{plainLanguage.sectionTitle}</h2>
           <p className="mt-4 text-sm font-semibold text-gray-900">{plainLanguage.problemHeading}</p>
           <p className="mt-2 leading-relaxed text-gray-700">{plainLanguage.problem}</p>
           <p className="mt-5 text-sm font-semibold text-gray-900">{plainLanguage.analogyHeading}</p>
@@ -124,7 +120,7 @@ export function GuidedDemo({
 
         <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-100 bg-gray-50 px-6 py-4 sm:px-8">
-            <h2 className="text-xl font-semibold text-gray-900">{step.title}</h2>
+            <h2 className="text-xl font-semibold text-brand-blue">{step.title}</h2>
           </div>
           <div className="p-6 sm:p-8">
             <div className="w-full max-w-3xl">
@@ -189,7 +185,7 @@ export function GuidedDemo({
             )}
           </div>
         </div>
-      </div>
+      </DemoPageBody>
     </div>
   );
 }

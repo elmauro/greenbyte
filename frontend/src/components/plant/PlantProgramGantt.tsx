@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { QueueRow } from '../../demo/plant/plantDemoTypes';
 import { PLANT_SCHEDULE_META } from '../../demo/plant/plantScheduleMeta';
 import { useLocale } from '../../i18n';
@@ -12,9 +12,19 @@ type PlantProgramGanttProps = {
   compact?: boolean;
   layout?: ScheduleGanttLayout;
   onLayoutChange?: (layout: ScheduleGanttLayout) => void;
-  lineId?: string;
   /** Move callouts belong to a plan still waiting for acceptance. */
   showMoves?: boolean;
+  /** When set, the parent owns the expanded-timeline dialog. */
+  expanded?: boolean;
+  onExpandedChange?: (open: boolean) => void;
+  /** Reorder a runnable row while the expanded timeline is open. Index 0 stays put. */
+  onMoveRow?: (index: number, direction: -1 | 1) => void;
+  /** Drop a runnable row on another runnable position. Index 0 stays put. */
+  onPlaceRow?: (from: number, to: number) => void;
+  /** Order explained in the copilot beside this timeline. */
+  selectedPo?: string;
+  /** Choose an order for the copilot. Does not leave the schedule. */
+  onSelectRow?: (po: string) => void;
 };
 
 /** Viewport for Gantt rows — scroll instead of paginating (keeps timeline context). */
@@ -88,11 +98,7 @@ function moveNote(
   if (previous == null || previous === current) return null;
   if (row.status === 'HOLD') return labels.heldWas.replace('{n}', String(previous));
   if (previous > current) return labels.movedUp.replace('{n}', String(previous));
-  return null;
-}
-
-function lineNumber(lineId?: string) {
-  return String(lineId ?? 'line-1').match(/(\d+)\s*$/)?.[1] ?? '1';
+  return labels.movedDown.replace('{n}', String(previous));
 }
 
 function weekdayTick(ms: number, locale: Locale) {
@@ -176,18 +182,30 @@ export function PlantProgramGantt({
   compact,
   layout = 'vertical',
   onLayoutChange,
-  lineId,
   showMoves = true,
+  expanded: expandedProp,
+  onExpandedChange,
+  onMoveRow,
+  onPlaceRow,
+  selectedPo,
+  onSelectRow,
 }: PlantProgramGanttProps) {
   const { locale, messages: m } = useLocale();
   const s = m.plantMvp.scheduleShell;
-  const [expanded, setExpanded] = useState(false);
+  const [expandedInternal, setExpandedInternal] = useState(false);
+  const expanded = expandedProp ?? expandedInternal;
+  function setExpanded(next: boolean) {
+    if (expandedProp === undefined) setExpandedInternal(next);
+    onExpandedChange?.(next);
+  }
   const [zoomIndex, setZoomIndex] = useState(1);
+  const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  const dragRef = useRef<{ from: number; over: number } | null>(null);
+  const listRef = useRef<HTMLElement | null>(null);
   const zoom = ZOOM_STEPS[zoomIndex];
   const scale = dateScale(rows, zoom.ms);
   const tickPx = zoom.ms <= HOUR_MS ? 44 : zoom.ms <= 6 * HOUR_MS ? 56 : 72;
   const chartMinPx = Math.max(640, (scale?.ticks.length ?? 1) * tickPx);
-  const lineNo = lineNumber(lineId);
 
   useEffect(() => {
     if (!expanded) return;
@@ -197,6 +215,84 @@ export function PlantProgramGantt({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [expanded]);
+
+  function canDragRow(index: number) {
+    if (layout === 'approval') return false;
+    const row = rows[index];
+    return Boolean(onPlaceRow && row && row.status !== 'HOLD' && index > 0);
+  }
+
+  function onDragPointerDown(index: number, event: ReactPointerEvent<HTMLElement>) {
+    if (!canDragRow(index)) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    const session = { from: index, over: index };
+    dragRef.current = session;
+    setDrag(session);
+
+    function move(pointer: PointerEvent) {
+      const current = dragRef.current;
+      if (!current) return;
+      const scroller = listRef.current?.parentElement;
+      if (scroller) {
+        const box = scroller.getBoundingClientRect();
+        if (pointer.clientY < box.top + 28) scroller.scrollTop -= 14;
+        else if (pointer.clientY > box.bottom - 28) scroller.scrollTop += 14;
+      }
+      const hit = document.elementFromPoint(pointer.clientX, pointer.clientY);
+      const item = hit?.closest<HTMLElement>('[data-queue-index]');
+      const over = Number(item?.dataset.queueIndex);
+      if (!canDragRow(over) || current.over === over) return;
+      const next = { ...current, over };
+      dragRef.current = next;
+      setDrag(next);
+    }
+
+    function finish() {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+      const current = dragRef.current;
+      dragRef.current = null;
+      setDrag(null);
+      if (current && current.from !== current.over) onPlaceRow?.(current.from, current.over);
+      const po = current ? rows[current.from]?.po : undefined;
+      if (po) onSelectRow?.(po);
+    }
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+  }
+
+  function dragClass(index: number) {
+    if (!drag) return '';
+    if (drag.from === index) return 'opacity-40';
+    if (drag.over === index) return 'ring-2 ring-inset ring-brand-green';
+    return '';
+  }
+
+  function rowRing(po: string, isHold: boolean, isRush: boolean) {
+    if (drag) return '';
+    if (onSelectRow && selectedPo === po) return 'ring-2 ring-inset ring-brand-green';
+    if (isHold) return 'ring-1 ring-inset ring-red-200';
+    if (isRush) return 'ring-1 ring-inset ring-orange-300';
+    return '';
+  }
+
+  function selectRowFromClick(index: number, po: string, event: { target: EventTarget | null }) {
+    if (!onSelectRow || canDragRow(index)) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    onSelectRow(po);
+  }
+
+  function selectRowFromKey(po: string, event: { key: string; preventDefault: () => void; target: EventTarget | null }) {
+    if (!onSelectRow) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    onSelectRow(po);
+  }
   const footer = s.footerTotal
     .replace('{count}', String(rows.length))
     .replace('{runtime}', s.demoRuntime);
@@ -274,67 +370,68 @@ export function PlantProgramGantt({
       aria-modal={expanded || undefined}
       aria-label={expanded ? s.ganttTitle : undefined}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2.5">
-        <div>
+      <div className="space-y-3 border-b border-gray-100 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            {layout === 'approval' ? s.approvalTitle.replace('{line}', lineNo) : s.ganttTitle}
-            <span className="font-normal text-gray-400" title={s.ganttHint}>
-              ⓘ
-            </span>
+            {s.ganttTitle}
+            <TimelineInfo text={s.ganttHint} />
           </h3>
-          {layout === 'approval' && (
-            <p className="text-xs text-gray-500">{s.approvalSubtitle}</p>
-          )}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            {onLayoutChange && (
+              <div className="flex rounded-lg border border-gray-200 p-0.5" role="group" aria-label={s.layoutToggleAria}>
+                <LayoutBtn
+                  active={layout === 'vertical'}
+                  label={s.layoutVertical}
+                  onClick={() => onLayoutChange('vertical')}
+                />
+                <LayoutBtn
+                  active={layout === 'horizontal'}
+                  label={s.layoutHorizontal}
+                  onClick={() => onLayoutChange('horizontal')}
+                />
+                <LayoutBtn
+                  active={layout === 'approval'}
+                  label={s.layoutApproval}
+                  onClick={() => onLayoutChange('approval')}
+                />
+              </div>
+            )}
+            {layout === 'vertical' && (
+              <div className="flex items-center gap-1">
+                <span className="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700" title={s.zoomHint}>
+                  {zoom.label}
+                </span>
+                <ToolbarBtn
+                  label={s.zoomIn}
+                  disabled={zoomIndex >= ZOOM_STEPS.length - 1}
+                  onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
+                >
+                  +
+                </ToolbarBtn>
+                <ToolbarBtn
+                  label={s.zoomOut}
+                  disabled={zoomIndex <= 0}
+                  onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
+                >
+                  −
+                </ToolbarBtn>
+              </div>
+            )}
+            <ToolbarBtn
+              label={expanded ? s.closeExpanded : s.expand}
+              pressed={expanded}
+              onClick={() => setExpanded(!expanded)}
+            >
+              ⤢
+            </ToolbarBtn>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-          {onLayoutChange && (
-            <div className="flex rounded-lg border border-gray-200 p-0.5" role="group" aria-label={s.layoutToggleAria}>
-              <LayoutBtn
-                active={layout === 'vertical'}
-                label={s.layoutVertical}
-                onClick={() => onLayoutChange('vertical')}
-              />
-              <LayoutBtn
-                active={layout === 'horizontal'}
-                label={s.layoutHorizontal}
-                onClick={() => onLayoutChange('horizontal')}
-              />
-              <LayoutBtn
-                active={layout === 'approval'}
-                label={s.layoutApproval}
-                onClick={() => onLayoutChange('approval')}
-              />
-            </div>
-          )}
-          {layout === 'vertical' && (
-            <>
-              <span className="rounded border border-gray-200 px-2 py-0.5 font-semibold text-gray-700" title={s.zoomHint}>
-                {zoom.label}
-              </span>
-              <ToolbarBtn
-                label={s.zoomIn}
-                disabled={zoomIndex >= ZOOM_STEPS.length - 1}
-                onClick={() => setZoomIndex((index) => Math.min(ZOOM_STEPS.length - 1, index + 1))}
-              >
-                +
-              </ToolbarBtn>
-              <ToolbarBtn
-                label={s.zoomOut}
-                disabled={zoomIndex <= 0}
-                onClick={() => setZoomIndex((index) => Math.max(0, index - 1))}
-              >
-                −
-              </ToolbarBtn>
-            </>
-          )}
-          <ToolbarBtn
-            label={expanded ? s.closeExpanded : s.expand}
-            pressed={expanded}
-            onClick={() => setExpanded((open) => !open)}
-          >
-            ⤢
-          </ToolbarBtn>
-        </div>
+        {layout === 'approval' && (
+          <p className="max-w-2xl text-xs leading-relaxed text-gray-500">{s.approvalSubtitle}</p>
+        )}
+        {onPlaceRow && layout !== 'approval' && (
+          <p className="max-w-2xl text-xs leading-relaxed text-gray-500">{s.adjustHint}</p>
+        )}
       </div>
 
       {layout === 'vertical' ? (
@@ -364,7 +461,12 @@ export function PlantProgramGantt({
               </div>
             </div>
 
-            <ul className="space-y-0 divide-y divide-gray-100 border-y border-gray-100">
+            <ul
+              ref={(node) => {
+                listRef.current = node;
+              }}
+              className="space-y-0 divide-y divide-gray-100 border-y border-gray-100"
+            >
               {rows.map((row, index) => {
                 const isRush = row.po === rushPo;
                 const isHold = row.status === 'HOLD';
@@ -372,23 +474,39 @@ export function PlantProgramGantt({
                 const place = scale ? barPlacement(row.finish, scale) : { left: 2, width: 16 };
                 const color = toneTrack(tone);
                 const note = showMoves ? moveNote(row, index, s) : null;
-                const noteOnLeft = place.left + place.width > 58;
+                const barEnd = place.left + place.width;
+                const roomRight = 100 - barEnd;
+                const noteOnLeft = roomRight < 22;
 
                 return (
                   <li
                     key={row.po}
-                    className={`grid grid-cols-[14rem_1fr] items-center gap-2 py-2 ${
-                      isHold
-                        ? 'bg-red-50/80 ring-1 ring-inset ring-red-200'
-                        : isRush
-                          ? 'bg-orange-50/80 ring-1 ring-inset ring-orange-300'
-                          : ''
-                    }`}
+                    data-queue-index={index}
+                    onPointerDown={(event) => onDragPointerDown(index, event)}
+                    onClick={(event) => selectRowFromClick(index, row.po, event)}
+                    onKeyDown={(event) => selectRowFromKey(row.po, event)}
+                    tabIndex={onSelectRow ? 0 : undefined}
+                    aria-selected={onSelectRow ? selectedPo === row.po : undefined}
+                    className={`grid grid-cols-[14rem_minmax(0,1fr)] items-center gap-2 py-2 ${
+                      isHold ? 'bg-red-50/80' : isRush ? 'bg-orange-50/80' : ''
+                    } ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
                   >
-                    <div className="px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
+                    <div className="min-w-0 px-1" title={s.queuePosition.replace('{n}', String(index + 1))}>
+                      {canDragRow(index) && (
+                        <span className="mr-1 text-gray-400" aria-hidden="true" title={s.adjustDrag}>
+                          ⋮⋮
+                        </span>
+                      )}
                       {renderRowMeta(row, index, isRush, isHold)}
+                      <RowMoveControls
+                        index={index}
+                        row={row}
+                        rows={rows}
+                        onMoveRow={onMoveRow}
+                        labels={s}
+                      />
                     </div>
-                    <div className="relative h-11 rounded bg-gray-50/80">
+                    <div className="relative h-11 min-w-0">
                       <div
                         className={`absolute top-1.5 flex h-8 items-center rounded px-2 text-[10px] font-medium shadow ${color}`}
                         style={{ left: `${place.left}%`, width: `${place.width}%` }}
@@ -399,11 +517,17 @@ export function PlantProgramGantt({
                       </div>
                       {note && (
                         <span
-                          className="absolute top-1.5 flex h-8 items-center whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
+                          className="absolute top-1.5 flex h-8 items-center truncate whitespace-nowrap rounded-md border border-dashed border-gray-300 bg-white/90 px-2 text-[10px] font-medium text-gray-600"
                           style={
                             noteOnLeft
-                              ? { right: `calc(${100 - place.left}% + 8px)` }
-                              : { left: `calc(${place.left + place.width}% + 8px)` }
+                              ? {
+                                  right: `calc(${100 - place.left}% + 8px)`,
+                                  maxWidth: `calc(${Math.max(place.left - 4, 12)}% - 8px)`,
+                                }
+                              : {
+                                  left: `calc(${barEnd}% + 8px)`,
+                                  maxWidth: `calc(${Math.max(roomRight - 2, 12)}% - 12px)`,
+                                }
                           }
                         >
                           {note}
@@ -418,6 +542,9 @@ export function PlantProgramGantt({
         </div>
       ) : layout === 'horizontal' ? (
         <div
+          ref={(node) => {
+            listRef.current = node;
+          }}
           className={expanded ? 'min-h-0 flex-1 overflow-auto p-4' : `${GANTT_SCROLL_MAX_CLASS} overflow-x-auto overflow-y-auto p-3`}
           tabIndex={0}
           role="region"
@@ -433,13 +560,19 @@ export function PlantProgramGantt({
               return (
                 <article
                   key={row.po}
+                  data-queue-index={index}
+                  onPointerDown={(event) => onDragPointerDown(index, event)}
+                  onClick={(event) => selectRowFromClick(index, row.po, event)}
+                  onKeyDown={(event) => selectRowFromKey(row.po, event)}
+                  tabIndex={onSelectRow ? 0 : undefined}
+                  aria-selected={onSelectRow ? selectedPo === row.po : undefined}
                   className={`flex min-h-[7.5rem] flex-col rounded-xl border p-3 shadow-sm ${
                     tone === 'hold'
-                      ? 'border-red-200 bg-red-50 ring-2 ring-red-300'
+                      ? 'border-red-200 bg-red-50'
                       : tone === 'up'
                         ? 'border-green-200 bg-white'
                         : 'border-indigo-100 bg-indigo-50'
-                  }`}
+                  } ${rowRing(row.po, isHold, isRush)} ${canDragRow(index) ? 'cursor-grab active:cursor-grabbing' : onSelectRow ? 'cursor-pointer' : ''} ${dragClass(index)}`}
                 >
                   <span className={`mb-2 h-1.5 w-10 rounded-full ${toneFill(tone)}`} />
                   {renderRowMeta(row, index, isRush, isHold)}
@@ -451,6 +584,13 @@ export function PlantProgramGantt({
                       {note}
                     </p>
                   )}
+                  <RowMoveControls
+                    index={index}
+                    row={row}
+                    rows={rows}
+                    onMoveRow={onMoveRow}
+                    labels={s}
+                  />
                 </article>
               );
             })}
@@ -462,6 +602,8 @@ export function PlantProgramGantt({
           locale={locale}
           labels={s}
           showMoves={showMoves}
+          selectedPo={selectedPo}
+          onSelectRow={onSelectRow}
           className={
             expanded ? 'min-h-0 flex-1 overflow-auto p-3' : `${GANTT_SCROLL_MAX_CLASS} overflow-auto p-3`
           }
@@ -484,12 +626,16 @@ function ApprovalTimeline({
   labels,
   className,
   showMoves,
+  selectedPo,
+  onSelectRow,
 }: {
   rows: QueueRow[];
   locale: Locale;
   labels: ApprovalLabels;
   className: string;
   showMoves: boolean;
+  selectedPo?: string;
+  onSelectRow?: (po: string) => void;
 }) {
   const model = buildApproval(rows, showMoves);
   const dayWidth = 4.75;
@@ -514,10 +660,24 @@ function ApprovalTimeline({
               style={{ top: 8 + bar.lane * 52, left: `${bar.left}%` }}
             >
               <div
+                role={onSelectRow ? 'button' : undefined}
+                tabIndex={onSelectRow ? 0 : undefined}
+                aria-pressed={onSelectRow ? selectedPo === bar.row.po : undefined}
+                onClick={() => onSelectRow?.(bar.row.po)}
+                onKeyDown={(event) => {
+                  if (!onSelectRow) return;
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  onSelectRow(bar.row.po);
+                }}
                 className={`truncate rounded-lg px-2.5 py-2 text-[11px] font-semibold shadow-sm ${
-                  bar.kind === 'up'
-                    ? 'bg-brand-green text-white ring-2 ring-green-800'
-                    : 'bg-indigo-100 text-indigo-950'
+                  onSelectRow ? 'cursor-pointer' : ''
+                } ${
+                  selectedPo === bar.row.po
+                    ? 'bg-brand-green text-white ring-2 ring-brand-green-dark'
+                    : bar.kind === 'up'
+                      ? 'bg-brand-green text-white ring-2 ring-green-800'
+                      : 'bg-indigo-100 text-indigo-950'
                 }`}
                 title={bar.row.reasonShort ?? bar.row.finish}
               >
@@ -538,7 +698,19 @@ function ApprovalTimeline({
               {model.held.map(({ row }) => (
                 <li
                   key={row.po}
-                  className="rounded-md border border-red-200 px-2 py-1.5 text-[11px] font-semibold text-red-800"
+                  role={onSelectRow ? 'button' : undefined}
+                  tabIndex={onSelectRow ? 0 : undefined}
+                  aria-pressed={onSelectRow ? selectedPo === row.po : undefined}
+                  onClick={() => onSelectRow?.(row.po)}
+                  onKeyDown={(event) => {
+                    if (!onSelectRow) return;
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    onSelectRow(row.po);
+                  }}
+                  className={`rounded-md border px-2 py-1.5 text-[11px] font-semibold text-red-800 ${
+                    onSelectRow ? 'cursor-pointer' : ''
+                  } ${selectedPo === row.po ? 'border-brand-green ring-2 ring-brand-green' : 'border-red-200'}`}
                   style={{
                     backgroundImage:
                       'repeating-linear-gradient(-45deg, rgba(254,226,226,0.95), rgba(254,226,226,0.95) 6px, rgba(252,165,165,0.55) 6px, rgba(252,165,165,0.55) 8px)',
@@ -576,6 +748,93 @@ function ColorLegend({ labels, className = '' }: { labels: ApprovalLabels; class
   );
 }
 
+function rowCanMove(rows: QueueRow[], index: number, direction: -1 | 1): boolean {
+  const row = rows[index];
+  if (!row || row.status === 'HOLD' || index <= 0) return false;
+  const target = index + direction;
+  if (target <= 0 || target >= rows.length) return false;
+  return rows[target].status !== 'HOLD';
+}
+
+function RowMoveControls({
+  index,
+  row,
+  rows,
+  onMoveRow,
+  labels,
+}: {
+  index: number;
+  row: QueueRow;
+  rows: QueueRow[];
+  onMoveRow?: (index: number, direction: -1 | 1) => void;
+  labels: { adjustUp: string; adjustDown: string; adjustRunning: string };
+}) {
+  if (!onMoveRow || row.status === 'HOLD') return null;
+  if (index === 0) {
+    return (
+      <span className="mt-1 inline-block text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+        {labels.adjustRunning}
+      </span>
+    );
+  }
+  return (
+    <span className="mt-1 flex gap-1">
+      <button
+        type="button"
+        aria-label={labels.adjustUp}
+        disabled={!rowCanMove(rows, index, -1)}
+        onClick={() => onMoveRow(index, -1)}
+        className="rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        aria-label={labels.adjustDown}
+        disabled={!rowCanMove(rows, index, 1)}
+        onClick={() => onMoveRow(index, 1)}
+        className="rounded-md border border-gray-300 bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+      >
+        ↓
+      </button>
+    </span>
+  );
+}
+
+function TimelineInfo({ text }: { text: string }) {
+  const tipId = useId();
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-describedby={open ? tipId : undefined}
+        onClick={() => setOpen(true)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-300 bg-white text-[11px] font-semibold leading-none text-brand-blue shadow-sm transition hover:border-brand-blue hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-blue"
+      >
+        i
+        <span className="sr-only">{text}</span>
+      </button>
+      {open && (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="absolute left-0 top-full z-30 mt-2 w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-xs font-normal leading-relaxed text-gray-600 shadow-lg"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function LayoutBtn({
   active,
   label,
@@ -589,7 +848,7 @@ function LayoutBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+      className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${
         active ? 'bg-brand-green text-white' : 'text-gray-600 hover:bg-gray-50'
       }`}
     >
@@ -618,7 +877,7 @@ function ToolbarBtn({
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
-      className={`rounded border border-gray-200 px-1.5 py-0.5 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`rounded border border-gray-200 px-2 py-1 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 ${
         pressed ? 'bg-brand-green text-white' : ''
       }`}
     >

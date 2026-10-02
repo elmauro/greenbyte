@@ -77,7 +77,21 @@ WHERE qt.process_order_id IS NOT NULL
 GROUP BY qt.process_order_id;
 COMMENT ON VIEW gold.v_po_quality_status IS 'PASS | FAIL | PENDING per PO (NOT_TESTED when absent). Any FAIL holds the PO (assumption, Q-3)';
 
+-- planner v2 (Q3): the override in force per PO and type = the latest gold.plan_override row, if still active.
+CREATE VIEW gold.v_active_override AS
+SELECT o.*
+FROM (SELECT DISTINCT ON (po.process_order_id, po.override_type) po.*
+      FROM gold.plan_override po
+      ORDER BY po.process_order_id, po.override_type, po.plan_override_id DESC) o
+WHERE o.is_active;
+COMMENT ON VIEW gold.v_active_override IS
+  'Active override per (PO, override_type): latest gold.plan_override row wins; is_active = false in a later row ends it';
+
 -- Open queue per work center with effective values after ingest overlays (latest change wins per field).
+-- v4 (gold-data-model §4): trusted note facts of the same schedule row (gold.v_trusted_fact) add not-ready / hold /
+-- rush; a fact never holds the running (ONLINE) batch. New columns are appended so SELECT * consumers keep working.
+-- planner v2: active overrides (gold.v_active_override): FORCE_HOLD holds the row (hold_reason OVERRIDE_HOLD),
+-- PIN_POSITION and LINE_SWAP are exposed for gold.replan (swapped_to_work_center_id <> line => skipped).
 CREATE VIEW gold.v_open_queue AS
 SELECT li.line_schedule_item_id,
        wc.work_center_id, wc.work_center_code, wc.demo_line_id,
@@ -94,12 +108,33 @@ SELECT li.line_schedule_item_id,
        chp.ingest_event_id AS priority_ingest_event_id,
        coalesce(chf.scheduled_finish_date, li.scheduled_finish_date) AS scheduled_finish_date,
        po.sap_finish_date,
-       li.is_rush OR coalesce(chx.is_rush, false) AS is_rush,
+       li.is_rush OR coalesce(chx.is_rush, false) OR tf.rush_fact_id IS NOT NULL AS is_rush,
        coalesce(qs.quality_status, 'NOT_TESTED') AS quality_status,
        qs.latest_fail_test_id, qs.latest_fail_reason,
        dem.need_by_date, dem.order_numbers, dem.priority_tier,
        least(dem.need_by_date, coalesce(chf.scheduled_finish_date, li.scheduled_finish_date)) AS due_date,
-       (li.status_code IN ('ON_HOLD', 'LAB') OR coalesce(qs.quality_status = 'FAIL', false)) AS is_hold
+       (li.status_code IN ('ON_HOLD', 'LAB') OR coalesce(qs.quality_status = 'FAIL', false) OR ovh.plan_override_id IS NOT NULL
+        OR (li.status_code <> 'ONLINE' AND (coalesce(tf.is_not_ready, false) OR tf.hold_fact_id IS NOT NULL))) AS is_hold,
+       -- v4 columns
+       coalesce(tf.is_not_ready, false) AS is_not_ready,
+       CASE WHEN qs.quality_status = 'FAIL' THEN 'QA_FAIL'
+            WHEN li.status_code IN ('ON_HOLD', 'LAB') THEN 'STATUS'
+            WHEN ovh.plan_override_id IS NOT NULL THEN 'OVERRIDE_HOLD'
+            WHEN li.status_code <> 'ONLINE' AND tf.is_not_ready THEN 'NOT_READY'
+            WHEN li.status_code <> 'ONLINE' AND tf.hold_fact_id IS NOT NULL THEN 'NOTE_HOLD' END AS hold_reason,
+       tf.not_ready_fact_id, tf.hold_fact_id, tf.rush_fact_id,
+       (tf.rush_fact_id IS NOT NULL AND NOT (li.is_rush OR coalesce(chx.is_rush, false))) AS is_rush_note,
+       coalesce(tf.fact_ids, '{}') AS fact_ids,
+       CASE WHEN dem.need_by_date IS NULL AND coalesce(chf.scheduled_finish_date, li.scheduled_finish_date) IS NULL THEN NULL
+            WHEN dem.need_by_date IS NOT NULL
+             AND dem.need_by_date <= coalesce(chf.scheduled_finish_date, li.scheduled_finish_date, dem.need_by_date)
+            THEN 'NEED_BY' ELSE 'SCHEDULE_FINISH' END AS due_date_basis,
+       CASE WHEN tp.n_runs >= gold.cfg('min_species_runs')::int THEN 'SPECIES' ELSE 'WORK_CENTER' END AS throughput_basis,
+       coalesce(li.input_kg > 0, false) AS has_kg,
+       -- planner v2 columns
+       ovs.to_work_center_id AS swapped_to_work_center_id, ovs.plan_override_id AS swap_override_id,
+       ovh.plan_override_id AS hold_override_id, ovh.hold_reason AS override_hold_reason,
+       ovp.plan_override_id AS pin_override_id, ovp.pinned_position AS override_pinned_position
 FROM silver.line_schedule_item li
 JOIN silver.work_center wc USING (work_center_id)
 JOIN silver.process_order po USING (process_order_id)
@@ -125,9 +160,22 @@ LEFT JOIN LATERAL (
     FROM silver.order_allocation oa
     JOIN silver.customer_order co USING (customer_order_id)
     WHERE oa.process_order_id = po.process_order_id) dem ON true
+LEFT JOIN LATERAL (
+    SELECT bool_or(f.fact_type = 'NOT_READY') AND NOT coalesce(bool_or(f.fact_type = 'RELEASE'), false) AS is_not_ready,
+           min(f.semantic_fact_id) FILTER (WHERE f.fact_type = 'NOT_READY') AS not_ready_fact_id,
+           min(f.semantic_fact_id) FILTER (WHERE f.fact_type = 'HOLD') AS hold_fact_id,
+           min(f.semantic_fact_id) FILTER (WHERE f.fact_type = 'RUSH') AS rush_fact_id,
+           array_agg(f.semantic_fact_id ORDER BY f.semantic_fact_id) FILTER (WHERE f.fact_type <> 'INFO') AS fact_ids
+    FROM gold.v_trusted_fact f
+    WHERE f.line_schedule_item_id = li.line_schedule_item_id) tf ON true
+LEFT JOIN gold.v_throughput tp
+       ON tp.work_center_id = li.work_center_id AND tp.grain = 'SPECIES' AND tp.species_code = li.species_code
+LEFT JOIN gold.v_active_override ovs ON ovs.process_order_id = po.process_order_id AND ovs.override_type = 'LINE_SWAP'
+LEFT JOIN gold.v_active_override ovh ON ovh.process_order_id = po.process_order_id AND ovh.override_type = 'FORCE_HOLD'
+LEFT JOIN gold.v_active_override ovp ON ovp.process_order_id = po.process_order_id AND ovp.override_type = 'PIN_POSITION'
 WHERE li.status_code <> 'COMPLETE' AND NOT li.is_duplicate;
 COMMENT ON VIEW gold.v_open_queue IS
-  'Open (non-COMPLETE) schedule rows per work center with effective priority/finish after ingest, QA status, demand and due date = least(need_by, finish)';
+  'Open (non-COMPLETE) schedule rows per work center with effective priority/finish after ingest, QA status, demand, due date = least(need_by, finish), and (v4) trusted note facts: is_not_ready, hold_reason, fact ids, due_date_basis, throughput_basis, has_kg';
 
 -- Data-quality flag counts per table and source file (reconciled against observations §8).
 CREATE VIEW gold.v_dq_summary AS

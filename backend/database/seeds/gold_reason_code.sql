@@ -1,27 +1,48 @@
 -- Reason codes written by gold.replan into gold.entry_reason. Templates are a fallback; the Agent API writes the prose
 -- from the same params and must cite only the ids they contain.
-INSERT INTO gold.reason_code (reason_code, category, description, template) VALUES
+-- param_keys = params that are always present (non-null) for the code; gold.add_reason rejects a row without them.
+-- Idempotent (ON CONFLICT DO NOTHING): the in-place upgrades re-run it to add new codes.
+INSERT INTO gold.reason_code (reason_code, category, description, template, param_keys) VALUES
     ('ALREADY_RUNNING', 'STATE', 'Batch is already running on the line: kept first',
-        'Already running on {work_center_code} — kept in position 1'),
+        'Already running on {work_center_code} — kept in position 1', '{work_center_code,status_code}'),
     ('QA_HOLD', 'HARD', 'A QA test failed: the batch is held out of the run sequence',
-        'QA fail ({fail_reason}) on test {quality_test_id} — on hold'),
+        'QA fail ({fail_reason}) on test {quality_test_id} — on hold', '{quality_test_id,source}'),
     ('STATUS_HOLD', 'HARD', 'Schedule status is not runnable (ON_HOLD / LAB)',
-        'Schedule status {status_code} — not runnable'),
+        'Schedule status {status_code} — not runnable', '{status_code}'),
     ('RUSH_PRIORITY', 'EVENT', 'SAP-style priority change marked the batch as rush',
-        'Rush: priority {previous_priority} → {priority_rank} (SAP change)'),
+        'Rush: priority {previous_priority} → {priority_rank} (SAP change)', '{source}'),
     ('RESEQUENCED', 'EVENT', 'Position changed because of the triggering event',
-        'Moved {from_position} → {to_position} after {event_type} on PO {event_po}'),
+        'Moved {from_position} → {to_position} after {event_type} on PO {event_po}', '{from_position,to_position,event_type}'),
     ('DUE_DATE_RISK', 'URGENCY', 'Projected finish is after the due date',
-        'At risk: due {due_date}, projected {planned_end_date} ({slack_days} days)'),
+        'At risk: due {due_date}, projected {planned_end_date} ({slack_days} days)', '{due_date,planned_end_date,slack_days}'),
     ('EARLIEST_DUE', 'URGENCY', 'Earliest due date among the remaining batches',
-        'Earliest due date remaining ({due_date})'),
+        'Earliest due date remaining ({due_date})', '{due_date}'),
     ('PRIORITY', 'PRIORITY', 'Scheduler / SAP priority rank (1 = highest)',
-        'Priority {priority_rank}'),
+        'Priority {priority_rank}', '{priority_rank,priority_source}'),
     ('SAME_VARIETY_GROUP', 'CHANGEOVER', 'Grouped with the previous batch of the same variety',
-        'Same variety as previous ({variety_code}) — saves ~{saved_h} h changeover'),
+        'Same variety as previous ({variety_code}) — saves ~{saved_h} h changeover', '{variety_code,previous_po,saved_h}'),
     ('SAME_SPECIES_GROUP', 'CHANGEOVER', 'Grouped with the previous batch of the same species',
-        'Same species as previous ({species_code})'),
+        'Same species as previous ({species_code})', '{species_code,previous_po}'),
     ('CUSTOMER_DEMAND', 'DEMAND', 'Covers an open customer order (synthetic in the demo)',
-        'Covers order {order_number} due {need_by_date}'),
+        'Covers order {order_number} due {need_by_date}', '{order_number,need_by_date}'),
     ('CHANGEOVER', 'CHANGEOVER', 'Estimated changeover vs the previous batch',
-        '{transition_code} changeover: {hours} h');
+        '{transition_code} changeover: {hours} h', '{transition_code,hours,from_po}'),
+    -- v4: reasons backed by semantic facts read from free-text notes (cite semantic_fact_id)
+    ('NOT_READY_HOLD', 'HARD', 'A trusted note says the batch is not ready to run (e.g. not fumigated): held',
+        'Not ready ({fact_label}): note "{note_text}" — on hold', '{fact_label,semantic_fact_id,note_text}'),
+    ('NOT_READY_WARNING', 'STATE', 'A trusted note says not ready, but the batch is already running: kept, flagged',
+        'Running although the note says not ready ({fact_label}): "{note_text}"', '{fact_label,semantic_fact_id,note_text}'),
+    ('NOTE_HOLD', 'HARD', 'A trusted note puts the batch on hold',
+        'On hold per note "{note_text}"', '{semantic_fact_id,note_text}'),
+    ('NOTE_RUSH', 'EVENT', 'A trusted note marks the batch as rush',
+        'Rush per note "{note_text}"', '{semantic_fact_id,note_text}'),
+    ('NOTE_DEADLINE', 'URGENCY', 'A trusted note gives a deadline',
+        'Note deadline {deadline_date}: "{note_text}"', '{semantic_fact_id,deadline_date,note_text}'),
+    ('THROUGHPUT_FALLBACK', 'STATE', 'Too few logged runs for this species on the line: line median kg/h used',
+        'No {species_code} run history on {work_center_code}: line median speed used', '{work_center_code}'),
+    -- planner v2 (Q3): active overrides applied by the heuristic (cite plan_override_id)
+    ('OVERRIDE_HOLD', 'HARD', 'A planner / scheduler override forces the batch on hold',
+        'On hold by override: {hold_reason}', '{plan_override_id,hold_reason}'),
+    ('OVERRIDE_PIN', 'STATE', 'A planner / scheduler override pins the batch to a position',
+        'Pinned to position {pinned_position} by override', '{plan_override_id,pinned_position}')
+ON CONFLICT (reason_code) DO NOTHING;
