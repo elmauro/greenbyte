@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOutPlantUx } from '../../demo/plant/plantDemoSessionAuth';
 import { useDemoSession } from '../../hooks/useDemoSession';
 import { useLocale } from '../../i18n';
-import { demoDefaultAfterSignIn, paths } from '../../routes/paths';
+import { demoDefaultAfterSignIn, isWideDemoPath, paths } from '../../routes/paths';
+import { openPlantHelp } from '../plant/ux/PlantHelpDrawer';
 import { LanguageSwitcher } from './LanguageSwitcher';
 
 export function SiteHeader() {
@@ -13,6 +14,7 @@ export function SiteHeader() {
   const navigate = useNavigate();
   const session = useDemoSession();
   const onHome = location.pathname === paths.home;
+  const frame = isWideDemoPath(location.pathname) ? 'site-container-demo' : 'site-container';
 
   /** Landing anchors — public home only; hidden once demo session is active. */
   const navItems =
@@ -53,13 +55,13 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="border-b border-brand-green/20 bg-brand-green/5">
-        <div className="site-container flex h-9 items-center justify-between text-xs text-gray-600">
+        <div className={`${frame} flex h-9 items-center justify-between text-xs text-gray-600`}>
           <span>{m.header.tagline}</span>
           <span className="hidden sm:inline">{m.header.domain}</span>
         </div>
       </div>
 
-      <div className="site-container flex h-16 items-center justify-between gap-4">
+      <div className={`${frame} flex h-16 items-center justify-between gap-4`}>
         <Link to={paths.home} className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-green text-lg font-bold text-white">
             G
@@ -106,6 +108,20 @@ export function SiteHeader() {
             >
               {m.header.demoSignIn}
             </Link>
+          )}
+          {location.pathname === paths.demoPlantUx && (
+            <button
+              type="button"
+              onClick={openPlantHelp}
+              aria-label={m.plantMvp.ux.navHelp}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+                <circle cx="12" cy="12" r="9" strokeWidth="2" />
+                <path strokeLinecap="round" strokeWidth="2" d="M9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.3-1.2.8-1.2 1.6V14" />
+                <circle cx="12" cy="17" r="0.8" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
           )}
           <LanguageSwitcher />
           <button

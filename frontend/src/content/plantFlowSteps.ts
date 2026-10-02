@@ -22,6 +22,8 @@ export type PlantFlowStepConfig = {
   method: 'GET' | 'POST';
   path: string;
   request?: Record<string, unknown>;
+  /** Runtime body from the flow snapshot (used when the sample depends on the mock plan). */
+  requestKey?: 'explainReplanRequest';
   responseKey: keyof PlantFlowResponseKeys;
   mapping: { jsonPath: string; ui: string }[];
 };
@@ -35,6 +37,7 @@ export type PlantFlowResponseKeys = {
   poll: true;
   accept: true;
   explain: true;
+  explainReplan: true;
 };
 
 export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
@@ -151,12 +154,22 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     backendOwnerKey: 's04',
     preview: 'copilot',
     method: 'POST',
-    path: 'Simulated inside the BFF · Agent POST /explain-replan (after replan; not a browser route)',
-    responseKey: 'rush',
+    path: '/explain-replan',
+    requestKey: 'explainReplanRequest',
+    responseKey: 'explainReplan',
     mapping: [
-      { jsonPath: 'explanation.summary', ui: 'Copilot lead' },
-      { jsonPath: 'explanation.bullets[]', ui: 'Bullet list' },
-      { jsonPath: 'explanation.impact', ui: 'Impact box' },
+      {
+        jsonPath: 'queueSnapshot[]',
+        ui: 'Request. Same rows as the ingest queue[]. The BFF renames that array. No public route returns this name.',
+      },
+      { jsonPath: 'diff.moves[]', ui: 'Request. Position changes the rules already computed.' },
+      { jsonPath: 'diff.added[]', ui: 'Request. New PO on a COISPI refresh. eventType is still rush.' },
+      { jsonPath: 'diff.held[]', ui: 'Request. POs set to HOLD. eventType is qa_fail.' },
+      { jsonPath: 'eventType', ui: 'Request. rush or qa_fail only.' },
+      { jsonPath: 'alertBanner', ui: 'Response. Alert bar.' },
+      { jsonPath: 'summary', ui: 'Response. Copilot lead.' },
+      { jsonPath: 'bullets[]', ui: 'Response. Bullet list.' },
+      { jsonPath: 'impact', ui: 'Response. Impact box.' },
     ],
   },
   {
@@ -200,7 +213,8 @@ export const PLANT_FLOW_STEPS: PlantFlowStepConfig[] = [
     request: { po: '1002307551', question: 'When does it ship?', locale: 'en|es' },
     responseKey: 'explain',
     mapping: [
-      { jsonPath: 'answer', ui: 'Chat answer' },
+      { jsonPath: 'po, question, locale', ui: 'Browser body. The BFF adds lineId and planVersion when it calls David POST /batches/explain.' },
+      { jsonPath: 'answer', ui: 'Chat answer (David returns this with po, citations, suggestedFollowUps)' },
       { jsonPath: 'citations[]', ui: 'Sources line' },
     ],
   },

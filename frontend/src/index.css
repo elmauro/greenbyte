@@ -20,6 +20,10 @@ body {
     @apply mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8;
   }
 
+  .site-container-demo {
+    @apply mx-auto w-full max-w-demo px-4 sm:px-6 lg:px-8;
+  }
+
   .nav-link {
     @apply text-sm font-medium text-gray-700 transition-colors hover:text-brand-green;
   }

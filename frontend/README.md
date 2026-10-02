@@ -1,6 +1,6 @@
 # GreenByte Frontend
 
-Web app for the Syngenta hackathon demo (**UC1 Plant Capacity** on `/demo/plant`) and supporting pages (architecture, UC4 breeding walkthrough).
+Web app for the Syngenta hackathon demo (**UC1 Plant Capacity** on `/demo/plant`) and the architecture page.
 
 **Stack:** React 18 · TypeScript · Vite 6 · Tailwind CSS · MSW (dev mocks)
 
@@ -26,7 +26,7 @@ Local dev uses **MSW** to mock the BFF (`VITE_USE_MSW=true` in `.env.development
 | `/demo/plant/tour` | Guided 6-step tour (rush + QA previews) |
 | `/demo/plant/flow` | UI ↔ API integration map (incl. `sap-queue-refresh`) |
 | `/demo/architecture` | Team architecture page |
-| `/demo/breeding` | UC4 walkthrough (reference) |
+| `/demo/plant/ux` | UC1 Pasco demo |
 
 ## Configuration
 

@@ -13,9 +13,8 @@ export const en = {
     sustainability: 'Sustainability',
     news: 'News',
     demoPlant: 'UC1 Pasco',
-    demoPlantUx: 'UC1 Pasco (UX)',
+    demoPlantUx: 'UC1 Pasco (Demo)',
     demoPlantFlow: 'UC1 UI↔API',
-    demoBreeding: 'Demo: Breeding',
     demoArchitecture: 'Architecture',
   },
   demoCommon: {
@@ -28,7 +27,6 @@ export const en = {
       restart: 'Restart walkthrough',
     },
     viewPlant: 'View UC1 plant capacity walkthrough',
-    viewBreeding: 'View UC4 breeding intelligence walkthrough',
     viewArchitecture: 'View architecture diagrams',
   },
   demoPlant: {
@@ -118,8 +116,6 @@ export const en = {
     previewHeading: 'UI preview',
     previewNote:
       'On /demo/plant the line control calls GET /demo/plant/lines/{lineId}/queue (line-1 or line-2). While a plan is PROPOSED the BFF returns that plan and the copilot summary; otherwise it reads gold.v_open_queue.',
-    liveDemoCta: 'Try the live plant demo',
-    tourLink: '6-step story',
     stepNavLabel: 'Flow steps',
     prev: 'Previous',
     next: 'Next',
@@ -133,11 +129,11 @@ export const en = {
         'Mauricio · BFF POST /demo/plant/ingest/sap-queue-refresh inserts the new PO on the line and calls gold.replan (event queue_refresh).',
       s03b:
         'Mauricio · BFF POST /demo/plant/ingest/pass-fail-log calls gold.ingest_pass_fail: Fail row in silver.quality_test, then a proposed plan with that batch on hold.',
-      s04: 'David · Agent POST /explain-replan stays simulated inside the BFF. After each ingest, that call turns the plan diff into the copilot summary. GET queue returns it while the plan is PROPOSED.',
+      s04: 'David · POST /explain-replan. The browser never calls it. The BFF sends this body after each ingest. While AGENT_API_BASE_URL is empty, a template inside the BFF writes the text. Set that base URL (no trailing slash) and redeploy core-api to use his service. He returns only alertBanner, summary, bullets, and impact. The BFF stores that on the ingest explanation and on GET pendingExplanation while the plan is PROPOSED.',
       s05: 'Mauricio · BFF GET /demo/plant/lines/{lineId}/queue while the plan is PROPOSED. Same route as step 01. The sample is the poll body: lastEvent, pendingDiff, pendingExplanation — not the ingest POST body.',
       s06: 'Mauricio · BFF POST /demo/plant/schedule/accept calls gold.accept_plan: plan_decision ACCEPT and schedule_plan → ACCEPTED. No SAP write.',
       s07:
-        'Mauricio · BFF POST /demo/plant/batches/explain → David · Agent API (batch Q&A, nice-to-have) · tools on Camilo · Data API.',
+        'Mauricio · BFF POST /demo/plant/batches/explain. The panel shows the browser body. The BFF calls David POST /batches/explain with po, question, locale, lineId, and planVersion. He returns po, answer, citations, and suggestedFollowUps. Simulated inside the BFF until AGENT_API_BASE_URL is set.',
     },
     triggers: {
       s01: 'User opens /demo/plant and picks a line — plantDemoApi.getQueue(lineId).',
@@ -145,7 +141,7 @@ export const en = {
       s03: 'Operator posts SAP priority change — POST /demo/plant/ingest/sap-priority-change.',
       s03c: 'Operator posts a new COISPI PO — POST /demo/plant/ingest/sap-queue-refresh (insert + replan).',
       s03b: 'Operator posts a Fail row — POST /demo/plant/ingest/pass-fail-log (open PO, Equipment ID, failedFor).',
-      s04: 'Copilot reads the simulated explain-replan summary returned on GET queue after a replan.',
+      s04: 'Private call after each ingest. This sample is the rush plan from step 03. queueSnapshot is that response queue, renamed. A new COISPI PO is eventType rush with the PO in diff.added. A Fail is eventType qa_fail with the PO in diff.held.',
       s05: 'Screen polls GET queue. While PROPOSED the response carries the proposed order, pendingDiff, and pendingExplanation.',
       s06: 'User clicks Accept schedule — POST /demo/plant/schedule/accept.',
       s07: 'Sales asks about one batch — POST /demo/plant/batches/explain.',
@@ -164,7 +160,7 @@ export const en = {
   },
   plantMvp: {
     eyebrow: 'Syngenta UC1 · Hackathon demo target',
-    title: 'Pasco conditioning — Line 1',
+    title: 'Pasco conditioning',
     subtitle:
       'Scheduler workspace: ranked queue updates when upstream data lands (SAP priority / pass-fail log). Review Scheduling, accept — no ERP write.',
     demoTargetBadge: 'Demo target B+ · Aligns with Syngenta brief + GreenByte wow mockups.',
@@ -175,6 +171,7 @@ export const en = {
       flowSlides: 'UI ↔ API flow (live map)',
       backMvp: 'Back to Line 1 demo',
     },
+    lineScheduleHeading: 'Line Schedule',
     lineSelectLabel: 'Conditioning line',
     lineNames: {
       'line-1': 'Line 1',
@@ -219,10 +216,19 @@ export const en = {
       footerTotal: '{count} batches · Total runtime: {runtime}',
       demoRuntime: '5d 2h 45m',
       adjustManually: 'Adjust manually',
+      adjustHint: 'Drag a batch to another place. The one already running stays first. Batches on hold stay on hold.',
+      adjustDrag: 'Drag to reorder',
+      adjustDone: 'Done',
+      adjustUp: 'Move up',
+      adjustDown: 'Move down',
+      adjustRunning: 'Running',
+      thisOrder: 'This order',
+      selectRowHint: 'Select an order on the timeline. The explanation stays in this panel.',
+      hideCopilot: 'Hide copilot',
+      showCopilot: 'Show copilot',
       layoutVertical: 'Vertical',
       layoutHorizontal: 'Horizontal',
       layoutApproval: 'Approval',
-      approvalTitle: 'Program timeline — Line {line}',
       approvalSubtitle: 'Simplified view for approval (not ERP)',
       holdArea: 'Hold area',
       movedUpShort: 'Moved up',
@@ -249,7 +255,6 @@ export const en = {
       pageOf: 'Page {page} of {totalPages}',
     },
     baselineDashboard: {
-      tagline: 'SEED. PLAN. GROW.',
       nav: {
         panel: 'Dashboard',
         queue: 'Queue',
@@ -307,21 +312,11 @@ export const en = {
     },
     copilotTitle: 'AI Copilot — What changed',
     copilotIdle: 'When a replan lands from upstream data, open Scheduling to review the proposed order and explanation.',
+    copilotIdleHere: 'No schedule change is waiting.',
     footerStats: '{count} active batches in queue (Pasco-style POs).',
     acceptedNote: 'Human acceptance recorded on the proposed plan. No write to SAP.',
-    apiNoteMsw:
-      'Dev mocks: HTTP → MSW → same BFF paths as production. Set VITE_USE_MSW=false and VITE_API_BASE_APP when Mauricio’s core-api is live.',
-    apiNoteLocal:
-      'Static demo: in-process plantDemoServer (no HTTP). For local dev with mocks use .env.development (MSW).',
-    apiNoteBff:
-      'Live BFF (VITE_API_BASE_APP). Camilo Data + David Agent sit behind core-api — no frontend change when they ship.',
     uxCompare: {
-      badge: 'UX preview',
-      title: 'Pasco conditioning — UX preview',
-      subtitle:
-        'Same BFF queue and accept flow as the classic demo. Compare navigation, help, and notifications side-by-side.',
-      classicLink: 'Open classic Line 1 demo',
-      previewLink: 'Try UX preview (sign-in)',
+      previewLink: 'Try Demo',
       signedInAs: 'Signed in as {user}',
       signOut: 'Sign out',
     },
@@ -348,13 +343,12 @@ export const en = {
       calmMeta: 'Next completion: {finish} · Line utilization {utilization}%',
       amberTitle: 'Schedule change waiting for your approval',
       amberBody: 'Review the timeline and summary, then approve if you agree. Nothing is sent to SAP automatically.',
-      goSchedule: 'Go to Schedule',
       approvedStrip: 'Approved · Demo audit only — no live ERP write',
       whereNext: 'Where to go next',
       nextCalm: 'Everything is on plan. Glance at the Queue to check finish dates.',
       nextApproved: 'Open the Queue to confirm the new order.',
       notifTitle: 'Notifications',
-      notifEmptySub: 'You’re caught up on Line 1',
+      notifEmptySub: 'You’re caught up on {line}',
       reviewUpdated: 'Review updated schedule',
       pBell: 'Priority change on Line 1 — customer window',
       qBell: 'Quality failure — batch on hold',
@@ -362,11 +356,27 @@ export const en = {
       dismiss: 'Dismiss',
       footerAction: 'Review the proposed plan, then approve if you agree.',
       askBtn: 'Ask about an order…',
-      helpTitle: 'Help — Line 1',
+      helpTitle: 'Help',
       helpClose: 'Close',
+      helpIntroTitle: 'Pasco conditioning',
+      helpIntroBody:
+        'A rush order or a failed quality check reorders the line. Look at each batch and why it moved, then accept the plan if you agree. Nothing is sent to SAP.',
       glossaryTitle: 'Glossary',
       journeysTitle: 'Typical flows',
-      presenterTitle: 'Presenter notes (30s)',
+      timelineTitle: 'Reading the timeline',
+      timelineLegend: [
+        { tone: 'up' as const, label: 'Moved up in the queue' },
+        { tone: 'rush' as const, label: 'Rush order' },
+        { tone: 'hold' as const, label: 'On hold' },
+        { tone: 'quiet' as const, label: 'Unchanged' },
+      ],
+      timelineRules: [
+        'The batch already running stays first.',
+        'Batches on hold stay on hold.',
+        'Approval is for review only. Drag a batch in Vertical or Horizontal.',
+        'Select an order on the timeline. The copilot on the right explains that batch.',
+        'Hide the copilot when you want the schedule wider. It opens again when you select an order or a new change arrives.',
+      ],
       glossary: [
         { term: 'PO (order)', def: 'One batch of seed with its own order number.' },
         { term: 'Hold', def: 'A batch set aside after a failed quality check.' },
@@ -386,16 +396,10 @@ export const en = {
           title: 'Priority or quality event',
           steps: [
             'Bell shows 1 — open notifications',
-            'Open Scheduling, read timeline and Copilot',
+            'Open Scheduling and read the copilot beside the timeline',
             'Approve schedule, then open Queue to confirm order',
           ],
         },
-      ],
-      talkTrack: [
-        'This is Line 1 at Pasco — calm morning, queue on plan.',
-        'Planning raises priority on 1002307551 — the app asks for approval, not auto-push to SAP.',
-        'Scheduler reads Copilot, checks the timeline, approves.',
-        'Second story: quality fails on 1001884747 — hold, re-sequence, same human gate.',
       ],
       whatChanged: 'What changed',
       queueSubAfter: 'Queue reflects your approved plan — verify order and dates',
@@ -435,12 +439,9 @@ export const en = {
       colFinish: 'Planned finish',
       colStatus: 'Status',
       paused: 'No ship date',
-      operatorsTitle: 'For demo operators',
-      operatorsBody:
-        'Schedule changes are triggered via BFF ingest (SAP priority / pass-fail log), not from the scheduler UI. See docs/hackathon/uc1-demo-operator-ingest.md.',
     },
     salesChat: {
-      eyebrow: 'Syngenta nice-to-have',
+      eyebrow: 'When a customer asks about a batch',
       title: 'Explain my batch (sales / customer service)',
       subtitle:
         'Ask why a PO is waiting, when it ships, or what would move it up — answers grounded in the current Line 1 queue (Agent API when live).',
@@ -448,26 +449,21 @@ export const en = {
       quickPrompts: ['Why is it waiting?', 'When does it ship?', 'What would move it up?'],
       inputPlaceholder: 'Ask about this batch…',
       askButton: 'Ask',
+      railPrompt: 'Ask about this order. The answer uses the current queue and does not change the plan.',
+      youLabel: 'You',
+      copilotLabel: 'Copilot',
+      thinking: 'Looking up this order…',
+      askError: 'The answer did not come back. Ask again in a moment.',
       citationsLabel: 'Sources',
-      agentNote:
-        'Demo uses rule-based answers from queue facts. David: replace with Agent tool calls to Data API batch + queue context.',
     },
   },
   demoArchitecture: {
     eyebrow: 'Syngenta hackathon · Technical baseline',
     title: 'Demo architecture',
     subtitle:
-      'One shared platform (React + BFF + Data + Agent), with two Syngenta briefs mapped below: UC1 Plant Capacity and UC4 R&D Unification.',
-    scopeNote:
-      'Document v1.3 · UC1 BFF contract matches /demo/plant/flow · Demo data only · Architecture PNGs are English in all locales.',
+      'The demo that runs is UC1. React calls only the BFF. The BFF reads and writes PostgreSQL. The agent narrates the plan the rules already built.',
     docNote: 'Document version 1.3 · No live Syngenta production connections.',
-    links: {
-      plant: 'UC1 MVP (Line 1)',
-      tour: 'UC1 guided tour',
-      flow: 'UC1 UI ↔ API map',
-      breeding: 'UC4 walkthrough',
-    },
-    useCasesTitle: 'Syngenta use cases this architecture supports',
+    useCasesTitle: 'Syngenta briefs',
     genAiRoleLabel: 'GenAI role',
     useCaseCards: [
       {
@@ -476,14 +472,7 @@ export const en = {
         problem:
           'Conditioning lines juggle many batches; rush orders and QA failures force manual replanning without clear explanations.',
         genAiRole:
-          'After rush or QA replan: explain diff in plain language. Optional: “Explain my batch” Q&A (no queue change). Human accepts — no ERP write.',
-      },
-      {
-        id: 'UC4',
-        name: 'R&D Data Source Unification',
-        problem:
-          'Syngenta’s four mock source families (trials, operations, lab, germplasm/pedigree) sit in disconnected files; breeders need one answer with evidence.',
-        genAiRole: 'NL chat + R/A/G triage grounded in Data API tool results; breeder override with audit trail.',
+          'PostgreSQL reorders the line and writes a reason on each position. The agent only narrates that plan. A person accepts. Nothing is written to SAP.',
       },
     ],
     fieldLabels: {
@@ -493,58 +482,53 @@ export const en = {
     },
     groups: {
       shared: {
-        title: 'Shared platform (both use cases)',
+        title: 'What this demo runs',
         intro:
-          'Every flow starts the same: React calls only the BFF; ETL loads Excel or CSV into PostgreSQL; Agent never reads raw files at runtime — only Data API SQL.',
+          'One path. The browser never calls the database or the agent. Camilo’s Data API and David’s Agent API are separate services. While their base URLs are empty, the BFF runs the SQL and a text template itself.',
       },
       uc1: {
-        title: 'UC1 — Plant capacity architecture',
+        title: 'UC1 — Plant capacity',
         intro:
-          'Operator ingest (SAP / pass-fail) → BFF replan → UI polls queue → Agent explains diff → scheduler accept.',
-        syngentaGoal: 'Recommendations with explanations; human validates; no live SAP connection.',
+          'An operator posts a SAP change, a new COISPI order, or a Fail. PostgreSQL reorders the line. The agent explains that diff. The scheduler accepts. Accept does not write to SAP.',
+        syngentaGoal: 'The rules propose the order and the reason. A person validates. No live SAP connection.',
         dataSource:
-          'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs).',
-      },
-      uc4: {
-        title: 'UC4 — R&D unification architecture',
-        intro:
-          'Breeder asks in natural language → BFF forwards to Agent → read-only tools on Data API → triage + citations → optional override logged by BFF.',
-        syngentaGoal: 'Unified view across sources; GenAI central; human in the loop with override audit.',
-        dataSource:
-          'Four Syngenta source families (trials incl. field obs, operations, lab, germplasm/pedigree) — five UC4 CSV files in the hackathon pack, keyed by TRIAL_GUID / MATERIAL_GUID.',
+          'Pasco LSV/SSV conditioning Excel (schedules, SAP orders, conditioning logs, pass/fail logs), loaded into PostgreSQL.',
       },
     },
     teamTitle: 'Team responsibilities',
     teamIntro:
-      'Ownership is split by layer; UC1 vs UC4 mainly changes which BFF routes and Agent endpoints you implement — not the container shape.',
+      'Three owners. The path that runs is the BFF plus PostgreSQL. Camilo and David plug in when their base URLs are set on core-api.',
     teamTable: {
       role: 'Role',
       owner: 'Owner',
       responsibility: 'Responsibility',
-      useCases: 'UC1 / UC4 focus',
+      useCases: 'What they own here',
     },
     teamRows: [
       {
         role: 'Product UI + BFF',
         owner: 'Mauricio / GreenByte',
-        responsibility: 'Single API contract to React; CORS; MSW mocks; override persistence',
+        responsibility: 'One contract for the browser. The BFF calls PostgreSQL and, after a replan, the agent.',
         useCases:
-          'UC1: /demo/plant/* queue, ingest, accept, batches/explain · UC4: /demo/breeding/* ask, dossier, override',
+          'GET /demo/plant/lines/{lineId}/queue · POST ingest (priority, COISPI refresh, pass/fail) · POST /schedule/accept · POST /batches/explain',
       },
       {
-        role: 'Data API',
+        role: 'Data in PostgreSQL',
         owner: 'Camilo',
-        responsibility: 'ETL, schema, read-only tools, data quality',
-        useCases: 'UC1: queue, replan, GET /batches/{po} (Agent tools) · UC4: trial, material, obs, lab, ops tools',
+        responsibility:
+          'ETL, schema, and data quality. His HTTP Data API is the handoff when DATA_API_BASE_URL is set. This demo does not call it while that URL is empty.',
+        useCases: 'gold.replan writes the order. gold.accept_plan records the human decision. Not a browser route.',
       },
       {
         role: 'Agent API',
         owner: 'David',
-        responsibility: 'Chat, triage, explain; tool calls to Data API',
-        useCases: 'UC1: explain-replan + batch explain (tools) · UC4: /chat, /triage with tool orchestration',
+        responsibility:
+          'Narrate the plan. He does not reorder the line and he does not read the database. The BFF sends the diff and queueSnapshot.',
+        useCases:
+          'POST /explain-replan · POST /batches/explain. A template inside the BFF until AGENT_API_BASE_URL is set.',
       },
     ],
-    endpointsTitle: 'Illustrative endpoints (align BFF contract to chosen UC)',
+    endpointsTitle: 'UC1 contracts',
     endpointTable: {
       layer: 'Layer',
       examples: 'Examples',
@@ -555,134 +539,91 @@ export const en = {
         layer: 'BFF',
         examples:
           'GET .../queue · POST .../ingest/* · POST .../schedule/accept · POST .../batches/explain',
-        purpose: 'Syngenta triggers via ingest, human accept, and sales batch Q&A',
+        purpose: 'Operator ingest, the queue poll, human accept, and the sales question',
       },
       {
-        layer: 'Data API',
-        examples: 'GET /lines/{id}/queue · POST /schedule/replan · GET /batches/{po}',
-        purpose: 'Pasco seed data, heuristic reorder, batch context',
-      },
-      {
-        layer: 'Agent API',
-        examples: 'POST /explain-replan · POST /suggest-rank (optional)',
-        purpose: 'NL explanation of schedule diff; optional rank suggestion validated by BFF',
-      },
-    ],
-    uc4Endpoints: [
-      {
-        layer: 'BFF',
-        examples: 'POST /demo/breeding/ask · GET /demo/breeding/materials/{guid}/dossier · POST .../override',
-        purpose: 'NL ask, aggregated dossier panel, breeder override audit',
-      },
-      {
-        layer: 'Data API',
-        examples: 'GET /trials/{guid} · GET /materials/{guid}/pedigree · GET .../observations · GET .../operations',
-        purpose: 'Read-only tools Agent calls (MCP-style over HTTP)',
+        layer: 'PostgreSQL',
+        examples: 'gold.replan · gold.accept_plan · gold.v_open_queue',
+        purpose: 'Rules write the order and a reason per position. Accept stores the decision. No SAP write.',
       },
       {
         layer: 'Agent API',
-        examples: 'POST /chat · POST /triage',
-        purpose: 'Tool orchestration, R/A/G with reason lines grounded in retrieved JSON',
+        examples: 'POST /explain-replan · POST /batches/explain',
+        purpose: 'Plain-language summary of a plan the rules already computed. Sales Q&A is read-only.',
       },
     ],
-    rulesTitle: 'Integration rules (day 1)',
+    rulesTitle: 'How the pieces fit',
     rules: [
-      'Contract first: OpenAPI or shared JSON for BFF ↔ frontend and BFF ↔ Data/Agent.',
-      'Parallel mocks: MSW mirrors BFF responses for offline demo.',
-      'Read-only tools on Data API with limits and allowed filters.',
-      'Agent grounding: LLM context from Data API JSON only; cite stable IDs.',
-      'BFF timeouts and fallback if Agent is unavailable.',
+      'The browser calls only /demo/plant/*.',
+      'Order and reasons come from gold.replan. The agent does not rank the line.',
+      'The agent receives the diff and queueSnapshot. queueSnapshot is the plan queue, renamed. It must not invent orders or dates.',
+      'An empty AGENT_API_BASE_URL keeps the template inside the BFF. If the agent call fails, the plan still returns.',
+      'Accept records the human decision. It does not write to SAP.',
     ],
+    diagrams: {
+      shared: `React  /demo/plant
+        |
+        |  only this hop
+        v
+core-api  BFF
+        |
+        +-- PostgreSQL
+        |     gold.replan        order + reason per position
+        |     gold.accept_plan   human sign-off, no SAP write
+        |
+        +-- Agent
+              POST /explain-replan     diff + queueSnapshot
+              POST /batches/explain    sales question, read-only
+              template inside the BFF while AGENT_API_BASE_URL is empty`,
+      uc1Flow: `Pasco Excel -- ETL --> PostgreSQL
+
+Operator
+  POST /demo/plant/ingest/sap-priority-change
+  POST /demo/plant/ingest/sap-queue-refresh
+  POST /demo/plant/ingest/pass-fail-log
+        |
+        v
+core-api BFF -- gold.replan --> proposed plan
+        |
+        +-- POST /explain-replan --> copilot text
+                    queueSnapshot = the plan queue
+
+React polls GET /demo/plant/lines/{lineId}/queue
+Scheduler POST /demo/plant/schedule/accept --> gold.accept_plan`,
+      uc1Sequence: `Operator     React          BFF            PostgreSQL       Agent
+   |           |              |                 |              |
+   |-- ingest --------------->|                 |              |
+   |           |              |-- gold.replan ->|              |
+   |           |              |<- queue + diff -|              |
+   |           |              |-- explain-replan ------------->|
+   |           |              |<- summary ---------------------|
+   |           |-- GET queue ->|                 |              |
+   |           |<- plan + why -|                 |              |
+   |           |-- accept ---->|-- accept_plan ->|              |`,
+    },
     sections: {
       container: {
-        title: 'Common container diagram',
-        description: 'Frontend talks only to the BFF; Agent calls Data API for tools (MCP-style over HTTP).',
+        title: 'Runtime path',
+        description: 'The browser stops at the BFF. Rules live in PostgreSQL. The agent only receives the plan.',
       },
       teamStack: {
-        title: 'Team stack (who owns what)',
-        description: 'Frontend and BFF in GreenByte; Data and Agent APIs as sibling services behind the BFF.',
+        title: 'Team stack',
+        description: 'Shown in the table above.',
       },
       uc1Flow: {
-        title: 'UC1 — Plant capacity flow',
-        description: 'Pasco conditioning: queue, events, replan, explain, human accept.',
+        title: 'UC1 — From ingest to accept',
+        description: 'The scheduler screen does not post the SAP or QA event. An operator ingest does. The screen polls the queue.',
       },
       uc1Sequence: {
-        title: 'UC1 — Sequence (event + replan + explain)',
-        description: 'Order of calls when upstream data triggers a rush or QA replan.',
-      },
-      uc4Flow: {
-        title: 'UC4 — R&D unification flow',
-        description: 'Unified CSVs, NL question, tools, triage, breeder override audit.',
-      },
-      uc4Sequence: {
-        title: 'UC4 — Sequence (ask + tools)',
-        description: 'BFF forwards chat; Agent retrieves facts before answering.',
+        title: 'UC1 — Call order',
+        description: 'Replan finishes before explain. Accept does not call the agent.',
       },
     },
-    monolithTitle: 'Monolith vs distributed',
+    monolithTitle: 'What is actually deployed',
     monolithBody:
-      'Judges may see a single “copilot” story. The team implements three services + BFF. Legacy single-box diagrams (everything in core-api) are logical only; physical deployment follows the container diagram above.',
+      'This demo deploys the React app, core-api, and PostgreSQL. The Data API and the Agent API are contracts. They stay inside the BFF until Camilo and David publish base URLs.',
   },
-  demoBreeding: {
-    eyebrow: 'Syngenta UC4 · R&D unification',
-    title: 'Breeding intelligence — guided demo',
-    subtitle:
-      'Walk through how a breeder asks one question across Syngenta’s four unified mock sources (trials incl. field obs, operations, lab, germplasm/pedigree) — then keeps the final say. Demo CSVs only.',
-    plainLanguage: {
-      sectionTitle: 'The idea, in plain language',
-      problemHeading: 'What problem are we solving?',
-      problem:
-        'Before a new variety reaches farmers, breeders test many candidates for years. Notes live in different spreadsheets, lab exports, and emails. Pulling one picture together can take weeks — and slows the whole pipeline.',
-      analogyHeading: 'Think of it like…',
-      analogy:
-        'A doctor whose patient history is split across four folders (visits, labs, family history, care notes). You ask “Is this treatment working?” and want one answer backed by facts — not a guess.',
-      walkthroughHeading: 'What you will see in the five steps below',
-      walkthroughSteps: [
-        'One workspace wired to all four Syngenta source families (five CSV files in the hackathon pack).',
-        'You ask a normal question in the chat box.',
-        'The assistant looks up facts from each source (it does not make up numbers).',
-        'You see a traffic-light style recommendation with a short reason and evidence.',
-        'You agree or push back — your choice is recorded.',
-      ],
-      tagline: 'In one line: “Should this candidate move forward — with all the papers in one place?”',
-    },
-    steps: [
-      {
-        title: '1. One place to start',
-        plainLine:
-          'Instead of chasing four disconnected source types, imagine one desk with everything linked.',
-        body:
-          'Trials (including field observations), field operations, lab results, and germplasm/pedigree — the same four families named in the Syngenta brief, loaded from the UC4 mock CSV set.',
-        imageSrc: '/demo/uc4-breeding-baseline.png',
-        imageAlt: 'Unified breeding workspace before a question',
-      },
-      {
-        title: '2. Ask like a person, not like SQL',
-        plainLine: 'You type a question the way you would ask a colleague across the table.',
-        body: 'No need to remember internal codes in this story — the assistant’s job is to translate your question into lookups.',
-        highlight: 'Example: “Which lines yielded well, stayed healthy, and share the same parents?”',
-      },
-      {
-        title: '3. Look it up, then answer',
-        plainLine: 'The AI pulls rows from the demo database and only then writes an answer.',
-        body: 'That is how we avoid “hallucinations”: if a number is not in the retrieved data, it should not appear in the reply.',
-        highlight: 'You should see references to where each fact came from.',
-      },
-      {
-        title: '4. Recommendation you can challenge',
-        plainLine: 'Green, amber, or red — plus one sentence why — and the evidence on the side.',
-        body: 'Field notes, lab values, and pedigree sit together so you can spot-check the story before you trust it.',
-        imageSrc: '/demo/uc4-rd-unification-wow.png',
-        imageAlt: 'Candidate dossier with triage and chat citations',
-      },
-      {
-        title: '5. You keep the final call',
-        plainLine: 'Accept, tweak, or override. The system logs what you decided.',
-        body: 'Breeding choices stay human. AI is a fast research assistant, not the boss.',
-        highlight: 'Coming next in the build: live AI and data services (see Architecture page).',
-      },
-    ],
-  },
+
   lang: {
     switchLabel: 'Language',
     en: 'EN',
@@ -696,7 +637,6 @@ export const en = {
     ctaDiscover: 'Discover GreenByte',
     ctaPrecision: 'Precision agriculture',
     ctaDemoPlant: 'UC1 Pasco demo',
-    ctaDemoBreeding: 'UC4 breeding demo',
     ctaArchitecture: 'Architecture',
   },
   intro: {

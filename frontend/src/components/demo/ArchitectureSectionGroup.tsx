@@ -26,8 +26,8 @@ export function ArchitectureSectionGroup({
   return (
     <div className="space-y-8 border-t border-gray-200 pt-12 first:border-t-0 first:pt-0">
       <div className="max-w-3xl">
-        <h2 className="text-2xl font-bold text-brand-blue">{title}</h2>
-        <p className="mt-3 leading-relaxed text-gray-700">{intro}</p>
+        <h2 className="text-xl font-semibold text-brand-blue">{title}</h2>
+        <p className="mt-3 text-base leading-relaxed text-gray-600">{intro}</p>
         {(syngentaGoal || dataSource || demoRoute) && (
           <dl className="mt-5 space-y-3 rounded-xl border border-gray-200 bg-gray-50 p-5 text-sm">
             {syngentaGoal && syngentaLabel && (

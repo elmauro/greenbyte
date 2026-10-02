@@ -27,6 +27,7 @@ Path:
 | GREENBYTE-003 | n/a | `uc1-bff-demo-plant-dynamo-stub` | UC1 BFF demo plant Dynamo stub | backend | done |
 | GREENBYTE-004 | n/a | `uc1-plant-ux-compare` | UC1 Plant UX compare page | frontend | done |
 | GREENBYTE-005 | n/a | `uc1-data-model-medallion` | UC1 data model medallion (raw silver gold) | backend | done |
+| GREENBYTE-006 | n/a | `uc1-manual-schedule-adjust` | UC1 manual schedule adjust | frontend | done |
 
 ## How to update
 

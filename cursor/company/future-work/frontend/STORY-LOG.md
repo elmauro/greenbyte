@@ -7,6 +7,26 @@ Backlog FW-*: [`README.md`](README.md) · Ticket↔FW registry: [`../STORY-REGIS
 
 <!-- newest first; new-feature.mjs inserts below this comment -->
 
+### GREENBYTE-006 — UC1 manual schedule adjust
+
+- FW: `n/a` · Slug: `uc1-manual-schedule-adjust` · Stack: frontend
+- Change type: `feat` · Branch: `feature/greenbyte-006` · PR: `GREENBYTE-006: UC1 manual schedule adjust`
+- Status: shipped · Shipped: 2026-10-01 · Package: [`frontend/uc1-manual-schedule-adjust/`](../../../analysis/features/frontend/uc1-manual-schedule-adjust/)
+
+```text
+@cursor/prompts/feature/prompt-feature-lifecycle.md
+
+Feature slug: uc1-manual-schedule-adjust
+Feature name: UC1 manual schedule adjust
+Ticket/story: GREENBYTE-006
+Backlog ID: n/a
+Change type: feat
+Stack scope: frontend
+Start at: analysis
+Run tests: yes
+Auto-close: yes
+```
+
 ### GREENBYTE-004 — UC1 Plant UX compare page
 
 - FW: `n/a` · Slug: `uc1-plant-ux-compare` · Stack: frontend

@@ -25,6 +25,7 @@ export default {
       },
       maxWidth: {
         site: '1200px',
+        demo: '1440px',
       },
     },
   },

@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom';
+import { DemoPageBody, DemoPageIntro } from '../layout/DemoPageIntro';
 import { plantLineById } from '../../demo/plant/plantLines';
 import { useLocale } from '../../i18n';
 import { usePlantDemoQueue } from '../../hooks/usePlantDemoQueue';
@@ -23,18 +24,18 @@ export function PlantLineMvp() {
     refreshing,
     busy,
     acceptPlan,
-    connectionMode,
+    setManualOrder,
     loadError,
   } = usePlantDemoQueue(locale, line.id);
 
   return (
     <div className="pb-16">
-      <section className="border-b border-gray-100 bg-gradient-to-br from-brand-green/10 via-white to-brand-blue/5 py-10">
-        <div className="site-container max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-widest text-brand-green">{copy.eyebrow}</p>
-          <h1 className="mt-2 text-3xl font-bold text-brand-blue">{copy.title}</h1>
-          <p className="mt-3 max-w-3xl text-gray-600">{copy.subtitle}</p>
-          <p className="mt-2 text-sm font-medium text-brand-blue/80">{copy.demoTargetBadge}</p>
+      <DemoPageIntro
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        subtitle={copy.subtitle}
+        note={copy.demoTargetBadge}
+      >
           <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
             <Link
               to={paths.demoPlantTour}
@@ -52,14 +53,13 @@ export function PlantLineMvp() {
               {copy.links.flowSlides} →
             </Link>
           </div>
-        </div>
-      </section>
+      </DemoPageIntro>
 
-      <div className="site-container mt-8 max-w-7xl space-y-6">
+      <DemoPageBody>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-brand-blue">
-              {copy.lineNames[line.id]} — {line.sheet}
+              {copy.lineScheduleHeading}
             </h2>
             <p className="text-sm text-gray-500">{copy.lineSubtitle}</p>
           </div>
@@ -105,6 +105,7 @@ export function PlantLineMvp() {
               setSearchParams(params, { replace: true });
             }}
             onAccept={() => void acceptPlan()}
+            onManualOrder={setManualOrder}
           />
           </>
         )}
@@ -112,14 +113,7 @@ export function PlantLineMvp() {
         {accepted && (
           <p className="text-center text-sm font-medium text-brand-green-dark">{copy.acceptedNote}</p>
         )}
-        <p className="text-xs text-gray-500">
-          {connectionMode === 'bff'
-            ? copy.apiNoteBff
-            : connectionMode === 'msw'
-              ? copy.apiNoteMsw
-              : copy.apiNoteLocal}
-        </p>
-      </div>
+      </DemoPageBody>
     </div>
   );
 }

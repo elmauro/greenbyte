@@ -46,7 +46,7 @@ export function PlantScheduleWorkspace({
       )}
 
       <div className="flex flex-col lg:flex-row">
-        <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} />
+        <PlantProgramGantt rows={queue} rushPo={rushPo} compact={compact} showMoves={!accepted} />
         <PlantCopilotWowPanel explanation={explanation} compact={compact} />
       </div>
 
