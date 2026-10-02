@@ -40,12 +40,17 @@ function reasonsFor(order, meta) {
   if (order.statusCode === 'ONLINE') {
     add('ALREADY_RUNNING', { work_center_code: meta.workCenterCode, status_code: order.statusCode });
   }
-  if (order.rushPlacement) {
+  if (order.rushPlacement || (order.isRush && !order.rushFact)) {
     add('RUSH_PRIORITY', {
-      source: 'scheduler',
+      source: order.rushPlacement ? 'scheduler' : 'sap',
       priority_rank: order.priorityRank ?? 'rush',
       previous_priority: order.schedulePriorityRank ?? order.priorityRank ?? 'none',
     });
+  } else if (order.rushFact) {
+    add('NOTE_RUSH', {
+      semantic_fact_id: order.rushFact.id,
+      note_text: order.rushFact.noteText,
+    }, [order.rushFact.id]);
   }
   if (order.priorityRank != null && order.statusCode !== 'ONLINE') {
     add('PRIORITY', { priority_rank: order.priorityRank, priority_source: order.prioritySource || 'SAP' });

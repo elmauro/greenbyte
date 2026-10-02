@@ -1,6 +1,6 @@
 /**
  * Local BFF for UI testing: serves the core-api HTTP routes on localhost by calling the Lambda handlers.
- * Usage (from backend/core-api): PG* vars + SEMANTIC_PLANNER_ENABLED=true node scripts/local-bff.mjs
+ * Usage (from backend/core-api): put PG* vars and SEMANTIC_PLANNER_ENABLED=true in .env.local, then npm run local:bff
  * Dev only. It writes to whatever database the PG* vars point at.
  */
 import http from 'node:http';
@@ -15,6 +15,8 @@ const routes = [
   ['POST', /^\/demo\/plant\/ingest\/sap-queue-refresh$/, 'plant-demo-ingest-sap-refresh'],
   ['POST', /^\/demo\/plant\/schedule\/accept$/, 'plant-demo-accept'],
   ['POST', /^\/demo\/plant\/batches\/explain$/, 'plant-demo-explain'],
+  ['POST', /^\/demo\/plant\/demo\/stage-raw$/, 'plant-demo-morning'],
+  ['POST', /^\/demo\/plant\/demo\/plan-line$/, 'plant-demo-morning'],
   ['POST', /^\/plan\/compute$/, 'agent-plan-compute'],
   ['POST', /^\/facts\/extract$/, 'agent-facts-extract'],
   ['POST', /^\/explain-replan$/, 'agent-explain-replan'],

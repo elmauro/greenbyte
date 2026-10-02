@@ -9,9 +9,11 @@ function byFinishThenPo(a, b) {
 }
 
 function pickNext(remaining, currentSpecies) {
+  const rushes = remaining.filter((order) => order.isRush);
+  const candidates = rushes.length > 0 ? rushes : remaining;
   let bestPriority = Number.POSITIVE_INFINITY;
-  for (const order of remaining) bestPriority = Math.min(bestPriority, priorityKey(order));
-  const band = remaining.filter((order) => priorityKey(order) === bestPriority);
+  for (const order of candidates) bestPriority = Math.min(bestPriority, priorityKey(order));
+  const band = candidates.filter((order) => priorityKey(order) === bestPriority);
   const sameSpecies = currentSpecies ? band.filter((order) => order.speciesCode === currentSpecies) : [];
   const pool = sameSpecies.length > 0 ? sameSpecies : band;
   if (sameSpecies.length > 0) return pool.slice().sort(byFinishThenPo)[0];

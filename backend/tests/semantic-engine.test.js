@@ -4,9 +4,11 @@ import { handler as planHandler } from '../core-api/functions/agent-plan-compute
 import { jest } from '@jest/globals';
 import { replanWithSemanticEngine, withSemanticPlan } from '../core-api/services/plantDemo/semanticReplan.js';
 import { loadSnapshot, PlannerNotReadyError, savePlan } from '../core-api/services/semanticEngine/db/goldGateway.js';
+import { batchAnswerGuard, explainBatchQuestion, packetFromGold, templateBatchAnswer } from '../core-api/services/semanticEngine/explain/explainBatch.js';
 import { explainPlan, explanationGuard } from '../core-api/services/semanticEngine/explain/explainPlan.js';
-import { createJevClassifier } from '../core-api/services/semanticEngine/models/clients.js';
+import { createJevClassifier, createJevQuestionRouter } from '../core-api/services/semanticEngine/models/clients.js';
 import { extractFacts } from '../core-api/services/semanticEngine/notes/extractFacts.js';
+import { rankLine } from '../core-api/services/semanticEngine/planner/rank.js';
 import { snapshotFromGold } from '../core-api/services/semanticEngine/snapshot/mapSnapshot.js';
 
 const asOf = '2026-10-05T06:00:00-07:00';
@@ -104,6 +106,62 @@ describe('explainer', () => {
   });
 });
 
+describe('batch chat', () => {
+  const context = {
+    lineId: 'line-1',
+    planVersion: 9,
+    queue: [
+      { po: '1002267630', position: 1, species: 'PECO', kg: 56170, finish: '2026-09-28 14:13', status: 'PLANNED', reasonShort: 'Already running on LSVLN1 — kept in position 1', reasons: [{ code: 'ALREADY_RUNNING', text: 'Already running' }] },
+      { po: '1002266913', position: 2, species: 'PECO', kg: 164940, finish: '2026-10-05', status: 'HOLD', reasonShort: 'Not ready (FUMIGATION): note "Not fumi" — on hold', reasons: [{ code: 'NOT_READY_HOLD', text: 'Not ready' }] },
+    ],
+    facts: [{ factId: 4, po: '1002267630', type: 'NOT_READY', label: 'FUMIGATION', note: 'Not fumi' }],
+  };
+
+  it('quotes the note and keeps a running order in place', () => {
+    const packet = packetFromGold(context, {}, '1002267630');
+    const answer = templateBatchAnswer(packet, 'WHY_WAITING', 'en');
+    expect(answer.answer).toMatch(/already running/);
+    expect(answer.answer).toMatch(/Not fumi/);
+    expect(answer.citations.join(' ')).toMatch(/fact 4/);
+  });
+
+  it('drops a model answer that names an order outside the packet', async () => {
+    const packet = packetFromGold(context, {}, '1002266913');
+    const result = await explainBatchQuestion({
+      packet,
+      question: 'Why is it waiting?',
+      locale: 'en',
+      classify: async () => 'WHY_WAITING',
+      complete: async () => JSON.stringify({ answer: 'PO 9999999999 is blocked.' }),
+    });
+    expect(result.source).toBe('template');
+    expect(batchAnswerGuard(result.answer, packet).ok).toBe(true);
+    expect(result.answer).toMatch(/1002266913/);
+  });
+
+  it('asks JEV which kind of question this is', async () => {
+    let body;
+    const route = createJevQuestionRouter(async (url, options) => {
+      body = JSON.parse(options.body);
+      return { ok: true, json: async () => ({ answers: { intent: { choice: 'MOVE_UP' } } }) };
+    });
+    expect(await route({ po: '1002266913', question: 'the one ahead?', history: [{ role: 'user', text: 'Why is it waiting?' }] })).toBe('MOVE_UP');
+    expect(body.state.history).toHaveLength(1);
+    expect(body.questions.intent.criteria.MOVE_UP).toMatch(/earlier/);
+  });
+});
+
+describe('rank', () => {
+  it('places a rush ahead of a better SAP priority, after the order already running', () => {
+    const sequence = rankLine([
+      { poNumber: '1001', priorityRank: 1, speciesCode: 'PECO', sapFinishDate: '2026-10-01', statusCode: 'NEW' },
+      { poNumber: '1002', priorityRank: 9, speciesCode: 'PECO', sapFinishDate: '2026-10-01', statusCode: 'ONLINE' },
+      { poNumber: '1003', priorityRank: 8, speciesCode: 'SWCO', sapFinishDate: '2026-12-01', statusCode: 'NEW', isRush: true },
+    ]);
+    expect(sequence.map((order) => order.poNumber)).toEqual(['1002', '1003', '1001']);
+  });
+});
+
 describe('gold snapshot', () => {
   it('builds a planner snapshot from queue rows', () => {
     const snapshot = snapshotFromGold({
@@ -113,13 +171,18 @@ describe('gold snapshot', () => {
         { demo_line_id: 'line-2', work_center_code: 'LSVLN2', line_schedule_item_id: 5, process_order_id: 9, po_number: '1002307551', species_code: 'PEA', variety_code: 'A', trait_family_code: 'NONE', input_kg: '1000', priority_rank: 2, sap_finish_date: '2026-10-20', status_code: 'PLANNED', is_hold: false },
         { demo_line_id: null, work_center_code: 'LSVCLSRT', line_schedule_item_id: 8, process_order_id: 11, po_number: '3001', species_code: 'CORN', variety_code: 'C', trait_family_code: 'NONE', input_kg: '500', priority_rank: 1, sap_finish_date: '2026-10-18', status_code: 'PLANNED', is_hold: false },
       ],
-      facts: [{ po_number: '1002307551', fact_type: 'NOT_READY', status: 'AUTO', semantic_fact_id: 4, note_text: 'Needs fumi!!', fact_value: { reason: 'FUMIGATION', ready_by: '2026-10-08T00:00:00Z' } }],
+      facts: [
+        { po_number: '1002307551', fact_type: 'NOT_READY', status: 'AUTO', semantic_fact_id: 4, note_text: 'Needs fumi!!', fact_value: { reason: 'FUMIGATION', ready_by: '2026-10-08T00:00:00Z' } },
+        { po_number: '1002307551', fact_type: 'RUSH', status: 'AUTO', semantic_fact_id: 9, note_text: 'RUSH - needs fumi' },
+      ],
       changeovers: [{ work_center_code: 'LSVLN2', transition_code: 'SPECIES_CHANGE', hours: 2.5 }],
       throughput: [{ work_center_code: 'LSVLN2', grain: 'WORK_CENTER', median_kg_per_h: 800 }],
       previousPayload: { proposals: [{ parentPo: '999', route: 'COLORSORT', status: 'PROPOSED' }, { parentPo: '998', status: 'LINKED' }] },
     });
     expect(snapshot.orders.map((order) => order.poNumber)).toEqual(['1002307551']);
     expect(snapshot.orders[0].readyBy).toBe('2026-10-08T00:00:00Z');
+    expect(snapshot.orders[0].isRush).toBe(true);
+    expect(snapshot.orders[0].rushFact).toMatchObject({ id: 9, noteText: 'RUSH - needs fumi' });
     expect(snapshot.orders[0].sapFinishDate).toBe('2026-10-20');
     expect(snapshot.lines['line-2'].kgPerHour).toBe(800);
     expect(snapshot.proposals).toHaveLength(1);
@@ -236,6 +299,13 @@ describe('BFF semantic replan', () => {
     expect(JSON.parse(insert.params[1]).event).toEqual({ kind: 'qa_fail', po: '8888', failedFor: 'Discolored' });
     const stored = calls.find((call) => call.text.includes('UPDATE gold.plan_event'));
     expect(stored.params[0]).toBe(20);
+  });
+
+  it('plans one line from the orders already on it', async () => {
+    const { query, calls } = fakeDb();
+    const result = await replanWithSemanticEngine(query, { lineId: 'line-2', kind: 'queue_refresh', onlyLine: true });
+    expect(result.explanation.alertBanner).toBe('Line 2 ordered from the raw orders. Nothing written to SAP.');
+    expect(calls.filter((call) => call.text.includes('SELECT gold.replan(')).map((call) => call.params[0])).toEqual(['line-2']);
   });
 
   it('falls back to the heuristic when disabled or when replan cannot read entries', async () => {

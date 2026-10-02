@@ -73,6 +73,7 @@ export async function replanWithSemanticEngine(query, change) {
     eventType: trigger,
     focusPo: change.po,
     focusLineId: change.lineId,
+    lineIds: change.onlyLine ? [change.lineId] : undefined,
   });
   const target = saved.find((row) => row.lineId === change.lineId) ?? saved[0];
   if (!target) throw new Error(`Planner produced no entries for ${change.lineId}`);

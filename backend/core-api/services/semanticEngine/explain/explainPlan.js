@@ -62,6 +62,9 @@ function lineLabel(lineId) {
 }
 
 function eventHeadline(event, entries, line) {
+  if (event?.kind === 'queue_refresh' && !event.po) {
+    return `${line} ordered from the raw orders. Nothing written to SAP.`;
+  }
   if (!event?.po) return null;
   if (event.kind === 'qa_fail') {
     return `QA fail${event.failedFor ? ` (${event.failedFor})` : ''} on ${event.po}: repair proposed for ${line}.`;

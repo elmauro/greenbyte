@@ -799,6 +799,7 @@ export function PlantBaselineDashboard({
                   <PlantScheduleCopilot
                     explanation={eventPendingReview ? explanation : null}
                     queue={queue}
+                    lineId={selectedLineId}
                     focusPo={explainPo}
                     onFocusPo={revealScheduleOrder}
                     openRequest={copilotOpenTick}
@@ -818,7 +819,7 @@ export function PlantBaselineDashboard({
         );
       }
       case 'copilot':
-        return <PlantBatchExplainChat queue={queue} embedded focusPo={explainPo} />;
+        return <PlantBatchExplainChat queue={queue} embedded lineId={selectedLineId} focusPo={explainPo} />;
     }
   }
 

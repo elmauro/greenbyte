@@ -66,6 +66,7 @@ export function snapshotFromGold(input) {
     const po = row.po_number;
     const facts = factsByPo.get(po) || [];
     const notReadyRow = facts.find((fact) => fact.fact_type === 'NOT_READY' && ['AUTO', 'CONFIRMED'].includes(fact.status));
+    const rushRow = facts.find((fact) => fact.fact_type === 'RUSH' && ['AUTO', 'CONFIRMED'].includes(fact.status));
     const notReady = notReadyRow
       ? withReadyBy([{ fact_type: 'NOT_READY', fact_value: notReadyRow.fact_value || {} }], input.asOf)[0].fact_value
       : null;
@@ -93,6 +94,10 @@ export function snapshotFromGold(input) {
       readyBy: notReady?.ready_by || null,
       notReadyFact: notReadyRow
         ? { id: Number(notReadyRow.semantic_fact_id), label: notReady.reason || 'NOT_READY', noteText: notReadyRow.note_text || '' }
+        : null,
+      isRush: row.is_rush === true || Boolean(rushRow),
+      rushFact: rushRow
+        ? { id: Number(rushRow.semantic_fact_id), noteText: rushRow.note_text || '' }
         : null,
       isGmo: gmo ? true : null,
       isCertifiedNonGmo: certified ? true : null,

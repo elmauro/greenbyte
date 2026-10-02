@@ -36,6 +36,53 @@ const JEV_QUESTIONS = {
   },
 };
 
+const QUESTION_INTENTS = {
+  intent: {
+    type: 'choice',
+    instructions: {
+      question: 'What is this person asking about the selected production order?',
+      glossary: 'A follow-up may say "it" or "the one ahead". History only shows which order they mean. The selected PO is the subject unless the question names a different order.',
+    },
+    criteria: {
+      WHY_WAITING: 'Why the order is where it is: held, not ready, not fumigated, blocked, or already running. Includes "why is it first".',
+      WHEN_FINISH: 'When the order finishes or ships.',
+      MOVE_UP: 'The person wants the order earlier, or asks what would move it up. Asking why it is already first is not this.',
+      OTHER: 'Anything else, or the question is not about scheduling this order.',
+    },
+  },
+};
+
+/** Routes one chat question. Returns WHY_WAITING, WHEN_FINISH, MOVE_UP, or OTHER. */
+export function createJevQuestionRouter(fetchImpl = fetch) {
+  return async function routeQuestion({ po, question, history }) {
+    const response = await fetchImpl('https://openrouter.ai/api/alpha/decisions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'X-OpenRouter-Title': 'GreenByte',
+      },
+      body: JSON.stringify({
+        model: JEV_MODEL,
+        state: {
+          po,
+          question,
+          history: (history || []).slice(-4).map((turn) => ({
+            role: turn.role,
+            text: String(turn.text || '').slice(0, 400),
+          })),
+        },
+        questions: QUESTION_INTENTS,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error(`JEV ${response.status}`);
+    const { answers = {} } = await response.json();
+    const choice = answers.intent?.choice;
+    return ['WHY_WAITING', 'WHEN_FINISH', 'MOVE_UP', 'OTHER'].includes(choice) ? choice : 'OTHER';
+  };
+}
+
 export function createJevClassifier(fetchImpl = fetch) {
   return async function classify(text) {
     const response = await fetchImpl('https://openrouter.ai/api/alpha/decisions', {

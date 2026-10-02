@@ -8,6 +8,7 @@ type PlantBatchExplainChatProps = {
   queue: QueueRow[];
   /** Inside plant shell AI Copilot nav — parent supplies page title. */
   embedded?: boolean;
+  lineId?: string;
   /** Order chosen from the schedule. Selects that batch when it is on this line. */
   focusPo?: string;
   /** Keeps the timeline selection in sync when the order is changed from this panel. */
@@ -17,6 +18,7 @@ type PlantBatchExplainChatProps = {
 export function PlantBatchExplainChat({
   queue,
   embedded = false,
+  lineId,
   focusPo,
   onPoChange,
 }: PlantBatchExplainChatProps) {
@@ -55,7 +57,7 @@ export function PlantBatchExplainChat({
     if (!po || !q) return;
     setBusy(true);
     try {
-      const res = await plantDemoApi.postBatchExplain(po, q, locale);
+      const res = await plantDemoApi.postBatchExplain(po, q, locale, { lineId });
       setAnswer(res.answer);
       setCitations(res.citations);
       if (!preset) setQuestion('');

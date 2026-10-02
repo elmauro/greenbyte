@@ -9,6 +9,7 @@ const OPEN_KEY = 'greenbyte-schedule-copilot-open-v1';
 type PlantScheduleCopilotProps = {
   explanation: PlantExplanation | null;
   queue: QueueRow[];
+  lineId?: string;
   focusPo?: string;
   onFocusPo?: (po: string) => void;
   /** Increments when the scheduler picks an order, including the one already shown. */
@@ -35,6 +36,7 @@ function storeOpen(open: boolean) {
 export function PlantScheduleCopilot({
   explanation,
   queue,
+  lineId,
   focusPo,
   onFocusPo,
   openRequest = 0,
@@ -115,7 +117,7 @@ export function PlantScheduleCopilot({
       </div>
       <div className="flex min-h-0 flex-1 flex-col border-t border-gray-200 bg-white">
         {focusPo ? (
-          <PlantCopilotThread queue={queue} focusPo={focusPo} onPoChange={onFocusPo} />
+          <PlantCopilotThread queue={queue} lineId={lineId} focusPo={focusPo} onPoChange={onFocusPo} />
         ) : (
           <div className="px-4 py-4">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{shell.thisOrder}</h4>

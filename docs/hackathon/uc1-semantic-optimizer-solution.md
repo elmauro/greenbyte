@@ -210,7 +210,7 @@ Input packet (from Data API `agent_context` or the replan response): event, diff
 - Bedrock Converse, Claude Sonnet 4.5 (`us.anthropic.claude-sonnet-4-5-20250929-v1:0`), temperature 0, JSON output matching `PlantExplanation { alertBanner, summary, bullets, impact }`.
 - System prompt: plain planner language, ≤ 4 bullets, lead with what is late, cite only IDs from the packet, never invent numbers — use the impact fields verbatim.
 - **Guard:** parse JSON; every PO/lot mentioned must be in the citable set and every number must match an impact field. On failure, retry once, then fall back to the reason-code templates (`explanationBuilder.js` behavior).
-- **Explain my batch:** JEV routes the question (why waiting / when will it finish / what would move it / other); code assembles the answer facts for that PO; Bedrock phrases it with the same guard; returns `PlantBatchExplainResponse` with citations.
+- **Explain my batch:** `POST /demo/plant/batches/explain` reads the latest plan (`gold.agent_context`, `gold.batch_detail`) for the selected PO and its two neighbors. JEV routes the question (`WHY_WAITING`, `WHEN_FINISH`, `MOVE_UP`, `OTHER`); the browser sends the last 4 turns so a follow-up can say "it". Bedrock phrases the answer when enabled. A PO that is not in that packet is rejected and the template is used. History stays in the browser.
 
 ### 5.9 Accept and override
 
