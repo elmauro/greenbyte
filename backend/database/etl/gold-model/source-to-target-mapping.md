@@ -79,7 +79,7 @@ Grain checks run (all pass unless noted):
 | Target | Source | Rule | St |
 | --- | --- | --- | --- |
 | `config_key` | seed literal | `as_of_date`, `plan_start_at`, `plant_time_zone`, `heuristic_version`, `min_species_runs` | B |
-| `value` | `silver.extract_as_of()` for the two dates; literals otherwise | `plan_start_at` = as-of date + ` 06:00:00 America/Los_Angeles` | B |
+| `value` | `silver.demo_as_of()` (2026-10-02, demo day; R-DATE-SHIFT, GREENBYTE-017) for the two dates; literals otherwise | `plan_start_at` = demo as-of date + ` 06:00:00 America/Los_Angeles`. Until 2026-10-02 this was `silver.extract_as_of()` (2026-09-28) | B |
 | `description` | seed literal | — | B |
 
 ### 3.2 `gold.reason_code` ← `seeds/gold_reason_code.sql`
@@ -169,8 +169,8 @@ Grain: one open, non-duplicate schedule row = PO × work center. Filter: `line_s
 | `priority_rank` | latest `process_order_change.priority_rank` → `li.priority_rank` → `po.priority_rank` | first non-null | B |
 | `priority_source` | — | `INGEST` \| `SCHEDULE` \| `SAP` | B |
 | `priority_ingest_event_id` | `process_order_change.ingest_event_id` | latest priority change | B |
-| `scheduled_finish_date` | latest `process_order_change.scheduled_finish_date` → `li.scheduled_finish_date` | — | B |
-| `sap_finish_date` | `process_order.sap_finish_date` | reference only (SQ-02) | B |
+| `scheduled_finish_date` | latest `process_order_change.scheduled_finish_date` → `li.scheduled_finish_date` | `li` value = source + 7 days (R-DATE-SHIFT); ingest changes are live dates, not shifted | B |
+| `sap_finish_date` | `process_order.sap_finish_date` | reference only (SQ-02); source + 7 days (R-DATE-SHIFT) | B |
 | `is_rush` | `li.is_rush` OR any `process_order_change.is_rush` | `li.is_rush` = priority text contains `rush` | B |
 | `quality_status`, `latest_fail_test_id`, `latest_fail_reason` | `v_po_quality_status` | `NOT_TESTED` when absent | B |
 | `need_by_date`, `order_numbers`, `priority_tier` | `customer_order` ⋈ `order_allocation` | min need-by; orders sorted by need-by; best tier RUSH > KEY > STANDARD | B (synthetic, LSVLN1 only — G-14) |

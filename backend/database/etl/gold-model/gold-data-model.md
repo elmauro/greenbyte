@@ -402,3 +402,22 @@ Not done, as agreed: no wrapper function (Q8a); `agent_context` unchanged (Q8b);
 3. `COB` is the most frequent fail (263 tests) and has no repair route: on purpose?
 4. Does `SPECIES_GROUP` mean same variety first, then same species (as in the heuristic)?
 5. Does an override end at a date, or only when a later run sends `active: false`?
+
+---
+
+## 8. Demo date shift (GREENBYTE-017, built 2026-10-02)
+
+**Why:** the Pasco extract is dated 2026-09-28. On demo day (2026-10-02) the plan horizon and part of the open queue were already in the past, and the demo shows delivery dates live.
+
+**What changed:**
+- **No gold table and no key.** The commitment dates live in silver, and gold is rebuilt from silver (rule G-01), so the shift is applied in silver. Gold reads the shifted values through `v_open_queue`, `replan` and the API functions. No date is part of a primary, business or foreign key.
+- **Silver (R-DATE-SHIFT, `observations.md` §6.1).** `silver.to_commit_date()` = source date + `silver.demo_date_shift_days()` (7). It is applied to `line_schedule_item.scheduled_finish_date`, `line_schedule_item.original_finish_date` and `process_order.sap_finish_date`. The synthetic `customer_order.need_by_date` follows (derived from the shifted finish date).
+- **Clock.** `gold.config` `as_of_date` = `silver.demo_as_of()` (2026-10-02), and `plan_start_at` = 2026-10-02 06:00 America/Los_Angeles. `silver.extract_as_of()` stays 2026-09-28: it describes the source, and DQ-15 (103 overdue SAP orders) is still measured on the source dates.
+- **Not shifted:** `run_date` and `test_date` (history: throughput medians, run order), audit timestamps (`*_at`), and live dates from `raw.ingest_event` / the SAP batch. The plans (`schedule_entry.due_date`, `planned_*`) are regenerated, not patched.
+
+**Effect, estimated from the CSVs** (open schedule rows, all lines, finish vs the 2026-10-02 clock): 8 of 153 overdue and 20 due within 3 days (before: 17 and 38). No Line 1 order is overdue on day 0. 93 of 202 SAP orders are before the clock (before: 103). The heuristic's real at-risk count needs the replan: check it with `--validate` and `gold.queue_response('line-1')` after the build.
+
+**Applied 2026-10-02 on the dev RDS:** full build (reconciliation 61/61, gold v4 13/13) + `--reset-demo line-1`. Verified: clock 2026-10-02; 476/476 Line 1 rows and 202/202 SAP rows = source + 7; DQ-15 = 103. Open rows due before 2026-10-02: Line 1 0/12, Line 2 1/38, Gravity 0/17, SSV 5/78. Two Line 2 schedule rows inserted live before the build (not in raw) were dropped by the rebuild, and ingest event 51 (PO 1009900006) was skipped.
+
+**Apply (rerun):** a full `build_model.py` rebuilds silver and gold. It drops gold history, legacy tables and stored planner plans; raw is kept. Then reset the demo lines (`--reset-demo`), because ingest events recorded before the shift carry dates from the old clock.
+

@@ -4,7 +4,7 @@ Links **backlog items** (`FW-*`) to **execution stories** (`GREENBYTE-*` or exte
 
 **Convention:** see [`ITEM-TEMPLATE.md`](ITEM-TEMPLATE.md) § FW vs execution story.
 
-**Next free execution ID:** `GREENBYTE-017` (update when assigning).
+**Next free execution ID:** `GREENBYTE-018` (update when assigning).
 
 ---
 
@@ -31,6 +31,7 @@ Status: **backlog** = FW without execution ID; **active** = feature folder exist
 
 | Execution story | Backlog ID | Feature slug | Feature name | Priority | Status |
 | --- | --- | --- | --- | --- | --- |
+| GREENBYTE-017 | n/a | `data-tweak` | Data tweak | P2 | active |
 | GREENBYTE-015 | n/a | `plant-hub-horizontal-scheduler-ux` | Align Pasco hub with horizontal scheduler UX | P2 | shipped |
 | GREENBYTE-014 | n/a | `show-demo-login-credentials-on-sign-in-hint` | Show demo login credentials on sign-in hint | P2 | shipped |
 | GREENBYTE-013 | n/a | `nav-pasco-conditioning-label` | Nav label Pasco conditioning | P2 | shipped |

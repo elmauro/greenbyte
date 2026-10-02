@@ -36,13 +36,14 @@ LEFT JOIN silver.species sp ON sp.species_code = a.species_code
 ORDER BY f.lot_number;
 
 -- process_order 1/4: SAP open-order extract (authoritative attributes). main.csv is byte-identical: lineage only.
+-- sap_finish_date is shifted (R-DATE-SHIFT); DQ-15 is measured on the source date, as in the extract.
 INSERT INTO silver.process_order
     (po_number, po_type, material_id, species_id, work_center_id, is_in_sap, sap_status, planned_output_qty, uom_code,
      sap_finish_date, priority_rank, sap_notes, is_notes_truncated, source_csv, source_row_number, source_file_sha256,
      load_id, dq_flags)
 SELECT p.po_number, silver.po_type(p.po_number), m.material_id, coalesce(m.species_id, sp.species_id), wc.work_center_id,
        true, silver.norm_code(s.po_status), silver.to_num(s.output_qty), silver.norm_code(s.uom),
-       silver.to_date(s.scheduled_finish_date_sap), silver.to_rank(s.priority), btrim(s.notes),
+       silver.to_commit_date(s.scheduled_finish_date_sap), silver.to_rank(s.priority), btrim(s.notes),
        coalesce(length(btrim(s.notes)) = 40, false),
        'excel_sap_data.csv', s._source_row_number, sf.csv_sha256, sf.load_id,
        silver.po_dq(p.po_number_status)

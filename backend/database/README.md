@@ -56,6 +56,7 @@ python backend/database/etl/build_model.py --upgrade-gold-v4  # live DB: gold v4
 - **One transaction.** Migrations, transforms, seeds, the gold functions, the baseline plans and `tests/reconciliation.sql` all run in one transaction. If any check fails, everything rolls back and the previous build stays.
 - **Silver and gold are fully derived.** Both schemas are dropped and rebuilt, then the plans are regenerated: baseline v1 for each line with a `demo_line_id`, then every non-voided `raw.ingest_event` is replayed. Accept decisions aren't kept across rebuilds.
 - **`raw.ingest_event`, `raw.note_reading` and `raw.note_review` are never dropped.** They are the durable input the Data API writes outside gold: upstream signals, readings of free-text notes (rules-v1, Bedrock, a person) and human confirm/reject of a fact. They are replayed into gold on every build. Rerun `build_model.py` after every `load_raw.py` run.
+- **Demo date shift (R-DATE-SHIFT, GREENBYTE-017).** The demo clock starts on demo day (`silver.demo_as_of()` = 2026-10-02, not the extract date 2026-09-28). Silver moves the schedule finish, original finish and SAP finish dates +7 days (`silver.demo_date_shift_days()`); raw keeps the source values. See [gold-data-model §8](./etl/gold-model/gold-data-model.md).
 - **Ranking policy.** `seeds/gold_policy.sql` holds policy v1 (engine HEURISTIC, the heuristic-v1 order) and v2 (engine PLANNER, the semantic planner's rules). Every plan records `policy_id`.
 
 ## 3. Data API usage (gold functions)

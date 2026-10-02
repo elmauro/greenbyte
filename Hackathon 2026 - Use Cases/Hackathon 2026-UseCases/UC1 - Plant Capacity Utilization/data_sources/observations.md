@@ -1,6 +1,6 @@
 # UC1 data sources — observations and source-to-target mapping
 
-**Scope:** UC1 Plant Capacity Utilization (Pasco conditioning) · **Owner:** Data API (Camilo) · **Status:** v1 (2026-09-30)
+**Scope:** UC1 Plant Capacity Utilization (Pasco conditioning) · **Owner:** Data API (Camilo) · **Status:** v1 (2026-09-30) · R-DATE-SHIFT demo date shift added 2026-10-02 (GREENBYTE-017)
 **Folder:** `Hackathon 2026 - Use Cases/Hackathon 2026-UseCases/UC1 - Plant Capacity Utilization/data_sources/`
 **Related:** [`backend/data-model/uc1-data-model.md`](../../../../backend/data-model/uc1-data-model.md)
 
@@ -206,6 +206,7 @@ Store `po_number` as **text**, not bigint: it's an identifier, not a quantity, a
 | R-DERIVED | Don't migrate derived columns (rates, loss %, week, delay, helpers). Recompute them in views and use the source values only as ETL checks |
 | R-CROPYEAR | `^(\d{4})(CL)?$` → `crop_year` smallint + `crop_year_suffix` (`CL` or NULL). `CL` meaning = Q-2 |
 | R-DATE | Source dates have no time part → `date` |
+| R-DATE-SHIFT | **Demo only (GREENBYTE-017, 2026-10-02).** The extract is dated 2026-09-28 (`silver.extract_as_of()`) and the demo runs live on demo day. So silver moves the forward-looking **commitment dates** `silver.demo_date_shift_days()` = **+7 days** forward: `line_schedule_item.scheduled_finish_date`, `line_schedule_item.original_finish_date`, `process_order.sap_finish_date` (`silver.to_commit_date()`). The demo clock (`gold.config` `as_of_date` / `plan_start_at`) starts at `silver.demo_as_of()` = **2026-10-02**. The synthetic `customer_order.need_by_date` follows, because it is derived from the shifted finish date. **Not shifted:** raw and the CSVs (the source values stay traceable: shifted = source + 7), history dates (`conditioning_run.run_date`, `quality_test.test_date`), audit timestamps, and dates that arrive live through `raw.ingest_event`. DQ-15 is still measured on the source date. Every date relation and key is unchanged (no date is part of a key). Record and rationale: [GREENBYTE-017 package](../../../../cursor/analysis/features/backend/data-tweak/analysis.md) |
 
 ### 6.2 Enumerations (source value → standard code)
 
@@ -547,7 +548,7 @@ Row numbers are Excel rows, which are also CSV record numbers. Each issue is sto
 | DQ-12 | 🟡 | Material description off-grammar | 24 of 1,118 distinct descriptions (lower case, trailing `(…)`, truncated, camelina `CAME`) | `is_parsed = false` |
 | DQ-13 | 🟠 | Negative loss (output > input) | SSV log 1 (row 3: 7.54 in → 9.02 out). Loss = input − output holds for all other rows | Keep + flag |
 | DQ-14 | 🟡 | SAP notes cut at 40 characters | `Excel SAP data` `Notes:` 20 of 202 | `is_notes_truncated = true` |
-| DQ-15 | 🟠 | Overdue "open" POs | `Excel SAP data`: 103 of 202 have an SAP finish date before 2026-09-28 (earliest 2025-10-15) | Keep; this is the **at-risk signal** for UC1 |
+| DQ-15 | 🟠 | Overdue "open" POs | `Excel SAP data`: 103 of 202 have an SAP finish date before 2026-09-28 (earliest 2025-10-15) | Keep; this is the **at-risk signal** for UC1. Counted on the **source** date: silver `sap_finish_date` is shifted +7 days (R-DATE-SHIFT) |
 | DQ-16 | 🟠 | Status conflict SAP vs schedule | 3 of the 15 `LSVLN1` POs are `NEW` in SAP but `COMPLETE` in `Line 1 Schedule` | Schedule status wins for the queue; flag both |
 | DQ-17 | 🟡 | Free text in `Priority` / `Run Order` | Line 2 3 values; SSV lines about 100 distinct; run order in every schedule | §6.2 R-PRIORITY, §6.3 |
 | DQ-18 | 🟠 | QA result incomplete or contradictory | Blank `Pass/Fail` 37; `Fail` with no reason 25; `Pass` with a reason 12 | `PENDING`; keep reason as-is + flag |
